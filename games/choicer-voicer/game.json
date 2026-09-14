@@ -1,0 +1,13 @@
+{
+  "id": "choicer-voicer",
+  "name": "Choicer Voicer",
+  "tagline": "Voicepacks dubben – solo oder Multiplayer",
+  "description": "Eigene Variation des Dub-Studios: ZIP-Voicepacks hochladen, Szenen vertonen, Takes exportieren.",
+  "status": "playable",
+  "entry": "server/index.js",
+  "routes": {
+    "home": "/",
+    "host": "/host.html",
+    "play": "/play.html"
+  }
+}

@@ -1,6 +1,8 @@
 (function (global) {
   function createSocket() {
+    const GB = window.GB || '';
     return io({
+      path: GB ? `${GB}/socket.io` : '/socket.io',
       transports: ['websocket', 'polling'],
     });
   }

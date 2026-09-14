@@ -1,16 +1,17 @@
 {
   "name": "laggagames",
   "version": "1.0.0",
-  "description": "Laggagames \u2013 party/dub studio scaffold based on Choicer Voicer architecture (Express + Socket.io + voicepacks)",
+  "description": "Laggagames – Hub für eigene Party-Spiele (isolierte games/<slug> Ordner)",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "nodemon server/index.js"
+    "dev": "nodemon server/index.js",
+    "game": "node scripts/run-game.js"
   },
   "keywords": [
     "party-game",
     "multiplayer",
-    "voice",
+    "hub",
     "socket.io"
   ],
   "author": "",

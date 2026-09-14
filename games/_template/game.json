@@ -1,0 +1,11 @@
+{
+  "id": "my-game",
+  "name": "Mein Spiel",
+  "tagline": "Kurzbeschreibung für den Hub",
+  "description": "Längere Beschreibung.",
+  "status": "wip",
+  "entry": "server/index.js",
+  "routes": {
+    "home": "/"
+  }
+}
