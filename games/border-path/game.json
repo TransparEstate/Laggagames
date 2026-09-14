@@ -1,0 +1,12 @@
+{
+  "id": "border-path",
+  "name": "Border Path",
+  "tagline": "Finde den Grenzpfad von Land zu Land",
+  "description": "Travle-ähnlich: Start und Ziel nur als Umrandung, Länder tippen bis der Landgrenz-Pfad schließt. DE/EN-Namen, drei Schwierigkeiten, Hinweise.",
+  "status": "playable",
+  "entry": "server/index.js",
+  "partySupport": true,
+  "routes": {
+    "home": "/"
+  }
+}

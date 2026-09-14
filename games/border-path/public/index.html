@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Border Path</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="back" href="/">← Hub</a>
+      <div class="brand-mark">Border Path</div>
+      <button type="button" class="ghost" id="btnReturnParty" hidden>Zur Party</button>
+    </header>
+
+    <main>
+      <section id="view-home" class="view home">
+        <p class="eyebrow">Lagga Club</p>
+        <h1 class="hero-brand">Border Path</h1>
+        <p class="lede">
+          Nur Umrandungen. Finde den Landgrenz-Pfad vom Start zum Ziel — auf Deutsch oder Englisch.
+        </p>
+        <div class="diff-row" id="diffRow"></div>
+        <button type="button" class="cta" id="btnStart">Neue Route</button>
+        <p class="hint-home">Grün verkürzt den Restweg · Orange ist nah · Rot ist Umweg</p>
+      </section>
+
+      <section id="view-play" class="view play" hidden>
+        <div class="hud">
+          <div class="route">
+            <span class="chip start" id="chipStart">—</span>
+            <span class="arrow" aria-hidden="true">→</span>
+            <span class="chip goal" id="chipGoal">—</span>
+          </div>
+          <div class="meters">
+            <span id="meterGuesses">Versuche: —</span>
+            <span id="meterRemain">Rest: —</span>
+            <span id="meterHints">Hinweise: —</span>
+          </div>
+        </div>
+
+        <div class="map-shell" id="mapShell">
+          <svg id="worldMap" viewBox="0 0 960 480" role="img" aria-label="Weltkarte">
+            <defs>
+              <filter id="softGlow">
+                <feGaussianBlur stdDeviation="1.2" result="b" />
+                <feMerge>
+                  <feMergeNode in="b" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <g id="countries"></g>
+          </svg>
+          <div class="map-flash" id="mapFlash" hidden></div>
+        </div>
+
+        <form class="guess-form" id="guessForm" autocomplete="off">
+          <input id="guessInput" type="text" placeholder="Land tippen…" spellcheck="false" />
+          <button type="submit" class="cta compact">Raten</button>
+          <button type="button" class="ghost" id="btnHint">Hinweis</button>
+        </form>
+        <ul class="suggest" id="suggestList" hidden></ul>
+        <ul class="guess-list" id="guessList"></ul>
+        <p class="status-line" id="statusLine"></p>
+      </section>
+
+      <section id="view-end" class="view end" hidden>
+        <h2 id="endTitle">Ende</h2>
+        <p id="endText"></p>
+        <ol class="path-list" id="pathList"></ol>
+        <div class="end-actions">
+          <button type="button" class="cta" id="btnAgain">Nochmal</button>
+          <button type="button" class="ghost" id="btnHome">Start</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>

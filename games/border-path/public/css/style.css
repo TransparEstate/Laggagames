@@ -1,0 +1,308 @@
+:root {
+  --bg0: #1a1c1f;
+  --bg1: #24272c;
+  --ink: #e8eaed;
+  --muted: #9aa0a8;
+  --line: #4a5058;
+  --accent: #c5c9ce;
+  --green: #7d9a7c;
+  --green-fill: rgba(125, 154, 124, 0.35);
+  --orange: #c4a574;
+  --orange-fill: rgba(196, 165, 116, 0.3);
+  --red: #c47a7a;
+  --red-fill: rgba(196, 122, 122, 0.32);
+  --start: #d7dbe0;
+  --goal: #b8c0c8;
+  --radius: 14px;
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+  color: var(--ink);
+  font-family: var(--font-body);
+  background:
+    radial-gradient(1200px 700px at 10% -10%, #2c3036 0%, transparent 55%),
+    radial-gradient(900px 600px at 100% 0%, #23262b 0%, transparent 50%),
+    linear-gradient(165deg, var(--bg0), #121417 70%);
+}
+.noise {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  opacity: 0.05;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.topbar, main { position: relative; z-index: 1; }
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.back, .ghost {
+  color: var(--muted);
+  text-decoration: none;
+  background: transparent;
+  border: 1px solid transparent;
+  font: inherit;
+  cursor: pointer;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+}
+.ghost:hover, .back:hover { color: var(--ink); border-color: var(--line); }
+.brand-mark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-size: 0.95rem;
+  color: var(--accent);
+}
+main {
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 3rem;
+}
+.view[hidden] { display: none !important; }
+.home {
+  min-height: calc(100vh - 6rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.85rem;
+  animation: rise 0.7s ease both;
+}
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.hero-brand {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(3rem, 10vw, 5.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+.lede {
+  margin: 0;
+  max-width: 32rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+.diff-row { display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 0.5rem; }
+.diff-btn {
+  font: inherit;
+  cursor: pointer;
+  color: var(--ink);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.55rem 0.95rem;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.diff-btn:hover { transform: translateY(-1px); border-color: var(--accent); }
+.diff-btn.active { background: rgba(255,255,255,0.08); border-color: var(--accent); }
+.cta {
+  margin-top: 0.4rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  color: #141618;
+  background: var(--accent);
+  border: none;
+  border-radius: 999px;
+  padding: 0.85rem 1.4rem;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+.cta:hover { transform: translateY(-1px); filter: brightness(1.05); }
+.cta.compact { padding: 0.7rem 1rem; margin-top: 0; }
+.hint-home { margin: 0.4rem 0 0; color: var(--muted); font-size: 0.9rem; }
+.play { display: grid; gap: 0.9rem; animation: rise 0.45s ease both; }
+.hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.route { display: flex; align-items: center; gap: 0.55rem; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.04);
+  font-weight: 600;
+}
+.chip.start { box-shadow: inset 0 0 0 1px rgba(215,219,224,0.35); }
+.chip.goal { box-shadow: inset 0 0 0 1px rgba(184,192,200,0.45); }
+.arrow { color: var(--muted); }
+.meters { display: flex; flex-wrap: wrap; gap: 0.85rem; color: var(--muted); font-size: 0.92rem; }
+.map-shell {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255,255,255,0.07);
+  background: radial-gradient(ellipse at 50% 40%, #2a2e34 0%, #1b1e22 70%);
+  min-height: 280px;
+}
+#worldMap {
+  width: 100%;
+  height: auto;
+  display: block;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: center center;
+}
+.country {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 0.7;
+  vector-effect: non-scaling-stroke;
+  transition: fill 0.35s ease, stroke 0.35s ease, stroke-width 0.35s ease;
+}
+.country.is-start {
+  stroke: var(--start);
+  stroke-width: 1.4;
+  filter: url(#softGlow);
+  animation: pulseStroke 2.4s ease-in-out infinite;
+}
+.country.is-goal {
+  stroke: var(--goal);
+  stroke-width: 1.4;
+  filter: url(#softGlow);
+  animation: pulseStroke 2.4s ease-in-out infinite 0.4s;
+}
+.country.is-green {
+  fill: var(--green-fill);
+  stroke: var(--green);
+  stroke-width: 1.1;
+  animation: revealLand 0.45s ease both;
+}
+.country.is-green.frontier {
+  stroke-width: 1.5;
+  animation: revealLand 0.45s ease both, frontierPulse 1.2s ease 1;
+}
+.country.is-orange {
+  fill: var(--orange-fill);
+  stroke: var(--orange);
+  stroke-width: 1;
+  animation: revealLand 0.4s ease both;
+}
+.country.is-red {
+  fill: var(--red-fill);
+  stroke: var(--red);
+  stroke-width: 1.15;
+  animation: wrongShake 0.45s ease both;
+}
+.country.is-hint {
+  stroke: #aeb6bf;
+  stroke-width: 1.3;
+  stroke-dasharray: 4 3;
+  animation: hintReveal 0.55s ease both;
+}
+.map-flash {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(196,122,122,0.18);
+  animation: flashRed 0.4s ease;
+}
+.guess-form { display: grid; grid-template-columns: 1fr auto auto; gap: 0.55rem; }
+#guessInput {
+  font: inherit;
+  color: var(--ink);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.75rem 1rem;
+  outline: none;
+}
+#guessInput:focus { border-color: var(--accent); }
+.suggest {
+  list-style: none;
+  margin: -0.3rem 0 0;
+  padding: 0.35rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg1);
+}
+.suggest li button {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+}
+.suggest li button:hover { background: rgba(255,255,255,0.06); }
+.guess-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+.guess-list li {
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--line);
+  font-size: 0.9rem;
+  animation: rise 0.3s ease both;
+}
+.guess-list li.green { border-color: var(--green); color: #cfe0ce; }
+.guess-list li.orange { border-color: var(--orange); color: #e6d5b5; }
+.guess-list li.red { border-color: var(--red); color: #e6c2c2; }
+.status-line { min-height: 1.3em; margin: 0; color: var(--muted); }
+.end { animation: rise 0.5s ease both; }
+.end h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 3rem);
+  margin: 0 0 0.4rem;
+}
+.path-list { margin: 1rem 0 1.4rem; padding-left: 1.2rem; color: var(--muted); }
+.end-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes revealLand { from { opacity: 0.2; } to { opacity: 1; } }
+@keyframes wrongShake {
+  0%, 100% { transform: translateX(0); transform-box: fill-box; }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+@keyframes pulseStroke {
+  0%, 100% { stroke-opacity: 0.75; }
+  50% { stroke-opacity: 1; }
+}
+@keyframes frontierPulse {
+  0% { stroke-width: 1.1; }
+  50% { stroke-width: 2.2; }
+  100% { stroke-width: 1.5; }
+}
+@keyframes hintReveal {
+  from { opacity: 0; stroke-dashoffset: 20; }
+  to { opacity: 1; stroke-dashoffset: 0; }
+}
+@keyframes flashRed { from { opacity: 1; } to { opacity: 0; } }
+@media (max-width: 720px) {
+  .guess-form { grid-template-columns: 1fr 1fr; }
+  #guessInput { grid-column: 1 / -1; }
+}
