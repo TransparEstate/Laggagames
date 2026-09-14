@@ -1,0 +1,14 @@
+---
+description: Verbindliche Arbeitsregeln für Laggagames-Agents
+alwaysApply: true
+---
+
+# Laggagames Agent Rules
+
+- Produkt: multimodale Gamesite, eigene Spiele, Solo und synchronisierter Multiplayer (mit/gegen).
+- Stack beibehalten: Node/Express/Socket.io + statisches `public/`-Frontend. Kein Rewrite, kein neues Framework ohne Auftrag.
+- Nicht anlügen: Unsicherheit, Fehler und ungetestete Teile klar benennen.
+- Code-Exploration minimal: nur Dateien des aktuellen Spiels und bei Bedarf Multiplayer/Sync/Rooms. Nicht die ganze Repo-Struktur durchlesen.
+- Kein Browser-E2E, keine Screenshots, kein Computer-Use, außer der Nutzer verlangt es ausdrücklich. Verifikation über Terminal.
+- Nicht-Ziele: Auth/Payments/Store, IP-Packs committen, große Engine-Abstraktion vor dem zweiten Spiel, Secrets/Prod-Deploys.
+- Änderungen klein und erweiternd halten; bestehende Room-/Sync-Pfade nutzen statt Parallelwelten.
