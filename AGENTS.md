@@ -16,13 +16,13 @@ Aktueller Code (Branch mit App): Node.js + Express + Socket.io, statisches Front
    - Dashboard, Pack-Upload, R2, Export, Deploy-Configs usw. **nur**, wenn die Aufgabe das explizit braucht.
 4. **Kein Browser-Durchklicken und keine Screenshots**, außer der Nutzer fordert das ausdrücklich an. Fertig = Terminal-Checks (Start, gezielte Tests, Logs, API/Socket-Verhalten). Computer-Use/E2E im Browser ist standardmäßig **verboten**.
 5. **Kleine, fokussierte Änderungen.** Ein Ziel pro Lauf. Bestehende Strukturen erweitern statt parallele Systeme zu erfinden.
-6. **Keine Pushs und keine Pull Requests** in dieses Repo (und keine „komischen“ Auto-Branches/PRs). Arbeit nicht hier mergen-lassen.
-7. **Keine Repos mit kryptischen/wirren Namen.** Wenn ein neues Repo nötig ist, **nur** mit **sinnvollem, menschenlesbarem Namen** anlegen — Schema in der Art:
+6. **Keine Pushs und keine Pull Requests.** Agents sollen nicht von sich aus pushen oder PRs öffnen.
+7. **Nur sinnvoll benannte Branches** anlegen — keine kryptischen/wirren Auto-Namen. Schema in der Art:
    - `v3.1-Update-Michael-Jackson-Spiel`
    - `v2-Sync-Multiplayer-Lobby`
    - `v1-Neues-Kartenspiel`
    - Also: **Version/Kurzkennung + klarer Inhalt**, Bindestriche statt Zufalls-Hashes (`v6foo-190f`, `cursor-agent-…`, UUID-Fragmente usw. sind verboten).
-8. **Kein Repo „einfach so“.** Nur anlegen, wenn die Aufgabe das wirklich braucht; Name vorher so wählen, dass ein Mensch sofort versteht, worum es geht.
+8. **Kein Branch „einfach so“.** Nur anlegen, wenn die Aufgabe das braucht; Name so wählen, dass ein Mensch sofort versteht, worum es geht.
 
 ## Nicht-Ziele (vorerst)
 
@@ -31,7 +31,7 @@ Aktueller Code (Branch mit App): Node.js + Express + Socket.io, statisches Front
 - Fremde/IP-belastete Packs committen oder öffentlich machen
 - Große Game-Engine-Abstraktion, bevor ein zweites Spiel und klare Sync-Verträge stehen
 - Prod-Deploys oder Secrets ins Repo
-- Push/PR in Laggagames; kryptisch benannte Repos oder Zufalls-Branch-Namen
+- Push/PR von Agents aus; kryptisch oder zufällig benannte Branches
 
 ## Stack (beibehalten)
 
