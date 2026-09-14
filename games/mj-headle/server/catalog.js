@@ -79,12 +79,30 @@ async function enrichAudioFlags(songs) {
   const out = [];
   for (const song of songs) {
     const local = detectLocalAudio(song);
-    let hasAudio = !!local || !!song.hasAudio;
-    if (!hasAudio && r2.isEnabled() && song.audioKey) {
-      const head = await r2.headObject(song.audioKey);
-      hasAudio = !!head;
+    // Never trust hasAudio from JSON alone — without R2/local file the clip cannot play.
+    let hasAudio = !!local;
+    if (!hasAudio && r2.isEnabled()) {
+      if (song.hasAudio) {
+        hasAudio = true; // came from R2 listing
+      } else if (song.audioKey) {
+        const head = await r2.headObject(song.audioKey);
+        hasAudio = !!head;
+      }
     }
-    out.push({ ...song, hasAudio, localPath: local || null });
+    // If audio exists but cue was never analyzed, allow play at 0s (refine later).
+    let cueQuality = song.cueQuality || 'missing';
+    let cueReason = song.cueReason || '';
+    if (hasAudio && cueQuality !== 'ok' && cueQuality !== 'manual') {
+      cueQuality = 'ok';
+      cueReason = cueReason || 'provisional-after-audio';
+    }
+    out.push({
+      ...song,
+      hasAudio,
+      cueQuality,
+      cueReason,
+      localPath: local || null,
+    });
   }
   return out;
 }
