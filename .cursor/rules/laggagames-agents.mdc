@@ -12,3 +12,5 @@ alwaysApply: true
 - Kein Browser-E2E, keine Screenshots, kein Computer-Use, außer der Nutzer verlangt es ausdrücklich. Verifikation über Terminal.
 - Nicht-Ziele: Auth/Payments/Store, IP-Packs committen, große Engine-Abstraktion vor dem zweiten Spiel, Secrets/Prod-Deploys.
 - Änderungen klein und erweiternd halten; bestehende Room-/Sync-Pfade nutzen statt Parallelwelten.
+- Keine Pushs und keine Pull Requests in dieses Repo.
+- Keine Repos mit komischen/kryptischen Namen (keine Hash-/UUID-/cursor-agent-Namen). Neue Repos nur bei Bedarf und nur sinnvoll benannt, z. B. `v3.1-Update-Michael-Jackson-Spiel` (Version + klarer Inhalt).
