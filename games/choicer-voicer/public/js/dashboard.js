@@ -141,13 +141,14 @@
   function updateStorageHint(r2) {
     if (!storageHint) return;
     if (r2?.enabled) {
-      storageHint.textContent = `Dauerhafter Speicher aktiv (${r2.bucket || 'Object Storage'}).`;
+      storageHint.textContent = `Cloudflare R2 aktiv (${r2.bucket || 'R2'}) — Packs sind für alle Nutzer geteilt.`;
       storageHint.classList.remove('hidden', 'error');
       return;
     }
     storageHint.textContent =
-      'Hinweis: Object Storage aus — Packs können bei Redeploys verloren gehen.';
+      'Cloudflare R2 fehlt — Uploads sind deaktiviert. Packs werden nur in R2 gespeichert.';
     storageHint.classList.remove('hidden');
+    storageHint.classList.add('error');
   }
 
   async function loadProjects() {
@@ -346,7 +347,11 @@
       }
       if (xhr.status >= 200 && xhr.status < 300 && data.ok) {
         setProgress(100, 'Fertig');
-        showUploadOk(`„${data.pack?.title || data.pack?.id}“ ist bereit.`);
+        showUploadOk(
+          data.duplicate
+            ? `„${data.pack?.title || data.pack?.id}“ war schon vorhanden (Duplikat übersprungen).`
+            : `„${data.pack?.title || data.pack?.id}“ ist in Cloudflare R2 für alle bereit.`
+        );
         await loadPacks();
         setTimeout(() => {
           uploadProgressWrap?.classList.add('hidden');

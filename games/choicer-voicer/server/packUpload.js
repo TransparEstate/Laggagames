@@ -1,4 +1,5 @@
 const fs = require('fs');
+const crypto = require('crypto');
 const path = require('path');
 const fsp = fs.promises;
 const unzipper = require('unzipper');
@@ -70,7 +71,38 @@ async function rmrf(target) {
 /**
  * Install a uploaded .zip voice pack into USER_PACKS_ROOT (+ optional R2).
  */
+
+/**
+ * Stable SHA-256 over sorted relative paths + file bytes (after convert).
+ */
+async function hashPackDirectory(packDir) {
+  const files = [];
+  const walk = async (dir, base) => {
+    for (const entry of await fsp.readdir(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) await walk(full, base);
+      else files.push(path.relative(base, full).replace(/\\/g, '/'));
+    }
+  };
+  await walk(packDir, packDir);
+  files.sort();
+  const hash = crypto.createHash('sha256');
+  for (const rel of files) {
+    hash.update(rel);
+    hash.update('\0');
+    hash.update(await fsp.readFile(path.join(packDir, rel)));
+    hash.update('\0');
+  }
+  return hash.digest('hex');
+}
+
 async function installPackFromZip(zipPath, originalName) {
+  if (!r2.isEnabled()) {
+    throw new Error(
+      'Cloudflare R2 ist nicht konfiguriert. Packs werden nur in R2 gespeichert — setze R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY und R2_BUCKET.'
+    );
+  }
   ensureUserPacksRoot();
   const workRoot = path.join(
     USER_PACKS_ROOT,
@@ -95,8 +127,9 @@ async function installPackFromZip(zipPath, originalName) {
       if (titleMatch) preferredName = titleMatch[1];
     }
 
-    const packId = uniquePackId(preferredName);
-    const dest = path.join(USER_PACKS_ROOT, packId);
+    // Stage under temp id, convert, then dedupe by content hash before assigning final id.
+    const stagingId = `.staging-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const dest = path.join(USER_PACKS_ROOT, stagingId);
     await copyDir(packRoot, dest);
 
     // Chrome/Edge cannot play .ogv — convert to H.264 MP4 before listing/R2
@@ -107,41 +140,81 @@ async function installPackFromZip(zipPath, originalName) {
       console.warn('Video-Konvertierung:', converted.error);
     } else if (converted.converted) {
       console.log(
-        `Pack ${packId}: ${converted.from} → dub_video.mp4` +
+        `Pack staging: ${converted.from} → dub_video.mp4` +
           (converted.profile ? ` [${converted.profile}]` : '')
       );
     }
 
-    const pack = loadPack(packId);
-    if (!pack.videoFile || pack.videoFile.endsWith('.ogv') || pack.videoFile.endsWith('.webm')) {
+    // Validate video via directory load (staging folder name is not a public pack id)
+    const stagingPack = loadPack(stagingId);
+    if (!stagingPack.videoFile || stagingPack.videoFile.endsWith('.ogv') || stagingPack.videoFile.endsWith('.webm')) {
       const detail = converted?.error
         ? converted.error.slice(0, 280)
         : 'Unbekannter Fehler bei der Konvertierung.';
       throw new Error(
-        `Video konnte nicht nach MP4 konvertiert werden (${pack.videoFile || 'kein Video'}). ${detail}`
+        `Video konnte nicht nach MP4 konvertiert werden (${stagingPack.videoFile || 'kein Video'}). ${detail}`
       );
     }
 
+    const contentHash = await hashPackDirectory(dest);
+    const existingId = await r2.getPackIdByContentHash(contentHash);
+    if (existingId) {
+      await rmrf(dest);
+      try {
+        await require('./packLoader').refreshR2Manifests();
+      } catch {
+        /* ignore */
+      }
+      let existing;
+      try {
+        existing = loadPack(existingId);
+      } catch {
+        const remote = await r2.getJson(r2.manifestKey(existingId));
+        if (!remote?.id) throw new Error(`Duplikat-Pack ${existingId} nicht in R2 gefunden.`);
+        require('./packLoader').rememberManifest(remote);
+        existing = loadPack(existingId);
+      }
+      return {
+        ok: true,
+        duplicate: true,
+        r2: { ok: true, deduped: true },
+        pack: {
+          id: existing.id,
+          title: existing.title,
+          iconUrl: existing.iconUrl,
+          sceneCount: existing.scenes.length,
+          characters: existing.characters,
+          source: existing.source,
+          sizeBytes: existing.sizeBytes,
+          hasVideo: existing.hasVideo,
+          mirroredToR2: true,
+          contentHash,
+        },
+      };
+    }
+
+    const packId = uniquePackId(preferredName);
+    const finalDest = path.join(USER_PACKS_ROOT, packId);
+    await fsp.rename(dest, finalDest);
+
+    const pack = loadPack(packId);
+    pack.contentHash = contentHash;
     const manifest = buildManifest(pack);
     rememberManifest(manifest);
 
-    let r2Status = { skipped: true };
-    if (r2.isEnabled()) {
-      await r2.uploadPackDirectory(packId, dest);
-      await r2.putManifest(packId, manifest);
-      r2Status = { ok: true };
-      rememberManifest(manifest);
+    await r2.uploadPackDirectory(packId, finalDest);
+    await r2.putManifest(packId, manifest);
+    await r2.putContentHashIndex(contentHash, packId);
+    rememberManifest(manifest);
 
-      // Optional: drop bulky local files after R2 mirror (Railway free disk)
-      if (!r2.status().keepLocal) {
-        await rmrf(dest);
-      }
-    }
+    // Local disk is staging only — packs live exclusively in Cloudflare R2
+    await rmrf(finalDest);
 
     const refreshed = loadPack(packId);
     return {
       ok: true,
-      r2: r2Status,
+      duplicate: false,
+      r2: { ok: true },
       pack: {
         id: refreshed.id,
         title: refreshed.title,
@@ -151,7 +224,8 @@ async function installPackFromZip(zipPath, originalName) {
         source: refreshed.source,
         sizeBytes: refreshed.sizeBytes,
         hasVideo: refreshed.hasVideo,
-        mirroredToR2: !!refreshed.mirroredToR2 || r2Status.ok === true,
+        mirroredToR2: true,
+        contentHash,
       },
     };
   } finally {
@@ -175,10 +249,21 @@ async function deleteUserPack(packId) {
 
   const dir = path.join(USER_PACKS_ROOT, safe);
   const hadLocal = fs.existsSync(dir);
-  const hadMeta = !!require('./packLoader').readLocalManifest(safe);
+  const localMeta = require('./packLoader').readLocalManifest(safe);
+  const hadMeta = !!localMeta;
 
   if (!hadLocal && !hadMeta && !r2.isEnabled()) {
     return { error: 'Pack nicht gefunden.' };
+  }
+
+  let contentHash = localMeta?.contentHash || null;
+  if (!contentHash && r2.isEnabled()) {
+    try {
+      const remote = await r2.getJson(r2.manifestKey(safe));
+      contentHash = remote?.contentHash || null;
+    } catch {
+      /* ignore */
+    }
   }
 
   if (hadLocal) await rmrf(dir);
@@ -186,6 +271,13 @@ async function deleteUserPack(packId) {
 
   if (r2.isEnabled()) {
     await r2.deletePackPrefix(safe);
+    if (contentHash) {
+      try {
+        await r2.deleteContentHashIndex(contentHash);
+      } catch {
+        /* ignore */
+      }
+    }
     try {
       await require('./packLoader').refreshR2Manifests();
     } catch {
@@ -196,54 +288,18 @@ async function deleteUserPack(packId) {
   return { ok: true };
 }
 
-/**
- * Mirror local user packs into object storage so redeploys keep them.
- * Skips packs that already have a remote manifest.
- */
+
 async function syncLocalPacksToRemote() {
-  if (!r2.isEnabled()) return { skipped: true, synced: [] };
-  ensureUserPacksRoot();
-  const remoteIds = new Set(await r2.listPackIds());
-  const synced = [];
-  const failed = [];
-
-  if (!fs.existsSync(USER_PACKS_ROOT)) {
-    return { ok: true, synced, failed };
-  }
-
-  for (const entry of fs.readdirSync(USER_PACKS_ROOT, { withFileTypes: true })) {
-    if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
-    const packId = entry.name;
-    const dest = path.join(USER_PACKS_ROOT, packId);
-    if (remoteIds.has(packId)) {
-      // Ensure manifest exists even if files were uploaded earlier without one
-      try {
-        const existing = await r2.getJson(r2.manifestKey(packId));
-        if (existing?.id) continue;
-      } catch {
-        /* upload manifest below */
-      }
-    }
-    try {
-      const pack = loadPack(packId);
-      const manifest = buildManifest(pack);
-      rememberManifest(manifest);
-      await r2.uploadPackDirectory(packId, dest);
-      await r2.putManifest(packId, manifest);
-      synced.push(packId);
-      console.log(`Pack nach Object Storage gespiegelt: ${packId}`);
-    } catch (err) {
-      failed.push({ id: packId, error: err.message || String(err) });
-      console.warn(`Spiegeln fehlgeschlagen: ${packId}`, err.message || err);
-    }
-  }
-
-  return { ok: true, synced, failed };
+  // Local disk is ephemeral staging only — Cloudflare R2 is the sole pack store.
+  // Existing R2 packs are loaded via refreshR2Manifests on boot / GET /api/packs.
+  return { skipped: true, synced: [], note: 'R2-only: kein lokales Spiegeln' };
 }
+
 
 module.exports = {
   installPackFromZip,
   deleteUserPack,
   looksLikePackDir,
   syncLocalPacksToRemote,
+  hashPackDirectory,
 };

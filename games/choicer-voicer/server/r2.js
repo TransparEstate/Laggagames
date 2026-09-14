@@ -208,7 +208,7 @@ async function listPackIds() {
     );
     for (const p of res.CommonPrefixes || []) {
       const m = String(p.Prefix || '').match(/^packs\/([^/]+)\//);
-      if (m && !m[1].startsWith('.')) ids.add(m[1]);
+      if (m && !m[1].startsWith('.') && !m[1].startsWith('_')) ids.add(m[1]);
     }
     token = res.IsTruncated ? res.NextContinuationToken : undefined;
   } while (token);
@@ -257,13 +257,56 @@ async function deletePackPrefix(packId) {
   return { ok: true };
 }
 
+
+function contentHashKey(contentHash) {
+  const hash = String(contentHash || '').replace(/[^a-fA-F0-9]/g, '').toLowerCase();
+  if (!hash) throw new Error('Ungültiger Content-Hash.');
+  return `packs/_index/by-hash/${hash}.json`;
+}
+
+async function getPackIdByContentHash(contentHash) {
+  if (!isEnabled()) return null;
+  try {
+    const data = await getJson(contentHashKey(contentHash));
+    return data?.packId || null;
+  } catch {
+    return null;
+  }
+}
+
+async function putContentHashIndex(contentHash, packId) {
+  if (!isEnabled()) return { skipped: true };
+  const body = Buffer.from(
+    JSON.stringify({ packId, contentHash, updatedAt: new Date().toISOString() }, null, 2),
+    'utf8'
+  );
+  await putBuffer(contentHashKey(contentHash), body, 'application/json');
+  return { ok: true };
+}
+
+async function deleteContentHashIndex(contentHash) {
+  if (!isEnabled() || !contentHash) return { skipped: true };
+  const s3 = getClient();
+  try {
+    await s3.send(
+      new DeleteObjectsCommand({
+        Bucket: bucket(),
+        Delete: { Objects: [{ Key: contentHashKey(contentHash) }] },
+      })
+    );
+  } catch {
+    /* ignore */
+  }
+  return { ok: true };
+}
+
 function status() {
   return {
     enabled: isEnabled(),
     bucket: isEnabled() ? bucket() : null,
     endpoint: isEnabled() ? endpoint() : null,
     publicBaseUrl: publicBaseUrl() || null,
-    keepLocal: env('R2_KEEP_LOCAL', '1') !== '0',
+    keepLocal: env('R2_KEEP_LOCAL', '0') !== '0',
   };
 }
 
@@ -273,6 +316,7 @@ module.exports = {
   publicBaseUrl,
   packKey,
   manifestKey,
+  contentHashKey,
   uploadPackDirectory,
   putManifest,
   getObject,
@@ -282,5 +326,8 @@ module.exports = {
   listPackIds,
   listManifests,
   deletePackPrefix,
+  getPackIdByContentHash,
+  putContentHashIndex,
+  deleteContentHashIndex,
   contentTypeFor,
 };

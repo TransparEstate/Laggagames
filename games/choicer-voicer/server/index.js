@@ -19,7 +19,7 @@ const {
   refreshR2Manifests,
   repairPackDurations,
 } = require('./packLoader');
-const { installPackFromZip, deleteUserPack, syncLocalPacksToRemote } = require('./packUpload');
+const { installPackFromZip, deleteUserPack } = require('./packUpload');
 const r2 = require('./r2');
 
 const PORT = process.env.PORT || 3000;
@@ -913,29 +913,21 @@ server.listen(PORT, async () => {
   const r2Info = r2.status();
   if (r2Info.enabled) {
     console.log(
-      `Object storage: bucket=${r2Info.bucket} endpoint=${r2Info.endpoint || '—'} keepLocal=${r2Info.keepLocal}`
+      `Cloudflare R2: bucket=${r2Info.bucket} endpoint=${r2Info.endpoint || '—'} (einziger Pack-Speicher)`
     );
     if (r2Info.publicBaseUrl) console.log(`Public media:  ${r2Info.publicBaseUrl}`);
     try {
       await refreshR2Manifests();
-      console.log('Object-Storage-Manifeste geladen.');
+      const remotePacks = listPacks();
+      console.log(
+        `R2-Packs geladen: ${remotePacks.length ? remotePacks.map((p) => p.id).join(', ') : '(noch keine — Katalog startet leer bis Uploads)'}`
+      );
     } catch (e) {
-      console.warn('Manifeste konnten nicht geladen werden:', e.message || e);
-    }
-    try {
-      const sync = await syncLocalPacksToRemote();
-      if (sync.synced?.length) {
-        console.log(`Lokale Packs gespiegelt: ${sync.synced.join(', ')}`);
-      }
-      if (sync.failed?.length) {
-        console.warn(`Spiegeln fehlgeschlagen: ${sync.failed.map((f) => f.id).join(', ')}`);
-      }
-    } catch (e) {
-      console.warn('Pack-Spiegeln:', e.message || e);
+      console.warn('R2-Manifeste konnten nicht geladen werden:', e.message || e);
     }
   } else {
     console.warn(
-      'Object storage: AUS — Packs liegen nur auf ephemeral Disk und gehen bei Redeploys verloren. Setze R2_* (Railway Bucket oder Cloudflare R2).'
+      'Cloudflare R2: AUS — Uploads sind deaktiviert. Packs werden ausschließlich in R2 gespeichert. Setze R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET.'
     );
   }
   try {
