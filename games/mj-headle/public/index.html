@@ -43,9 +43,15 @@
           <input id="roundsInput" type="number" min="1" max="20" value="5" />
         </label>
       </div>
+      <label class="switch-field" id="syncRevealField" hidden>
+        <span class="switch-copy">
+          <strong>Gemeinsam aufdecken</strong>
+          <span class="switch-hint">An = alle warten aufeinander · Aus = jeder sieht Antwort &amp; Score sofort nach dem eigenen Finish</span>
+        </span>
+        <input type="checkbox" id="syncRevealToggle" checked />
+      </label>
       <ul class="player-list" id="playerList"></ul>
       <div class="cta-row">
-        <button type="button" class="btn" id="btnReady">Bereit</button>
         <button type="button" class="btn btn-primary" id="btnStart" hidden>Spiel starten</button>
       </div>
       <p class="hint" id="lobbyHint"></p>
@@ -69,7 +75,7 @@
         </div>
         <div class="cta-row">
           <button type="submit" class="btn btn-primary">Raten</button>
-          <button type="button" class="btn" id="btnSkip">Weiterhören</button>
+          <button type="button" class="btn" id="btnSkip">Skippen</button>
         </div>
       </form>
       <p class="feedback" id="feedback"></p>
@@ -78,6 +84,10 @@
     <section id="view-reveal" class="view" hidden>
       <p class="reveal-flash" id="revealTitle">—</p>
       <p class="lede" id="revealSub"></p>
+      <div class="reveal-audio">
+        <button type="button" class="btn" id="btnRevealPlay" aria-label="Song abspielen">▶ Song anhören</button>
+        <p class="hint" id="revealWaitHint" hidden></p>
+      </div>
       <ul class="player-list" id="revealList"></ul>
       <div class="cta-row">
         <button type="button" class="btn btn-primary" id="btnNext" hidden>Nächste Runde</button>
