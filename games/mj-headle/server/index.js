@@ -357,13 +357,17 @@ io.on('connection', (socket) => {
       const songs = await catalog.listPlayableSongs();
       const result = game.startMatch(room, songs);
       if (result.error) return typeof ack === 'function' && ack(result);
-      // Refine cue only for the active track (full library would be too slow).
-      if (room.current?.songId) {
-        const base = songs.find((s) => s.id === room.current.songId);
-        if (base) {
-          const refined = await catalog.ensureAudibleCue(base);
-          room.current.cueStartSec = Number(refined.cueStartSec) || 0;
-        }
+      // Refine cues for match tracks (sync: current; async: whole playlist).
+      const ids = room.current?.songId
+        ? [room.current.songId]
+        : [...(room.trackIds || [])];
+      for (const songId of ids) {
+        const base = songs.find((s) => s.id === songId);
+        if (!base) continue;
+        const refined = await catalog.ensureAudibleCue(base);
+        const cue = Number(refined.cueStartSec) || 0;
+        if (room.songMeta?.[songId]) room.songMeta[songId].cueStartSec = cue;
+        if (room.current?.songId === songId) room.current.cueStartSec = cue;
       }
       broadcastRoom(room);
       if (typeof ack === 'function') ack({ ok: true, state: rooms.getPublicState(room, socket.id) });
