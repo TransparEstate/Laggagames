@@ -324,6 +324,7 @@ function packFromManifest(manifest, source = 'r2') {
     source,
     sizeBytes: manifest.sizeBytes || 0,
     mirroredToR2: isRemoteMirror(packId) || source === 'r2',
+    contentHash: manifest.contentHash || null,
   };
 }
 
@@ -351,7 +352,8 @@ function buildManifest(pack) {
     })),
     hasVideo: !!pack.hasVideo,
     sizeBytes: pack.sizeBytes || 0,
-    uploadedAt: new Date().toISOString(),
+    contentHash: pack.contentHash || null,
+    uploadedAt: pack.uploadedAt || new Date().toISOString(),
   };
 }
 
@@ -395,19 +397,24 @@ function loadPack(packId) {
 }
 
 function listLocalPackIds() {
+  // Cloudflare R2 is the source of truth. Local user dirs are ephemeral staging only.
   const ids = new Set();
-  for (const root of [USER_PACKS_ROOT, BUNDLED_PACKS_ROOT]) {
-    if (!fs.existsSync(root)) continue;
-    for (const d of fs.readdirSync(root, { withFileTypes: true })) {
-      if (d.isDirectory() && !d.name.startsWith('.')) ids.add(d.name);
-    }
+  for (const id of r2ManifestCache.keys()) {
+    if (id && !String(id).startsWith('.') && !String(id).startsWith('_')) ids.add(id);
   }
   if (fs.existsSync(META_ROOT)) {
     for (const f of fs.readdirSync(META_ROOT)) {
-      if (f.endsWith('.json')) ids.add(f.replace(/\.json$/i, ''));
+      if (!f.endsWith('.json')) continue;
+      const id = f.replace(/\.json$/i, '');
+      if (id && !id.startsWith('.') && !id.startsWith('_')) ids.add(id);
     }
   }
-  for (const id of r2ManifestCache.keys()) ids.add(id);
+  // Optional bundled packs (usually empty)
+  if (fs.existsSync(BUNDLED_PACKS_ROOT)) {
+    for (const d of fs.readdirSync(BUNDLED_PACKS_ROOT, { withFileTypes: true })) {
+      if (d.isDirectory() && !d.name.startsWith('.')) ids.add(d.name);
+    }
+  }
   return [...ids];
 }
 
@@ -422,6 +429,7 @@ function summarize(pack) {
     sizeBytes: pack.sizeBytes,
     hasVideo: pack.hasVideo,
     mirroredToR2: !!pack.mirroredToR2,
+    contentHash: pack.contentHash || null,
   };
 }
 
