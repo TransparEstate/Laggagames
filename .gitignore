@@ -9,6 +9,9 @@ npm-debug.log*
 .DS_Store
 *.log
 .railway/
-.cursor/
+.cursor/*
+!.cursor/rules/
+.cursor/rules/*
+!.cursor/rules/*.mdc
 .tmp-prod-js/
 .nixpacks/
