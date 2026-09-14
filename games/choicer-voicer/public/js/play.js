@@ -3,6 +3,7 @@
   const params = new URLSearchParams(location.search);
 
   const errorEl = document.getElementById('error');
+  const btnReturnLobby = document.getElementById('btnReturnLobby');
   const videoError = document.getElementById('videoError');
   const joinCard = document.getElementById('joinCard');
   const gameCard = document.getElementById('gameCard');
@@ -1846,7 +1847,46 @@
     return true;
   }
 
-  async function startMultiplayer() {
+  
+  async function startPartySession(partyId, memberId) {
+    const packId = params.get('pack');
+    const name = (params.get('name') || '').trim();
+    if (!partyId) {
+      CV.showError(errorEl, 'Party-ID fehlt.');
+      return;
+    }
+    if (!name) {
+      CV.showError(errorEl, 'Name nötig — über die Hub-Party starten.');
+      return;
+    }
+    activeLocalProjectId = null;
+    sessionStorage.removeItem('cv_localProjectId');
+    joinCard.classList.add('hidden');
+    gameCard.classList.remove('hidden');
+    subtitle.textContent = `Party ${partyId}…`;
+    const res = await CV.emitAck(socket, 'session:join-party', {
+      partyId,
+      memberId: memberId || undefined,
+      name,
+      packId: packId || undefined,
+    });
+    if (res.error) {
+      joinCard.classList.remove('hidden');
+      gameCard.classList.add('hidden');
+      CV.showError(errorEl, res.error);
+      return;
+    }
+    playerId = res.playerId;
+    isRoomHost = !!res.isHost || res.state?.hostId === playerId;
+    sessionStorage.setItem('cv_playerId', playerId);
+    sessionStorage.setItem('cv_roomCode', res.state.code);
+    sessionStorage.setItem('cv_partyId', partyId);
+    loadMicGainForUser(name);
+    applyState(res.state);
+    if (btnReturnLobby) btnReturnLobby.classList.remove('hidden');
+  }
+
+async function startMultiplayer() {
     const packId = params.get('pack');
     const name = (params.get('name') || '').trim();
     if (!packId || !name) {
@@ -2175,7 +2215,12 @@
     btnBackToClips.addEventListener('click', () => backToClips());
   }
 
-  socket.on('state:update', (next) => {
+  
+  socket.on('session:returned', () => {
+    location.href = '/';
+  });
+
+socket.on('state:update', (next) => {
     if (!playerId) return;
     applyState(next);
   });
@@ -2280,21 +2325,44 @@
     });
   }
 
+  if (btnReturnLobby) {
+    btnReturnLobby.addEventListener('click', async () => {
+      const res = await CV.emitAck(socket, 'session:return-to-lobby', {});
+      if (res.error) {
+        CV.showError(errorEl, res.error);
+        return;
+      }
+      location.href = '/';
+    });
+  }
+
   window.addEventListener('resize', () => {
     if (selectedSceneId) refreshWaveform();
   });
 
-  if (params.get('project')) {
-    openLocalProject(params.get('project'));
+  // Party context from hub launch URL
+  const partyId = (params.get('party') || '').toUpperCase();
+  const partyMemberId = params.get('member') || '';
+
+  if (partyId && params.get('solo') === '1') {
+    CV.showError(errorEl, 'In einer Party ist Solo gesperrt.');
+  } else if (params.get('project')) {
+    if (partyId) {
+      CV.showError(errorEl, 'Projekte sind in der Party gesperrt — nur Multiplayer-Session.');
+    } else {
+      openLocalProject(params.get('project'));
+    }
+  } else if (partyId) {
+    startPartySession(partyId, partyMemberId);
   } else if (params.get('solo') === '1') {
     startSolo();
-  } else if (params.get('mp') === '1') {
-    startMultiplayer();
   } else {
     tryReconnect().then((ok) => {
-      if (ok) return;
-      if (codeInput.value && nameInput.value) {
-        joinRoom(codeInput.value.trim().toUpperCase(), nameInput.value.trim());
+      if (!ok) {
+        CV.showError(
+          errorEl,
+          'Kein Solo- und kein Party-Kontext. Starte Solo vom Dashboard oder tritt einer Hub-Party bei.'
+        );
       }
     });
   }

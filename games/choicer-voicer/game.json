@@ -1,13 +1,13 @@
 {
   "id": "choicer-voicer",
   "name": "Choicer Voicer",
-  "tagline": "Voicepacks dubben – solo oder Multiplayer",
-  "description": "Eigene Variation des Dub-Studios: ZIP-Voicepacks hochladen, Szenen vertonen, Takes exportieren.",
+  "tagline": "Voicepacks dubben – Solo oder in der Hub-Party",
+  "description": "Dub-Studio: ZIP-Voicepacks hochladen, Szenen vertonen, Takes exportieren. Multiplayer läuft über die zentrale Lagga-Party.",
   "status": "playable",
   "entry": "server/index.js",
+  "partySupport": true,
   "routes": {
     "home": "/",
-    "host": "/host.html",
     "play": "/play.html"
   }
 }

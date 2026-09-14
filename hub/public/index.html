@@ -17,15 +17,57 @@
   </header>
 
   <main class="wrap">
+    <section id="partyGate" class="party-panel">
+      <h1>Party</h1>
+      <p class="lede">Erstelle eine Party oder tritt mit Code bei. In der Party startet nur der Lead Spiele — und nur Multiplayer.</p>
+      <div class="party-forms">
+        <div class="party-form">
+          <label for="createName">Dein Name</label>
+          <input id="createName" type="text" maxlength="24" placeholder="Name" autocomplete="nickname" />
+          <button class="btn" id="btnCreateParty" type="button">Party erstellen</button>
+        </div>
+        <div class="party-form">
+          <label for="joinName">Dein Name</label>
+          <input id="joinName" type="text" maxlength="24" placeholder="Name" autocomplete="nickname" />
+          <label for="joinCode">Party-Code</label>
+          <input id="joinCode" type="text" maxlength="6" placeholder="AB3K9X" style="text-transform:uppercase" autocomplete="off" />
+          <button class="btn btn-secondary" id="btnJoinParty" type="button">Beitreten</button>
+        </div>
+      </div>
+      <p class="error hidden" id="partyError"></p>
+    </section>
+
+    <section id="partyLobby" class="party-panel hidden">
+      <div class="lobby-head">
+        <div>
+          <h1>Lobby</h1>
+          <p class="lede">Code teilen — alle bleiben in der Party, auch nach dem Spiel.</p>
+        </div>
+        <div class="lobby-code-block">
+          <span class="lobby-code-label">Code</span>
+          <div class="lobby-code" id="lobbyCode">······</div>
+        </div>
+      </div>
+      <div class="lobby-meta">
+        <span id="lobbyRole" class="pill">Mitglied</span>
+        <span id="lobbyStatus" class="pill muted-pill">Lobby</span>
+        <button class="btn btn-ghost btn-sm" id="btnLeaveParty" type="button">Party verlassen</button>
+      </div>
+      <h2 class="subhead">Mitglieder</h2>
+      <ul id="memberList" class="member-list"></ul>
+      <p class="error hidden" id="lobbyError"></p>
+    </section>
+
     <section class="intro">
-      <h1>Welches Spiel?</h1>
-      <p>Wähle ein Spiel aus dem Katalog. Neue Spiele landen als Ordner unter <code>games/&lt;slug&gt;/</code>.</p>
+      <h1 id="catalogTitle">Welches Spiel?</h1>
+      <p id="catalogHint">Ohne Party: Solo öffnen. In der Party: nur der Lead startet ein party-fähiges Spiel für alle.</p>
     </section>
     <section id="gameGrid" class="grid" aria-live="polite">
       <p class="muted">Lade Spiele…</p>
     </section>
   </main>
 
+  <script src="/socket.io/socket.io.js"></script>
   <script src="/js/hub.js"></script>
 </body>
 </html>

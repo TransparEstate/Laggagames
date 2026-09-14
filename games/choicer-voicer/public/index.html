@@ -15,25 +15,34 @@
       <div class="brand-badge">🎬</div>
       <div>
         <h1>Choicer Voicer</h1>
-        <p>Voicepacks hochladen, alleine dubben oder Multiplayer starten.</p>
+        <p id="dashTagline">Voicepacks hochladen und solo dubben. Multiplayer läuft über die Lagga-Party im Hub.</p>
       </div>
       <div class="dash-top-actions">
         <a class="btn btn-sm btn-ghost" href="/" data-hub-exit="1">← Lagga Club</a>
-        <button class="btn btn-sm" id="btnOpenMp" type="button">Multiplayer</button>
-        <button class="btn btn-sm btn-secondary" id="btnOpenJoin" type="button">Raum betreten</button>
       </div>
     </div>
 
-    <section class="card upload-card">
+    <section id="partyBanner" class="card hidden" style="margin-bottom:16px;border-color:rgba(15,107,76,0.35)">
+      <h2 style="margin:0 0 8px">Party-Modus</h2>
+      <p class="muted" id="partyBannerText" style="margin:0 0 12px">Du bist in einer Party — Solo ist gesperrt. Wähle ein Pack und starte die Session.</p>
+      <label for="partyName">Dein Name</label>
+      <input id="partyName" type="text" maxlength="24" placeholder="Name" autocomplete="nickname" />
+      <label for="partyPack" style="margin-top:12px">Voicepack</label>
+      <select id="partyPack"></select>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn" id="btnPartyStart" type="button">In Party-Session</button>
+        <a class="btn btn-ghost" href="/">Zurück zur Lobby</a>
+      </div>
+    </section>
+
+    <section class="card upload-card" id="soloSections">
       <h2>Voicepack hochladen</h2>
       <p class="muted" id="uploadHint">ZIP im Choicer-Voicer-Format hier ablegen.</p>
       <div class="upload-drop" id="uploadDrop" tabindex="0">
-        <!-- Kein accept=…: unter Windows filtert MIME/Extension-Accept oft ZIP weg -->
         <input type="file" id="packFile" hidden />
         <p><strong>ZIP hierher ziehen</strong> oder tippen/klicken</p>
         <p class="muted" style="margin:6px 0 0;font-size:0.9rem">
           Im Dialog „Alle Dateien“ wählen, dann die <strong>.zip</strong> auswählen.
-          Große Packs dauern (Konvertierung).
         </p>
         <button type="button" class="btn btn-sm btn-secondary" id="btnPickZip" style="margin-top:12px">
           ZIP-Datei auswählen…
@@ -48,7 +57,7 @@
       <p class="ok-msg hidden" id="uploadOk"></p>
     </section>
 
-    <section class="card" style="margin-top:16px">
+    <section class="card" style="margin-top:16px" id="projectsSection">
       <div class="dash-section-head" style="margin-bottom:10px">
         <h2 style="margin:0">Gespeicherte Projekte</h2>
         <div class="dash-top-actions" style="margin-left:0">
@@ -57,7 +66,7 @@
         </div>
       </div>
       <p class="muted" style="margin:0 0 12px;font-size:0.9rem">
-        Nur auf diesem Gerät (Browser) — Takes zum Nachbearbeiten, kein Video in der Cloud.
+        Nur auf diesem Gerät (Browser) — Takes zum Nachbearbeiten.
       </p>
       <label for="projectPackFilter">Pack filtern</label>
       <select id="projectPackFilter" style="max-width:360px;margin-bottom:12px">
@@ -75,38 +84,6 @@
       </div>
     </section>
   </main>
-
-  <div id="modalMp" class="dash-modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalMpTitle">
-    <div class="dash-modal-card">
-      <button type="button" class="dash-modal-close" data-close-modal="modalMp" aria-label="Schließen">×</button>
-      <h2 id="modalMpTitle">Multiplayer</h2>
-      <p class="muted">Name + Pack — dann Lobby mit Code teilen.</p>
-      <label for="mpName">Dein Name (Host)</label>
-      <input id="mpName" type="text" maxlength="24" placeholder="Host" autocomplete="nickname" />
-      <label for="mpPack" style="margin-top:12px">Voicepack</label>
-      <select id="mpPack"></select>
-      <div class="btn-row" style="margin-top:16px; justify-content:flex-end">
-        <button class="btn btn-ghost" type="button" data-close-modal="modalMp">Abbrechen</button>
-        <button class="btn" id="btnMultiplayer" type="button">Lobby erstellen</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="modalJoin" class="dash-modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalJoinTitle">
-    <div class="dash-modal-card">
-      <button type="button" class="dash-modal-close" data-close-modal="modalJoin" aria-label="Schließen">×</button>
-      <h2 id="modalJoinTitle">Raum betreten</h2>
-      <p class="muted">Code vom Host eingeben.</p>
-      <label for="joinCode">Room-Code</label>
-      <input id="joinCode" type="text" maxlength="6" placeholder="AB3K9X" style="text-transform: uppercase" autocomplete="off" />
-      <label for="joinName" style="margin-top:12px">Dein Name</label>
-      <input id="joinName" type="text" maxlength="24" placeholder="Spieler" autocomplete="nickname" />
-      <div class="btn-row" style="margin-top:16px; justify-content:flex-end">
-        <button class="btn btn-ghost" type="button" data-close-modal="modalJoin">Abbrechen</button>
-        <button class="btn btn-secondary" id="btnJoin" type="button">Beitreten</button>
-      </div>
-    </div>
-  </div>
 
   <script src="js/base.js"></script>
   <script src="js/projects.js"></script>

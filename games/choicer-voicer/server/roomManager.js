@@ -38,6 +38,23 @@ class RoomManager {
     return room;
   }
 
+  /**
+   * Party session: room key = hub partyId (no public room codes).
+   */
+  getOrCreatePartyRoom(partyId, hostSocketId) {
+    const code = String(partyId || '').toUpperCase();
+    if (!code) throw new Error('partyId fehlt.');
+    let room = this.rooms.get(code);
+    if (!room) {
+      room = createEmptyRoom(code, hostSocketId);
+      room.partyId = code;
+      room.solo = false;
+      this.rooms.set(code, room);
+    }
+    this.socketToRoom.set(hostSocketId, code);
+    return room;
+  }
+
   getRoom(code) {
     if (!code) return null;
     return this.rooms.get(String(code).toUpperCase()) || null;
