@@ -4,17 +4,32 @@ Heardle-Style: Michael-Jackson-Songs am Intro erraten. Solo oder über die zentr
 
 ## Songs einfach nach Cloudflare hochladen
 
-1. Bucket öffnen:  
-   https://dash.cloudflare.com/?to=/:account/r2/default/buckets/lagga-mj-headle
-2. Ordner/Prefix **`audio/`** anlegen (oder beim Upload den Pfad `audio/` setzen)
-3. In Windows alle MP3s markieren → per Drag&Drop in den Bucket / Upload
-4. Dateinamen dürfen so bleiben wie sie sind (`Smooth Criminal (2012 Remaster).mp3` ist ok)
-5. Im Spiel / Server: Katalog neu laden (`POST /api/catalog/sync` oder Server neu starten)
+Dashboard-Upload ist auf **100 Dateien** begrenzt. Bei ~140 Songs:
 
-Der Server liest danach alle Dateien unter `audio/`, räumt Titel auf und wirft Duplikate weg.  
-Cue kannst du später setzen (`--cues` / find-cue) — ohne Cue sind Songs noch nicht spielbar, aber schon in der Suchleiste sichtbar.
+### Variante A — Upload-Skript (empfohlen)
 
-R2-Zugangsdaten in `.env` (`MJ_R2_*`) müssen gesetzt sein, sonst sieht der Server den Bucket nicht.
+1. In `games/mj-headle/.env` die R2-Keys setzen (`MJ_R2_ACCOUNT_ID`, `MJ_R2_ACCESS_KEY_ID`, `MJ_R2_SECRET_ACCESS_KEY`)
+2. Auf deinem PC:
+
+```bash
+cd games/mj-headle
+node tools/upload-folder.js --in "C:/Pfad/zu/deinem/MJ-Ordner"
+```
+
+Das lädt alles nach `audio/` in Bucket **`lagga-mj-headle`**.  
+Dateinamen bleiben wie sie sind. Bereits vorhandene Dateien werden übersprungen.
+
+Nur Vorschau: `node tools/upload-folder.js --in "C:/..." --dry-run`
+
+### Variante B — Dashboard in 2 Batches
+
+Bucket: https://dash.cloudflare.com/?to=/:account/r2/default/buckets/lagga-mj-headle  
+
+Jeweils max. 100 Dateien hochladen (z. B. A–M, dann N–Z), Prefix **`audio/`**.
+
+### Danach
+
+Server neu starten oder `POST /api/catalog/sync` — Katalog wird aus `audio/` gebaut (Titel cleanen + Duplikate weg).
 
 
 Deine Dateien heißen schon richtig (z. B. `Smooth Criminal (2012 Remaster).mp3`).  
