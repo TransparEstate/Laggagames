@@ -63,8 +63,10 @@
       <p class="play-caption" id="playCaption">Ab Cue hören</p>
       <form id="guessForm" class="guess-form" autocomplete="off">
         <label class="sr-only" for="guessInput">Songtitel</label>
-        <input id="guessInput" list="songSuggestions" placeholder="Songtitel eingeben…" />
-        <datalist id="songSuggestions"></datalist>
+        <div class="search-wrap">
+          <input id="guessInput" placeholder="MJ-Song suchen und raten…" autocomplete="off" />
+          <ul id="guessResults" class="search-results" hidden></ul>
+        </div>
         <div class="cta-row">
           <button type="submit" class="btn btn-primary">Raten</button>
           <button type="button" class="btn" id="btnSkip">Weiterhören</button>

@@ -83,9 +83,103 @@
     stages = data.stages || stages;
     $('catalogMeta').textContent =
       `${catalog.length} Titel · ${data.playableCount || 0} spielbar (Audio + Cue)`;
-    $('songSuggestions').innerHTML = catalog
-      .map((s) => `<option value="${escapeHtml(s.title)}"></option>`)
+  }
+
+  function filterSongs(query) {
+    const q = String(query || '')
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+    if (!q) return catalog.slice(0, 12);
+    return catalog
+      .filter((s) => {
+        const t = String(s.title || '')
+          .toLowerCase()
+          .normalize('NFKD')
+          .replace(/[\u0300-\u036f]/g, '');
+        return t.includes(q);
+      })
+      .slice(0, 12);
+  }
+
+  function renderGuessResults(query, { open } = { open: true }) {
+    const box = $('guessResults');
+    if (!box) return;
+    if (!open) {
+      box.hidden = true;
+      box.innerHTML = '';
+      return;
+    }
+    const hits = filterSongs(query);
+    if (!hits.length) {
+      box.innerHTML = '<li class="empty">Kein Treffer im Katalog</li>';
+      box.hidden = false;
+      return;
+    }
+    box.innerHTML = hits
+      .map(
+        (s, i) =>
+          `<li data-title="${escapeHtml(s.title)}" class="${i === 0 ? 'active' : ''}">${escapeHtml(
+            s.title
+          )}</li>`
+      )
       .join('');
+    box.hidden = false;
+  }
+
+  function bindGuessSearch() {
+    const input = $('guessInput');
+    const box = $('guessResults');
+    if (!input || !box) return;
+
+    input.addEventListener('input', () => {
+      renderGuessResults(input.value, { open: true });
+    });
+    input.addEventListener('focus', () => {
+      renderGuessResults(input.value, { open: true });
+    });
+    input.addEventListener('keydown', (e) => {
+      const items = [...box.querySelectorAll('li[data-title]')];
+      if (!items.length) return;
+      const idx = items.findIndex((el) => el.classList.contains('active'));
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = items[(idx + 1) % items.length];
+        items.forEach((el) => el.classList.remove('active'));
+        next.classList.add('active');
+        next.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const next = items[(idx - 1 + items.length) % items.length];
+        items.forEach((el) => el.classList.remove('active'));
+        next.classList.add('active');
+        next.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter') {
+        const active = items.find((el) => el.classList.contains('active'));
+        if (active && box.hidden === false) {
+          e.preventDefault();
+          input.value = active.dataset.title || active.textContent;
+          renderGuessResults('', { open: false });
+        }
+      } else if (e.key === 'Escape') {
+        renderGuessResults('', { open: false });
+      }
+    });
+
+    box.addEventListener('mousedown', (e) => {
+      const li = e.target.closest('li[data-title]');
+      if (!li) return;
+      e.preventDefault();
+      input.value = li.dataset.title || li.textContent;
+      renderGuessResults('', { open: false });
+      input.focus();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (e.target === input || box.contains(e.target)) return;
+      renderGuessResults('', { open: false });
+    });
   }
 
   function renderPlayers(listEl, withReady) {
@@ -333,9 +427,11 @@
     $('btnSolo').hidden = true;
   }
 
-  loadCatalog().catch((err) => {
-    $('catalogMeta').textContent = `Katalog-Fehler: ${err.message}`;
-  });
+  loadCatalog()
+    .then(() => bindGuessSearch())
+    .catch((err) => {
+      $('catalogMeta').textContent = `Katalog-Fehler: ${err.message}`;
+    });
 
   if (partyId) joinPartyFlow();
   else show('home');
