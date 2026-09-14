@@ -81,10 +81,17 @@
     const data = await res.json();
     catalog = data.songs || [];
     stages = data.stages || stages;
-    const r2on = data.r2 && data.r2.enabled;
-    $('catalogMeta').textContent =
-      `${catalog.length} Titel · ${data.playableCount || 0} spielbar` +
-      (r2on ? ' · R2 an' : ' · R2 aus (keine Clips vom Bucket)');
+    const ping = data.r2 && data.r2.ping;
+    const r2on = ping ? !!ping.ok : !!(data.r2 && data.r2.enabled);
+    let meta = `${catalog.length} Titel · ${data.playableCount || 0} spielbar`;
+    if (ping && !ping.ok) {
+      meta += ` · R2-Fehler: ${ping.error || 'Bucket nicht erreichbar'}`;
+    } else if (r2on) {
+      meta += ' · R2 an';
+    } else {
+      meta += ' · R2 aus (keine Clips vom Bucket)';
+    }
+    $('catalogMeta').textContent = meta;
   }
 
   function filterSongs(query) {
@@ -246,9 +253,16 @@
         $('btnPlay').classList.remove('playing');
       }, Math.max(80, dur * 1000 + 40));
     };
-    audio.addEventListener('error', () => {
+    audio.addEventListener('error', async () => {
       const hint = $('playCaption');
-      if (hint) hint.textContent = 'Clip konnte nicht geladen werden (R2/Audio).';
+      if (!hint) return;
+      try {
+        const r = await fetch(url);
+        const j = await r.json().catch(() => ({}));
+        hint.textContent = j.error || `Clip-Fehler HTTP ${r.status}`;
+      } catch {
+        hint.textContent = 'Clip konnte nicht geladen werden (R2/Audio).';
+      }
     });
     if (audio.readyState >= 2) start();
     else audio.addEventListener('canplay', start, { once: true });

@@ -77,13 +77,13 @@ function detectLocalAudio(song) {
   return null;
 }
 
-async function enrichAudioFlags(songs) {
+async function enrichAudioFlags(songs, { r2Reachable = false } = {}) {
   const out = [];
   for (const song of songs) {
     const local = detectLocalAudio(song);
     // Never trust hasAudio from JSON alone — without R2/local file the clip cannot play.
     let hasAudio = !!local;
-    if (!hasAudio && r2.isEnabled()) {
+    if (!hasAudio && r2.isEnabled() && r2Reachable) {
       if (song.hasAudio) {
         hasAudio = true; // came from R2 listing
       } else if (song.audioKey) {
@@ -144,15 +144,20 @@ async function loadCatalog({ force = false } = {}) {
 
   let songs = [];
   let source = 'empty';
+  let r2Error = null;
+  let r2Reachable = false;
 
   try {
     const fromR2 = await buildFromR2();
     if (fromR2.length) {
       songs = fromR2;
       source = 'r2-audio';
+      r2Reachable = true;
+    } else if (r2.isEnabled()) {
+      r2Reachable = true; // list worked, just empty
     }
-  } catch {
-    /* ignore */
+  } catch (err) {
+    r2Error = err?.message || String(err);
   }
 
   if (!songs.length) {
@@ -163,7 +168,7 @@ async function loadCatalog({ force = false } = {}) {
     }
   }
 
-  if (!songs.length && r2.isEnabled()) {
+  if (!songs.length && r2.isEnabled() && r2Reachable) {
     try {
       const obj = await r2.getObjectBuffer('catalog/songs.json');
       if (obj?.buffer) {
@@ -171,8 +176,8 @@ async function loadCatalog({ force = false } = {}) {
         songs = Array.isArray(parsed) ? parsed : parsed.songs || [];
         if (songs.length) source = 'r2-catalog';
       }
-    } catch {
-      /* ignore */
+    } catch (err) {
+      r2Error = r2Error || err?.message || String(err);
     }
   }
 
@@ -183,9 +188,19 @@ async function loadCatalog({ force = false } = {}) {
   }
 
   songs = applyOverrides(songs.map(normalizeSong).filter(Boolean));
-  songs = await enrichAudioFlags(songs);
-  cache = { loadedAt: now, songs, source };
+  // If R2 keys are set but bucket is wrong, do NOT mark JSON songs as playable.
+  songs = await enrichAudioFlags(songs, { r2Reachable });
+  cache = { loadedAt: now, songs, source, r2Error, r2Reachable };
   return songs;
+}
+
+function catalogMeta() {
+  return {
+    source: cache.source || 'none',
+    r2Reachable: !!cache.r2Reachable,
+    r2Error: cache.r2Error || null,
+    bucket: r2.bucket(),
+  };
 }
 
 function publicSong(song) {
@@ -334,6 +349,7 @@ module.exports = {
   LOCAL_AUDIO_DIR,
   slugify,
   loadCatalog,
+  catalogMeta,
   listPublicSongs,
   listPlayableSongs,
   getSong,

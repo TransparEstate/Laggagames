@@ -115,6 +115,32 @@ async function putJson(key, data) {
   );
 }
 
+/**
+ * Live check: credentials alone are not enough — bucket must exist & be reachable.
+ */
+async function ping() {
+  if (!isEnabled()) {
+    return { ok: false, error: 'R2-Keys fehlen (MJ_R2_ACCOUNT_ID / ACCESS_KEY / SECRET / BUCKET).' };
+  }
+  try {
+    const objects = await listPrefix('audio/');
+    return {
+      ok: true,
+      bucket: bucket(),
+      audioObjects: objects.filter((o) => o.key && !o.key.endsWith('/')).length,
+    };
+  } catch (err) {
+    const msg = err?.message || String(err);
+    return {
+      ok: false,
+      bucket: bucket(),
+      error: msg.includes('specified bucket does not exist')
+        ? `Bucket existiert nicht: "${bucket()}" — in Railway MJ_R2_BUCKET=lagga-mj-headle und Account-ID prüfen.`
+        : msg,
+    };
+  }
+}
+
 module.exports = {
   isEnabled,
   bucket,
@@ -124,6 +150,7 @@ module.exports = {
   headObject,
   listPrefix,
   putJson,
+  ping,
   status() {
     return {
       enabled: isEnabled(),

@@ -69,11 +69,12 @@ function broadcastRoom(room) {
   }
 }
 
-app.get('/health', (_req, res) => {
+app.get('/health', async (_req, res) => {
+  const ping = await r2.ping();
   res.json({
     ok: true,
     game: 'mj-headle',
-    r2: r2.status(),
+    r2: { ...r2.status(), ping },
     stages: game.CLIP_STAGES,
     points: game.STAGE_POINTS,
   });
@@ -82,12 +83,15 @@ app.get('/health', (_req, res) => {
 app.get('/api/songs', async (_req, res) => {
   try {
     const songs = await catalog.listPublicSongs();
+    const ping = await r2.ping();
+    const meta = catalog.catalogMeta();
     res.json({
       songs,
       playableCount: songs.filter((s) => s.playable).length,
       stages: game.CLIP_STAGES,
       points: game.STAGE_POINTS,
-      r2: r2.status(),
+      r2: { ...r2.status(), ping },
+      catalog: meta,
     });
   } catch (err) {
     res.status(500).json({ error: err.message || 'Katalogfehler' });
@@ -132,7 +136,11 @@ app.get('/api/clip/:id', async (req, res) => {
     res.setHeader('X-Audio-Source', String(clip.source || ''));
     res.send(clip.buffer);
   } catch (err) {
-    res.status(500).json({ error: err.message || 'Clip-Fehler' });
+    const msg = err.message || 'Clip-Fehler';
+    const hint = msg.includes('bucket does not exist')
+      ? ` Bucket "${r2.bucket()}" fehlt — Railway: MJ_R2_BUCKET=lagga-mj-headle`
+      : '';
+    res.status(500).json({ error: msg + hint, bucket: r2.bucket() });
   }
 });
 
