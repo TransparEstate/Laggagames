@@ -1,797 +1,1196 @@
 {
+  "generatedAt": "2026-09-14T19:52:21.834Z",
+  "source": "r2-audio",
   "songs": [
     {
-      "id": "thriller-fixture",
-      "title": "Thriller Fixture",
+      "id": "i-like-the-way-you-love-me",
+      "title": "(I Like) The Way You Love Me",
       "artist": "Michael Jackson",
-      "audioKey": "audio/thriller-fixture.wav",
-      "cueStartSec": 0.99,
+      "audioKey": "audio/(I Like) The Way You Love Me.mp3",
+      "cueStartSec": 0,
       "cueQuality": "ok",
-      "cueReason": "fixture-onset",
-      "localFile": "fixtures/silence-then-hit.wav"
-    },
-    {
-      "id": "beat-it",
-      "title": "Beat It",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/beat-it.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "billie-jean",
-      "title": "Billie Jean",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/billie-jean.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "you-rock-my-world",
-      "title": "You Rock My World",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/you-rock-my-world.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "don-t-stop-til-you-get-enough",
-      "title": "Don't Stop 'Til You Get Enough",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/don-t-stop-til-you-get-enough.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "human-nature",
-      "title": "Human Nature",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/human-nature.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "remember-the-time",
-      "title": "Remember the Time",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/remember-the-time.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "dirty-diana",
-      "title": "Dirty Diana",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/dirty-diana.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "chicago",
-      "title": "Chicago",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/chicago.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "the-way-you-make-me-feel",
-      "title": "The Way You Make Me Feel",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/the-way-you-make-me-feel.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "rock-with-you",
-      "title": "Rock with You",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/rock-with-you.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "black-or-white",
-      "title": "Black or White",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/black-or-white.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "smooth-criminal",
-      "title": "Smooth Criminal",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/smooth-criminal.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "bad",
-      "title": "Bad",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/bad.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "earth-song",
-      "title": "Earth Song",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/earth-song.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "man-in-the-mirror",
-      "title": "Man in the Mirror",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/man-in-the-mirror.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "thriller",
-      "title": "Thriller",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/thriller.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "you-are-not-alone",
-      "title": "You Are Not Alone",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/you-are-not-alone.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "heaven-can-wait",
-      "title": "Heaven Can Wait",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/heaven-can-wait.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "they-don-t-care-about-us",
-      "title": "They Don't Care About Us",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/they-don-t-care-about-us.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "heal-the-world",
-      "title": "Heal the World",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/heal-the-world.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "p-y-t-pretty-young-thing",
-      "title": "P.Y.T. (Pretty Young Thing)",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/p-y-t-pretty-young-thing.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "wanna-be-startin-somethin",
-      "title": "Wanna Be Startin' Somethin'",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/wanna-be-startin-somethin.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "will-you-be-there",
-      "title": "Will You Be There",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/will-you-be-there.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "in-the-closet",
-      "title": "In the Closet",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/in-the-closet.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "leave-me-alone",
-      "title": "Leave Me Alone",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/leave-me-alone.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "scream",
-      "title": "Scream",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/scream.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "who-is-it",
-      "title": "Who Is It",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/who-is-it.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "love-never-felt-so-good",
-      "title": "Love Never Felt So Good",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/love-never-felt-so-good.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "blood-on-the-dance-floor",
-      "title": "Blood on the Dance Floor",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/blood-on-the-dance-floor.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "ghosts",
-      "title": "Ghosts",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/ghosts.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "liberian-girl",
-      "title": "Liberian Girl",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/liberian-girl.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "dangerous",
-      "title": "Dangerous",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/dangerous.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "give-in-to-me",
-      "title": "Give In to Me",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/give-in-to-me.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "off-the-wall",
-      "title": "Off the Wall",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/off-the-wall.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "the-girl-is-mine",
-      "title": "The Girl Is Mine",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/the-girl-is-mine.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "jam",
-      "title": "Jam",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/jam.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "workin-day-and-night",
-      "title": "Workin' Day and Night",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/workin-day-and-night.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "baby-be-mine",
-      "title": "Baby Be Mine",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/baby-be-mine.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "stranger-in-moscow",
-      "title": "Stranger in Moscow",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/stranger-in-moscow.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "the-lady-in-my-life",
-      "title": "The Lady in My Life",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/the-lady-in-my-life.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "hold-my-hand",
-      "title": "Hold My Hand",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/hold-my-hand.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "i-just-can-t-stop-loving-you",
-      "title": "I Just Can't Stop Loving You",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/i-just-can-t-stop-loving-you.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "she-s-out-of-my-life",
-      "title": "She's Out of My Life",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/she-s-out-of-my-life.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "butterflies",
-      "title": "Butterflies",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/butterflies.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "say-say-say",
-      "title": "Say Say Say",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/say-say-say.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "speed-demon",
-      "title": "Speed Demon",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/speed-demon.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "another-part-of-me",
-      "title": "Another Part of Me",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/another-part-of-me.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "childhood",
-      "title": "Childhood",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/childhood.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "unbreakable",
-      "title": "Unbreakable",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/unbreakable.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "i-can-t-help-it",
-      "title": "I Can't Help It",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/i-can-t-help-it.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "break-of-dawn",
-      "title": "Break of Dawn",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/break-of-dawn.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "a-place-with-no-name",
-      "title": "A Place With No Name",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/a-place-with-no-name.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "get-on-the-floor",
-      "title": "Get on the Floor",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/get-on-the-floor.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
     },
     {
       "id": "2000-watts",
       "title": "2000 Watts",
       "artist": "Michael Jackson",
-      "audioKey": "audio/2000-watts.mp3",
+      "audioKey": "audio/2000 Watts.mp3",
       "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
     },
     {
-      "id": "whatever-happens",
-      "title": "Whatever Happens",
+      "id": "a-place-with-no-name",
+      "title": "A Place With No Name",
       "artist": "Michael Jackson",
-      "audioKey": "audio/whatever-happens.mp3",
+      "audioKey": "audio/A Place With No Name.mp3",
       "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "this-is-it",
-      "title": "This Is It",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/this-is-it.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "why-you-wanna-trip-on-me",
-      "title": "Why You Wanna Trip on Me",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/why-you-wanna-trip-on-me.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "slave-to-the-rhythm",
-      "title": "Slave to the Rhythm",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/slave-to-the-rhythm.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "just-good-friends",
-      "title": "Just Good Friends",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/just-good-friends.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "cry",
-      "title": "Cry",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/cry.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "girlfriend",
-      "title": "Girlfriend",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/girlfriend.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "gone-too-soon",
-      "title": "Gone Too Soon",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/gone-too-soon.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "come-together",
-      "title": "Come Together",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/come-together.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "loving-you",
-      "title": "Loving You",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/loving-you.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "one-more-chance",
-      "title": "One More Chance",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/one-more-chance.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "tabloid-junkie",
-      "title": "Tabloid Junkie",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/tabloid-junkie.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "rockin-robin",
-      "title": "Rockin' Robin",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/rockin-robin.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "speechless",
-      "title": "Speechless",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/speechless.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "music-and-me",
-      "title": "Music And Me",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/music-and-me.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "she-drives-me-wild",
-      "title": "She Drives Me Wild",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/she-drives-me-wild.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "i-wanna-be-where-you-are",
-      "title": "I Wanna Be Where You Are",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/i-wanna-be-where-you-are.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "heartbreaker",
-      "title": "Heartbreaker",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/heartbreaker.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "burn-this-disco-out",
-      "title": "Burn This Disco Out",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/burn-this-disco-out.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "it-s-the-falling-in-love",
-      "title": "It's the Falling in Love",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/it-s-the-falling-in-love.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "invincible",
-      "title": "Invincible",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/invincible.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "can-t-let-her-get-away",
-      "title": "Can't Let Her Get Away",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/can-t-let-her-get-away.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "money",
-      "title": "Money",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/money.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "behind-the-mask",
-      "title": "Behind the Mask",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/behind-the-mask.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
     },
     {
       "id": "ain-t-no-sunshine",
       "title": "Ain't No Sunshine",
       "artist": "Michael Jackson",
-      "audioKey": "audio/ain-t-no-sunshine.mp3",
+      "audioKey": "audio/Ain't No Sunshine.mp3",
       "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
-    },
-    {
-      "id": "streetwalker",
-      "title": "Streetwalker",
-      "artist": "Michael Jackson",
-      "audioKey": "audio/streetwalker.mp3",
-      "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
     },
     {
       "id": "al-capone",
       "title": "Al Capone",
       "artist": "Michael Jackson",
-      "audioKey": "audio/al-capone.mp3",
+      "audioKey": "audio/Al Capone.mp3",
       "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
     },
     {
-      "id": "hollywood-tonight",
-      "title": "Hollywood Tonight",
+      "id": "another-part-of-me",
+      "title": "Another Part of Me",
       "artist": "Michael Jackson",
-      "audioKey": "audio/hollywood-tonight.mp3",
+      "audioKey": "audio/Another Part of Me (2012 Remaster).mp3",
       "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
     },
     {
-      "id": "you-are-my-life",
-      "title": "You Are My Life",
+      "id": "baby-be-mine",
+      "title": "Baby Be Mine",
       "artist": "Michael Jackson",
-      "audioKey": "audio/you-are-my-life.mp3",
+      "audioKey": "audio/Baby Be Mine.mp3",
       "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
     },
     {
-      "id": "xscape",
-      "title": "Xscape",
+      "id": "bad",
+      "title": "Bad",
       "artist": "Michael Jackson",
-      "audioKey": "audio/xscape.mp3",
+      "audioKey": "audio/Bad (2012 Remaster).mp3",
       "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
     },
     {
-      "id": "smile",
-      "title": "Smile",
+      "id": "beat-it",
+      "title": "Beat It",
       "artist": "Michael Jackson",
-      "audioKey": "audio/smile.mp3",
+      "audioKey": "audio/Beat It.mp3",
       "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "behind-the-mask",
+      "title": "Behind the Mask",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Behind the Mask.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "ben",
+      "title": "Ben",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Ben (Single Version).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "best-of-joy",
+      "title": "Best of Joy",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Best of Joy.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "billie-jean",
+      "title": "Billie Jean",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Billie Jean.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "black-or-white",
+      "title": "Black or White",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Black or White.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "blood-on-the-dance-floor",
+      "title": "Blood on the Dance Floor",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Blood on the Dance Floor.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "blue-gangsta",
+      "title": "Blue Gangsta",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Blue Gangsta (Original Version).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "break-of-dawn",
+      "title": "Break of Dawn",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Break of Dawn.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "burn-this-disco-out",
+      "title": "Burn This Disco Out",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Burn This Disco Out.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "butterflies",
+      "title": "Butterflies",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Butterflies.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "can-t-let-her-get-away",
+      "title": "Can't Let Her Get Away",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Can't Let Her Get Away.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "chicago",
+      "title": "Chicago",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Chicago.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "childhood-theme-from-free-willy-2",
+      "title": "Childhood (Theme from ＂Free Willy 2＂)",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Childhood (Theme from ＂Free Willy 2＂).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "come-together",
+      "title": "Come Together",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Come Together.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "cry",
+      "title": "Cry",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Cry.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
     },
     {
       "id": "d-s",
       "title": "D.S.",
       "artist": "Michael Jackson",
-      "audioKey": "audio/d-s.mp3",
+      "audioKey": "audio/D.S..mp3",
       "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "dangerous",
+      "title": "Dangerous",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Dangerous (Immortal Version).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "dirty-diana",
+      "title": "Dirty Diana",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Dirty Diana (2012 Remaster).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "do-you-know-where-your-children-are",
+      "title": "Do You Know Where Your Children Are",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Do You Know Where Your Children Are.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "don-t-stop-til-you-get-enough",
+      "title": "Don't Stop 'Til You Get Enough",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Don't Stop 'Til You Get Enough.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "don-t-walk-away",
+      "title": "Don't Walk Away",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Don't Walk Away.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "earth-song",
+      "title": "Earth Song",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Earth Song (Remastered Version).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "fly-away",
+      "title": "Fly Away",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Fly Away.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "get-on-the-floor",
+      "title": "Get on the Floor",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Get on the Floor.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "ghosts",
+      "title": "Ghosts",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Ghosts.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "girlfriend",
+      "title": "Girlfriend",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Girlfriend.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "give-in-to-me",
+      "title": "Give In to Me",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Give In to Me.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "gone-too-soon",
+      "title": "Gone Too Soon",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Gone Too Soon.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "got-the-hots",
+      "title": "Got the Hots",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Got the Hots (Demo).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "got-to-be-there",
+      "title": "Got To Be There",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Got To Be There.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "happy-love-theme-from-lady-sings-the-blues",
+      "title": "Happy (Love Theme From ＂Lady Sings The Blues＂)",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Happy (Love Theme From ＂Lady Sings The Blues＂).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "heal-the-world",
+      "title": "Heal the World",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Heal the World.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "heartbreaker",
+      "title": "Heartbreaker",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Heartbreaker.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "heaven-can-wait",
+      "title": "Heaven Can Wait",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Heaven Can Wait.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
     },
     {
       "id": "history",
       "title": "History",
       "artist": "Michael Jackson",
-      "audioKey": "audio/history.mp3",
+      "audioKey": "audio/History.mp3",
       "cueStartSec": 0,
-      "cueQuality": "missing",
-      "cueReason": "audio-pending"
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "hold-my-hand",
+      "title": "Hold My Hand",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Hold My Hand.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "hollywood-tonight",
+      "title": "Hollywood Tonight",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Hollywood Tonight.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "human-nature",
+      "title": "Human Nature",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Human Nature.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "i-can-t-help-it",
+      "title": "I Can't Help It",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/I Can't Help It.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "i-just-can-t-stop-loving-you",
+      "title": "I Just Can't Stop Loving You",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/I Just Can't Stop Loving You (2012 Remaster).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "i-wanna-be-where-you-are",
+      "title": "I Wanna Be Where You Are",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/I Wanna Be Where You Are.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "i-m-so-blue",
+      "title": "I'm So Blue",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/I'm So Blue.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "in-the-closet",
+      "title": "In the Closet",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/In the Closet.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "invincible",
+      "title": "Invincible",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Invincible.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "is-it-scary",
+      "title": "Is It Scary",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Is It Scary.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "it-s-the-falling-in-love",
+      "title": "It's the Falling in Love",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/It's the Falling in Love.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "jam",
+      "title": "Jam",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Jam.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "just-good-friends",
+      "title": "Just Good Friends",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Just Good Friends (2012 Remaster).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "keep-the-faith",
+      "title": "Keep the Faith",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Keep the Faith.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "leave-me-alone",
+      "title": "Leave Me Alone",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Leave Me Alone (2012 Remaster).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "liberian-girl",
+      "title": "Liberian Girl",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Liberian Girl (2012 Remastered Version).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "little-susie-pie-jesu",
+      "title": "Little Susie ⧸ Pie Jesu",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Little Susie ⧸ Pie Jesu.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "love-never-felt-so-good",
+      "title": "Love Never Felt So Good",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Love Never Felt So Good.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "loving-you",
+      "title": "Loving You",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Loving You (Original Version).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "man-in-the-mirror",
+      "title": "Man in the Mirror",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Man in the Mirror (2012 Remaster).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "money",
+      "title": "Money",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Money.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "morphine",
+      "title": "Morphine",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Morphine.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "music-and-me",
+      "title": "Music And Me",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Music And Me.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "off-the-wall",
+      "title": "Off the Wall",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Off the Wall.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "one-day-in-your-life",
+      "title": "One Day In Your Life",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/One Day In Your Life.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "one-more-chance",
+      "title": "One More Chance",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/One More Chance.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "p-y-t-pretty-young-thing",
+      "title": "P.Y.T. (Pretty Young Thing)",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/P.Y.T. (Pretty Young Thing).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "planet-earth-earth-song",
+      "title": "Planet Earth ⧸ Earth Song",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Planet Earth ⧸ Earth Song (Immortal Version).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "price-of-fame",
+      "title": "Price of Fame",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Price of Fame.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "privacy",
+      "title": "Privacy",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Privacy.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "remember-the-time",
+      "title": "Remember the Time",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Remember the Time.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "rock-with-you",
+      "title": "Rock with You",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Rock with You (Single Version).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "rockin-robin",
+      "title": "Rockin' Robin",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Rockin' Robin.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "say-say-say",
+      "title": "Say Say Say",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Say Say Say (Remastered 2015).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "scream",
+      "title": "Scream",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Scream.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "shake-your-body",
+      "title": "Shake Your Body",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Shake Your Body (Down to the Ground) (Remastered Single Version).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "she-drives-me-wild",
+      "title": "She Drives Me Wild",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/She Drives Me Wild.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "she-s-out-of-my-life",
+      "title": "She's Out of My Life",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/She's Out of My Life.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "she-s-trouble",
+      "title": "She's Trouble",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/She's Trouble (Demo).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "slave-to-the-rhythm",
+      "title": "Slave to the Rhythm",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Slave to the Rhythm.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "smile",
+      "title": "Smile",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Smile.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "smooth-criminal",
+      "title": "Smooth Criminal",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Smooth Criminal (Radio Edit).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "speechless",
+      "title": "Speechless",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Speechless.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "speed-demon",
+      "title": "Speed Demon",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Speed Demon (2012 Remaster).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "starlight",
+      "title": "Starlight",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Starlight.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "stranger-in-moscow",
+      "title": "Stranger in Moscow",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Stranger in Moscow.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "streetwalker",
+      "title": "Streetwalker",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Streetwalker.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "sunset-driver",
+      "title": "Sunset Driver",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Sunset Driver (Demo).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "superfly-sister",
+      "title": "Superfly Sister",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Superfly Sister.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "tabloid-junkie",
+      "title": "Tabloid Junkie",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Tabloid Junkie.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "the-girl-is-mine",
+      "title": "The Girl Is Mine",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/The Girl Is Mine.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "the-lady-in-my-life",
+      "title": "The Lady in My Life",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/The Lady in My Life.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "the-lost-children",
+      "title": "The Lost Children",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/The Lost Children.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "the-way-you-make-me-feel",
+      "title": "The Way You Make Me Feel",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/The Way You Make Me Feel (2012 Remaster).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "they-don-t-care-about-us",
+      "title": "They Don't Care About Us",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/They Don't Care About Us (Remastered Version).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "this-is-it",
+      "title": "This Is It",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/This Is It.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "this-place-hotel",
+      "title": "This Place Hotel",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/This Place Hotel (Immortal Version).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "this-time-around",
+      "title": "This Time Around",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/This Time Around.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "threatened",
+      "title": "Threatened",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Threatened.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "thriller-7-special-edit",
+      "title": "Thriller 7＂ (Special Edit)",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Thriller 7＂ (Special Edit).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "todo-mi-amor-eres-tu-i-just-can-t-stop-loving-you",
+      "title": "Todo Mi Amor Eres Tu (I Just Can't Stop Loving You)",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Todo Mi Amor Eres Tu (I Just Can't Stop Loving You).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "unbreakable",
+      "title": "Unbreakable",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Unbreakable.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "wanna-be-startin-somethin",
+      "title": "Wanna Be Startin' Somethin'",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Wanna Be Startin' Somethin'.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "we-re-almost-there",
+      "title": "We're Almost There",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/We're Almost There.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "whatever-happens",
+      "title": "Whatever Happens",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Whatever Happens.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "whatzupwitu",
+      "title": "Whatzupwitu",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Whatzupwitu.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "who-do-you-know",
+      "title": "Who Do You Know",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Who Do You Know (Demo).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "who-is-it",
+      "title": "Who Is It",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Who Is It.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "why-you-wanna-trip-on-me",
+      "title": "Why You Wanna Trip on Me",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Why You Wanna Trip on Me.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "will-you-be-there",
+      "title": "Will You Be There",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Will You Be There.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "workin-day-and-night",
+      "title": "Workin' Day and Night",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Workin' Day and Night.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "xscape",
+      "title": "Xscape",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/Xscape.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "you-are-my-life",
+      "title": "You Are My Life",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/You Are My Life.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "you-are-not-alone",
+      "title": "You Are Not Alone",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/You Are Not Alone.mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
+    },
+    {
+      "id": "you-rock-my-world",
+      "title": "You Rock My World",
+      "artist": "Michael Jackson",
+      "audioKey": "audio/You Rock My World (Radio Edit).mp3",
+      "cueStartSec": 0,
+      "cueQuality": "ok",
+      "cueReason": "r2-upload-default",
+      "hasAudio": true
     }
   ]
 }
