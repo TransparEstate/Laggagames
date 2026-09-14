@@ -5,13 +5,13 @@ alwaysApply: true
 
 # Laggagames Agent Rules
 
-- Produkt: multimodale Gamesite, eigene Spiele, Solo und synchronisierter Multiplayer (mit/gegen).
-- Stack beibehalten: Node/Express/Socket.io + statisches `public/`-Frontend. Kein Rewrite, kein neues Framework ohne Auftrag.
+- Produkt: multimodale Gamesite, eigene Spiele unter `games/<slug>/`, Hub + isolierte Spiele.
 - **Zentrales Lobby-/Party-System:** Rooms, Join-Codes, Host, Ready/Start, Socket-Sync. Jedes neue Spiel muss daran angebunden werden — kein eigenes Lobby/Party/Matchmaking pro Spiel.
+- Wenn ein Spiel genannt ist: **nur** `games/<slug>/` bearbeiten; Hub/andere Spiele nicht anfassen, außer ausdrücklich verlangt oder für Shared-Lobby unvermeidbar.
+- Neues Spiel: von `games/_template/` kopieren, `game.json` setzen, Lobby/Party mitanbinden.
+- Stack beibehalten: Node/Express/Socket.io + Vanilla-Frontend. Kein Rewrite ohne Auftrag.
 - Nicht anlügen: Unsicherheit, Fehler und ungetestete Teile klar benennen.
-- Code-Exploration minimal: nur Dateien des aktuellen Spiels und bei Bedarf Lobby/Party/Multiplayer/Sync/Rooms. Nicht die ganze Repo-Struktur durchlesen.
+- Code-Exploration minimal: aktuelles Spiel + bei Bedarf Lobby/Party/Sync. Nicht die ganze Repo-Struktur durchlesen.
 - Kein Browser-E2E, keine Screenshots, kein Computer-Use, außer der Nutzer verlangt es ausdrücklich. Verifikation über Terminal.
-- Nicht-Ziele: Auth/Payments/Store, IP-Packs committen, große Engine-Abstraktion vor dem zweiten Spiel, Secrets/Prod-Deploys, parallele Lobby-Systeme.
-- Änderungen klein und erweiternd halten; bestehende Room-/Lobby-/Sync-Pfade nutzen statt Parallelwelten.
-- Keine Pushs und keine Pull Requests von sich aus.
-- Keine kryptischen Branch-Namen (keine Hash-/UUID-/cursor-agent-Namen). Neue Branches nur bei Bedarf und nur sinnvoll benannt, z. B. `v3.1-Update-Michael-Jackson-Spiel` (Version + klarer Inhalt).
+- Nicht-Ziele: Auth/Payments/Store, IP-Packs committen, parallele Lobby-Systeme, Secrets/Prod-Deploys.
+- Keine Pushs/PRs von sich aus. Branches nur sinnvoll benannt, z. B. `v3.1-Update-Michael-Jackson-Spiel`.
