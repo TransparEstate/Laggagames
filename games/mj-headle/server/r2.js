@@ -84,7 +84,7 @@ async function headObject(key) {
 async function listPrefix(prefix) {
   const c = getClient();
   if (!c) return [];
-  const keys = [];
+  const objects = [];
   let token;
   do {
     const out = await c.send(
@@ -95,11 +95,11 @@ async function listPrefix(prefix) {
       })
     );
     for (const obj of out.Contents || []) {
-      if (obj.Key) keys.push(obj.Key);
+      if (obj.Key) objects.push({ key: obj.Key, size: obj.Size || 0 });
     }
     token = out.IsTruncated ? out.NextContinuationToken : undefined;
   } while (token);
-  return keys;
+  return objects;
 }
 
 async function putJson(key, data) {

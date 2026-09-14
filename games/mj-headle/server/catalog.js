@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const r2 = require('./r2');
 const { isPlayableCue } = require('./cueDetect');
+const { slugify, songsFromAudioObjects } = require('./titleClean');
 
 const ROOT = path.join(__dirname, '..');
 const LOCAL_CATALOG = path.join(ROOT, 'catalog', 'songs.json');
@@ -13,17 +14,8 @@ const AUDIO_EXTS = ['.mp3', '.m4a', '.ogg', '.wav', '.webm'];
 let cache = {
   loadedAt: 0,
   songs: [],
+  source: 'none',
 };
-
-function slugify(title) {
-  return String(title || '')
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
-}
 
 function loadJsonSafe(filePath, fallback) {
   try {
@@ -38,16 +30,14 @@ function normalizeSong(raw) {
   const id = String(raw.id || slugify(raw.title) || '').trim();
   if (!id) return null;
   const audioKey = raw.audioKey || `audio/${id}.mp3`;
-  const cueQuality = raw.cueQuality || 'missing';
-  const cueStartSec = Number(raw.cueStartSec ?? 0) || 0;
   return {
     id,
     title: String(raw.title || id),
     artist: String(raw.artist || 'Michael Jackson'),
     audioKey,
     localFile: raw.localFile || null,
-    cueStartSec,
-    cueQuality,
+    cueStartSec: Number(raw.cueStartSec ?? 0) || 0,
+    cueQuality: raw.cueQuality || 'missing',
     cueReason: raw.cueReason || '',
     hasAudio: !!raw.hasAudio,
   };
@@ -78,6 +68,10 @@ function detectLocalAudio(song) {
       : path.join(ROOT, song.localFile);
     if (fs.existsSync(p)) return p;
   }
+  if (song.audioKey) {
+    const p = path.join(ROOT, 'data', song.audioKey);
+    if (fs.existsSync(p)) return p;
+  }
   return null;
 }
 
@@ -85,14 +79,41 @@ async function enrichAudioFlags(songs) {
   const out = [];
   for (const song of songs) {
     const local = detectLocalAudio(song);
-    let hasAudio = !!local;
-    if (!hasAudio && r2.isEnabled()) {
+    let hasAudio = !!local || !!song.hasAudio;
+    if (!hasAudio && r2.isEnabled() && song.audioKey) {
       const head = await r2.headObject(song.audioKey);
       hasAudio = !!head;
     }
     out.push({ ...song, hasAudio, localPath: local || null });
   }
   return out;
+}
+
+async function buildFromR2() {
+  if (!r2.isEnabled()) return [];
+  const objects = await r2.listPrefix('audio/');
+  if (!objects.length) return [];
+  return songsFromAudioObjects(objects);
+}
+
+function buildFromLocalAudioDir() {
+  if (!fs.existsSync(LOCAL_AUDIO_DIR)) return [];
+  const files = fs.readdirSync(LOCAL_AUDIO_DIR);
+  const objects = files.map((name) => {
+    const full = path.join(LOCAL_AUDIO_DIR, name);
+    let size = 0;
+    try {
+      size = fs.statSync(full).size;
+    } catch {
+      size = 0;
+    }
+    return { key: `audio/${name}`, size };
+  });
+  return songsFromAudioObjects(objects).map((s) => ({
+    ...s,
+    localFile: path.join('data', s.audioKey),
+    hasAudio: true,
+  }));
 }
 
 async function loadCatalog({ force = false } = {}) {
@@ -102,26 +123,48 @@ async function loadCatalog({ force = false } = {}) {
   }
 
   let songs = [];
-  if (r2.isEnabled()) {
+  let source = 'empty';
+
+  try {
+    const fromR2 = await buildFromR2();
+    if (fromR2.length) {
+      songs = fromR2;
+      source = 'r2-audio';
+    }
+  } catch {
+    /* ignore */
+  }
+
+  if (!songs.length) {
+    const localAudio = buildFromLocalAudioDir();
+    if (localAudio.length) {
+      songs = localAudio;
+      source = 'local-audio';
+    }
+  }
+
+  if (!songs.length && r2.isEnabled()) {
     try {
       const obj = await r2.getObjectBuffer('catalog/songs.json');
       if (obj?.buffer) {
         const parsed = JSON.parse(obj.buffer.toString('utf8'));
         songs = Array.isArray(parsed) ? parsed : parsed.songs || [];
+        if (songs.length) source = 'r2-catalog';
       }
     } catch {
-      /* fall through to local */
+      /* ignore */
     }
   }
 
   if (!songs.length) {
     const local = loadJsonSafe(LOCAL_CATALOG, { songs: [] });
     songs = Array.isArray(local) ? local : local.songs || [];
+    if (songs.length) source = 'local-catalog';
   }
 
   songs = applyOverrides(songs.map(normalizeSong).filter(Boolean));
   songs = await enrichAudioFlags(songs);
-  cache = { loadedAt: now, songs };
+  cache = { loadedAt: now, songs, source };
   return songs;
 }
 
@@ -169,7 +212,7 @@ async function resolveAudio(song) {
       source: 'local',
     };
   }
-  if (r2.isEnabled()) {
+  if (r2.isEnabled() && song.audioKey) {
     const obj = await r2.getObjectBuffer(song.audioKey);
     if (obj) return { ...obj, source: 'r2' };
   }
@@ -190,6 +233,17 @@ function saveCueOverride(id, { cueStartSec, cueQuality = 'manual', cueReason = '
   return overrides[id];
 }
 
+async function syncFromStorage() {
+  cache.loadedAt = 0;
+  const songs = await loadCatalog({ force: true });
+  return {
+    source: cache.source,
+    total: songs.length,
+    withAudio: songs.filter((s) => s.hasAudio).length,
+    playable: songs.filter((s) => s.hasAudio && isPlayableCue(s)).length,
+  };
+}
+
 module.exports = {
   LOCAL_CATALOG,
   LOCAL_AUDIO_DIR,
@@ -201,5 +255,6 @@ module.exports = {
   resolveAudio,
   publicSong,
   saveCueOverride,
+  syncFromStorage,
   isPlayableCue,
 };

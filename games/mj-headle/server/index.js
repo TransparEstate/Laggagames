@@ -87,9 +87,19 @@ app.get('/api/songs', async (_req, res) => {
       playableCount: songs.filter((s) => s.playable).length,
       stages: game.CLIP_STAGES,
       points: game.STAGE_POINTS,
+      r2: r2.status(),
     });
   } catch (err) {
     res.status(500).json({ error: err.message || 'Katalogfehler' });
+  }
+});
+
+app.post('/api/catalog/sync', async (_req, res) => {
+  try {
+    const summary = await catalog.syncFromStorage();
+    res.json({ ok: true, ...summary });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Sync fehlgeschlagen' });
   }
 });
 
