@@ -10,13 +10,17 @@ function env(name, fallback = '') {
   return (process.env[name] || fallback).trim();
 }
 
+/**
+ * MJ Headle uses ONLY MJ_R2_* vars.
+ * Plain R2_* belong to other apps (e.g. Choicer-Voicer) on the same Railway service
+ * and must never leak into this client.
+ */
 function accessKeyId() {
-  // Prefer MJ_R2_* only — do not silently pick Railway/AWS globals.
-  return env('MJ_R2_ACCESS_KEY_ID') || env('R2_ACCESS_KEY_ID');
+  return env('MJ_R2_ACCESS_KEY_ID');
 }
 
 function secretAccessKey() {
-  return env('MJ_R2_SECRET_ACCESS_KEY') || env('R2_SECRET_ACCESS_KEY');
+  return env('MJ_R2_SECRET_ACCESS_KEY');
 }
 
 function bucket() {
@@ -24,13 +28,11 @@ function bucket() {
 }
 
 function accountId() {
-  return env('MJ_R2_ACCOUNT_ID') || env('R2_ACCOUNT_ID');
+  return env('MJ_R2_ACCOUNT_ID');
 }
 
 function endpoint() {
-  // Never fall back to AWS_ENDPOINT_URL — Railway often sets that to S3 and
-  // breaks R2 with "bucket does not exist" / auth errors.
-  const custom = env('MJ_R2_ENDPOINT') || env('R2_ENDPOINT');
+  const custom = env('MJ_R2_ENDPOINT');
   if (custom) return custom.replace(/\/$/, '');
   const id = accountId();
   if (id) return `https://${id}.r2.cloudflarestorage.com`;
@@ -38,7 +40,7 @@ function endpoint() {
 }
 
 function region() {
-  return env('MJ_R2_REGION') || env('R2_REGION') || 'auto';
+  return env('MJ_R2_REGION') || 'auto';
 }
 
 function isEnabled() {
@@ -51,8 +53,7 @@ function getClient() {
   if (!isEnabled()) return null;
   if (client) return client;
   // R2 expects path-style URLs; virtual-hosted style is flaky across SDK versions.
-  const forcePathStyle =
-    env('MJ_R2_FORCE_PATH_STYLE') !== '0' && env('R2_FORCE_PATH_STYLE') !== '0';
+  const forcePathStyle = env('MJ_R2_FORCE_PATH_STYLE') !== '0';
   client = new S3Client({
     region: region(),
     endpoint: endpoint(),
@@ -66,7 +67,7 @@ function getClient() {
 }
 
 function publicBaseUrl() {
-  return env('MJ_R2_PUBLIC_BASE_URL') || env('R2_PUBLIC_BASE_URL');
+  return env('MJ_R2_PUBLIC_BASE_URL');
 }
 
 async function getObjectBuffer(key) {
@@ -144,8 +145,8 @@ async function ping() {
     let error = msg;
     if (/specified bucket does not exist/i.test(msg)) {
       error = `Bucket existiert nicht: "${bucket()}" — Railway: MJ_R2_BUCKET=lagga-mj-headle und MJ_R2_ACCOUNT_ID prüfen.`;
-    } else if (/access denied/i.test(msg)) {
-      error = `R2 Access Denied für Bucket "${bucket()}" — Account-ID / Keys / Bucket-Name in Railway prüfen (soll: lagga-mj-headle).`;
+    } else if (/access denied|access key id you provided does not exist/i.test(msg)) {
+      error = `R2 Auth fehlgeschlagen für Bucket "${bucket()}" — nur MJ_R2_* nutzen (nicht die R2_* von Choicer-Voicer).`;
     }
     return {
       ok: false,
@@ -159,6 +160,7 @@ module.exports = {
   isEnabled,
   bucket,
   endpoint,
+  accountId,
   publicBaseUrl,
   getObjectBuffer,
   headObject,
