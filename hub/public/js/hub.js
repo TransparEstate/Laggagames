@@ -12,7 +12,8 @@ async function loadGames() {
     grid.innerHTML = games
       .map((g, i) => {
         const status = g.status || 'wip';
-        const badgeClass = status === 'playable' ? 'badge' : 'badge wip';
+        const ready = status === 'playable' || status === 'ready' || status === 'live';
+        const badgeClass = ready ? 'badge' : 'badge wip';
         const href = `/g/${g.slug}/`;
         return `<a class="card" href="${href}" style="animation-delay:${0.05 * i}s">
           <h2>${escapeHtml(g.name || g.slug)}</h2>

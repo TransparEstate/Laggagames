@@ -1,0 +1,9 @@
+{
+  "id": "beat-relay",
+  "name": "Beat Relay",
+  "tagline": "Weiterreichen im Takt – Platzhalter",
+  "description": "Platzhalter im Laggagames-Hub. Spielinhalt folgt.",
+  "status": "wip",
+  "entry": "server/index.js",
+  "routes": { "home": "/" }
+}
