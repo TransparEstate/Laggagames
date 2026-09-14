@@ -209,6 +209,20 @@ app.post('/api/songs/:id/analyze-cue', async (req, res) => {
   }
 });
 
+
+async function warmClipsForSong(song) {
+  if (!song) return;
+  await Promise.all(
+    (game.CLIP_STAGES || []).map(async (dur) => {
+      try {
+        await catalog.resolveClip(song, dur);
+      } catch (err) {
+        console.warn('[mj-headle] clip warm failed', song.id, dur, err.message || err);
+      }
+    })
+  );
+}
+
 io.on('connection', (socket) => {
   socket.on('room:create-solo', async (payload = {}, ack) => {
     try {
@@ -369,6 +383,14 @@ io.on('connection', (socket) => {
         if (room.songMeta?.[songId]) room.songMeta[songId].cueStartSec = cue;
         if (room.current?.songId === songId) room.current.cueStartSec = cue;
       }
+      if (room.current?.songId) {
+        const warmSong =
+          songs.find((s) => s.id === room.current.songId) ||
+          (room.songMeta?.[room.current.songId]
+            ? { id: room.current.songId, ...room.songMeta[room.current.songId] }
+            : { id: room.current.songId });
+        void warmClipsForSong(warmSong);
+      }
       broadcastRoom(room);
       if (typeof ack === 'function') ack({ ok: true, state: rooms.getPublicState(room, socket.id) });
     } catch (err) {
@@ -413,6 +435,7 @@ io.on('connection', (socket) => {
         if (base) {
           const refined = await catalog.ensureAudibleCue(base);
           room.current.cueStartSec = Number(refined.cueStartSec) || 0;
+          void warmClipsForSong(refined);
         }
       }
       broadcastRoom(room);

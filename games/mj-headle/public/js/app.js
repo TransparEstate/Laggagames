@@ -27,6 +27,9 @@
   let audioToken = 0;
   let stopTimer = null;
   let lastRoundKey = null;
+  let lastStageAutoKey = null;
+  let clipCache = new Map(); // key: `${songId}:${dur}` -> object URL
+  let clipCacheSongId = null;
   let revealPlaying = false;
   let lastRevealAutoKey = null;
   let leaving = false;
@@ -214,10 +217,53 @@
     $('stageTrack').innerHTML = list
       .map((sec, i) => {
         const cls = i < idx ? 'done' : i === idx ? 'on' : '';
-        return `<span class="${cls}" title="${fmtSec(sec)}"></span>`;
+        return `<span class="stage-step ${cls}" title="${fmtSec(sec)}"><i class="stage-bar" aria-hidden="true"></i><b class="stage-label">${fmtSec(sec)}</b></span>`;
       })
       .join('');
     $('stageLabel').textContent = cur?.stageSeconds != null ? fmtSec(cur.stageSeconds) : '—';
+  }
+
+  function clipKey(songId, dur) {
+    return `${songId}:${Number(dur)}`;
+  }
+
+  function clearClipCache() {
+    for (const url of clipCache.values()) {
+      try { URL.revokeObjectURL(url); } catch { /* ignore */ }
+    }
+    clipCache.clear();
+    clipCacheSongId = null;
+  }
+
+  function clipUrl(songId, dur) {
+    return `${GB}/api/clip/${encodeURIComponent(songId)}?dur=${encodeURIComponent(dur)}`;
+  }
+
+  async function preloadRoundClips(songId, stageList) {
+    if (!songId) return;
+    if (clipCacheSongId && clipCacheSongId !== songId) clearClipCache();
+    clipCacheSongId = songId;
+    const durs = stageList && stageList.length ? stageList : stages;
+    await Promise.all(
+      durs.map(async (dur) => {
+        const key = clipKey(songId, dur);
+        if (clipCache.has(key)) return;
+        try {
+          const res = await fetch(clipUrl(songId, dur));
+          if (!res.ok) return;
+          const blob = await res.blob();
+          if (clipCacheSongId !== songId) return;
+          clipCache.set(key, URL.createObjectURL(blob));
+        } catch {
+          /* best-effort warm */
+        }
+      })
+    );
+  }
+
+  function resolveClipSrc(songId, dur) {
+    const cached = clipCache.get(clipKey(songId, dur));
+    return cached || clipUrl(songId, dur);
   }
 
   function setPlayUi({ playing, caption, disabled }) {
@@ -253,18 +299,22 @@
     return msg.includes('interrupted') || msg.includes('aborted') || msg.includes('the play() request was interrupted');
   }
 
-  function playClip() {
+  function playClip({ auto = false } = {}) {
     const cur = state?.current;
     if (!cur?.songId || seesSharedReveal()) return;
     if (cur.matchDone || cur.waitingForOthers) return;
     stopAudio({ expected: true });
     const token = audioToken;
     const dur = Number(cur.stageSeconds) || 0.1;
-    const url = `${GB}/api/clip/${encodeURIComponent(cur.songId)}?dur=${encodeURIComponent(dur)}&t=${Date.now()}`;
-    const el = new Audio(url);
+    const src = resolveClipSrc(cur.songId, dur);
+    const el = new Audio(src);
     audio = el;
     el.preload = 'auto';
-    setPlayUi({ playing: false, caption: 'Lädt Clip…', disabled: true });
+    setPlayUi({
+      playing: false,
+      caption: auto ? 'Lädt Clip…' : 'Lädt Clip…',
+      disabled: true,
+    });
 
     const start = () => {
       if (token !== audioToken || audio !== el) return;
@@ -273,7 +323,11 @@
         p.catch((err) => {
           if (token !== audioToken) return;
           if (isBenignPlayError(err)) return;
-          setPlayUi({ playing: false, caption: `Audio-Fehler: ${err?.message || 'play blocked'}`, disabled: false });
+          setPlayUi({
+            playing: false,
+            caption: auto ? 'Tippe ▶ zum Start' : `Audio-Fehler: ${err?.message || 'play blocked'}`,
+            disabled: false,
+          });
         });
       }
       setPlayUi({ playing: true, caption: `Spielt ${fmtSec(dur)}…`, disabled: false });
@@ -288,12 +342,31 @@
       if (token !== audioToken || audio !== el) return;
       const hint = $('playCaption');
       if (!hint) return;
-      try {
-        const r = await fetch(url);
-        const j = await r.json().catch(() => ({}));
-        hint.textContent = j.error || `Clip-Fehler HTTP ${r.status}`;
-      } catch {
-        hint.textContent = 'Clip konnte nicht geladen werden (R2/Audio).';
+      // Cached blob may be stale — fall back to network once.
+      if (src.startsWith('blob:')) {
+        try {
+          const res = await fetch(clipUrl(cur.songId, dur));
+          if (res.ok) {
+            const blob = await res.blob();
+            const fresh = URL.createObjectURL(blob);
+            clipCache.set(clipKey(cur.songId, dur), fresh);
+            if (token !== audioToken) return;
+            playClip({ auto });
+            return;
+          }
+          const j = await res.json().catch(() => ({}));
+          hint.textContent = j.error || `Clip-Fehler HTTP ${res.status}`;
+        } catch {
+          hint.textContent = 'Clip konnte nicht geladen werden (R2/Audio).';
+        }
+      } else {
+        try {
+          const r = await fetch(src);
+          const j = await r.json().catch(() => ({}));
+          hint.textContent = j.error || `Clip-Fehler HTTP ${r.status}`;
+        } catch {
+          hint.textContent = 'Clip konnte nicht geladen werden (R2/Audio).';
+        }
       }
       setPlayUi({ playing: false, caption: hint.textContent, disabled: false });
     });
@@ -358,6 +431,7 @@
     const roundKey = `${cur.round}:${cur.songId}`;
     if (roundKey === lastRoundKey) return;
     lastRoundKey = roundKey;
+    lastStageAutoKey = null;
     const input = $('guessInput');
     const feedback = $('feedback');
     if (input) {
@@ -370,6 +444,8 @@
     }
     renderGuessResults('', { open: false });
     stopAudio({ expected: true });
+    // Warm all Heardle stage clips (0.1 → 13s) so skips/play don't wait on ffmpeg.
+    void preloadRoundClips(cur.songId, cur.stages || stages);
   }
 
   function updateLeaveButton() {
@@ -392,6 +468,7 @@
     leaving = true;
     closeLeaveModal();
     stopAudio({ expected: true });
+    clearClipCache();
     try {
       await emit('session:return-to-lobby');
     } catch { /* navigate anyway */ }
@@ -450,6 +527,16 @@
         ? `Richtig! +${cur.myGuess.points} Punkte — warte auf die anderen…`
         : 'Runde beendet — warte auf die anderen…';
       $('feedback').className = `feedback ${cur.myGuess.correct ? 'ok' : ''}`;
+    }
+    // Autoplay current stage once per stage (round start + after skip/wrong).
+    if (!done && cur?.songId) {
+      const stageKey = `${cur.round}:${cur.songId}:${cur.stageIndex ?? 0}`;
+      if (stageKey !== lastStageAutoKey) {
+        lastStageAutoKey = stageKey;
+        const run = () => playClip({ auto: true });
+        // Prefer playing from warm cache; still attempt immediately.
+        void preloadRoundClips(cur.songId, cur.stages || stages).then(run);
+      }
     }
   }
 
