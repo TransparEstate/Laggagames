@@ -1,0 +1,14 @@
+node_modules/
+data/packs/**
+!data/packs/.gitkeep
+data/pack-meta/**
+!data/pack-meta/.gitkeep
+.env
+.env.local
+npm-debug.log*
+.DS_Store
+*.log
+.railway/
+.cursor/
+.tmp-prod-js/
+.nixpacks/

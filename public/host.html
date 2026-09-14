@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Studio – Laggagames</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <main class="page page-wide">
+    <div class="brand brand-with-nav">
+      <div class="brand-badge">📺</div>
+      <div>
+        <h1>Dub Studio</h1>
+        <p>Lobby · Start · Export</p>
+      </div>
+      <a class="btn btn-ghost btn-sm brand-nav" href="/" id="btnDashboard">Dashboard</a>
+    </div>
+
+    <div id="error" class="error-banner hidden"></div>
+
+    <!-- LOBBY: only this until Start -->
+    <section class="card" id="lobbyPanel">
+      <div class="center">
+        <span class="phase-pill" id="phasePill">Lobby</span>
+        <h2 style="margin: 12px 0 4px">Raum-Code</h2>
+        <div class="room-code" id="roomCode">······</div>
+        <p class="muted">Spieler öffnen diesen Link auf dem zweiten Computer:</p>
+        <p class="join-url" id="joinUrl"></p>
+        <div id="lanLinks" class="stack" style="margin-top: 8px"></div>
+      </div>
+
+      <div class="stack" style="margin-top: 20px; max-width: 480px; margin-left: auto; margin-right: auto">
+        <label for="packSelect">Voicepack</label>
+        <select id="packSelect"></select>
+
+        <h3 style="margin-bottom: 0">Spieler</h3>
+        <p class="muted" id="lobbyHint">Warte auf Beitritte…</p>
+        <ul class="player-list" id="lobbyPlayerList"></ul>
+
+        <div class="btn-row" style="justify-content: center; margin-top: 8px">
+          <button class="btn" id="btnStart" type="button" disabled>Start</button>
+          <button class="btn btn-ghost" id="btnOpenPlay" type="button">Selbst mitspielen</button>
+        </div>
+        <p class="muted center" id="startHint">Start ist aktiv, wenn alle Ready sind.</p>
+      </div>
+    </section>
+
+    <!-- GAME: after Start -->
+    <div id="gamePanel" class="grid-2 hidden" style="margin-top: 16px">
+      <section class="card">
+        <div class="video-wrap">
+          <video id="dubVideo" playsinline preload="auto"></video>
+          <div class="caption-overlay" id="captionOverlay"></div>
+        </div>
+        <audio id="backingAudio" preload="auto"></audio>
+        <p class="muted center" id="segmentStatus"></p>
+        <div class="btn-row" id="playbackControls">
+          <button class="btn btn-secondary" id="btnPlaySegment" type="button">▶ Abschnitt (Vorschau)</button>
+          <button class="btn btn-ghost" id="btnPlayOriginal" type="button">Original</button>
+          <button class="btn btn-ghost" id="btnPlayTake" type="button">Take anhören</button>
+        </div>
+        <div class="btn-row" id="hostControls">
+          <button class="btn btn-success" id="btnReview" type="button">Review / Export</button>
+          <button class="btn btn-ghost" id="btnRestart" type="button">Zurück zur Lobby</button>
+        </div>
+        <div class="btn-row hidden" id="exportControls">
+          <button class="btn btn-success" id="btnExportWav" type="button">WAV exportieren</button>
+          <button class="btn btn-secondary" id="btnExportVideo" type="button">Video (WebM) exportieren</button>
+          <button class="btn btn-ghost" id="btnExportJson" type="button">Projekt JSON</button>
+        </div>
+        <p class="muted" id="exportStatus"></p>
+      </section>
+
+      <section class="card stack">
+        <h2 id="packTitle">Pack</h2>
+        <div id="sceneInfo" class="status-banner">
+          <p class="muted">Dubbing läuft — Spieler nehmen auf ihren Geräten auf.</p>
+        </div>
+        <h3>Team-Fortschritt</h3>
+        <p id="progressText" class="muted">0 / 0</p>
+        <div class="progress-bar" aria-hidden="true">
+          <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+        <div class="progress-chars" id="progressChars"></div>
+        <ul class="scene-list progress-clip-list" id="sceneList"></ul>
+        <h3>Cast</h3>
+        <ul class="player-list" id="playerList"></ul>
+        <ul class="player-list" id="castList"></ul>
+      </section>
+    </div>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/socket-client.js"></script>
+  <script src="/js/audio.js"></script>
+  <script src="/js/export.js"></script>
+  <script src="/js/host.js"></script>
+</body>
+</html>
