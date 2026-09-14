@@ -3,15 +3,27 @@ const path = require('path');
 const http = require('http');
 const { spawn } = require('child_process');
 const express = require('express');
+const { Server } = require('socket.io');
 const { listGames, getGame } = require('./registry');
+const PartyManager = require('./partyManager');
+const { attachPartySocket } = require('./partySocket');
 
 const PORT = Number(process.env.PORT || 3000);
 const GAME_PORT_BASE = Number(process.env.GAME_PORT_BASE || 3101);
+const PARTY_INTERNAL_TOKEN = process.env.PARTY_INTERNAL_TOKEN || 'dev-party-token';
+const HUB_INTERNAL_URL = process.env.HUB_INTERNAL_URL || `http://127.0.0.1:${PORT}`;
 
 const app = express();
 const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: true },
+  path: '/socket.io',
+});
+
+const parties = new PartyManager();
 
 const hubPublic = path.join(__dirname, '..', 'hub', 'public');
+app.use(express.json({ limit: '32kb' }));
 app.use(express.static(hubPublic));
 
 // Railway / Render healthcheck — must exist on the hub, not only on games
@@ -38,6 +50,39 @@ app.get('/api/games/:slug', (req, res) => {
   res.json(rest);
 });
 
+function assertPartyToken(req, res) {
+  const token = req.get('x-party-token') || req.query.token;
+  if (token !== PARTY_INTERNAL_TOKEN) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return false;
+  }
+  return true;
+}
+
+app.get('/api/party/:partyId', (req, res) => {
+  if (!assertPartyToken(req, res)) return;
+  const party = parties.getParty(req.params.partyId);
+  if (!party) {
+    res.status(404).json({ error: 'Party nicht gefunden.' });
+    return;
+  }
+  res.json({ ok: true, party: parties.publicState(party) });
+});
+
+app.post('/api/party/:partyId/return', (req, res) => {
+  if (!assertPartyToken(req, res)) return;
+  const party = parties.getParty(req.params.partyId);
+  if (!party) {
+    res.status(404).json({ error: 'Party nicht gefunden.' });
+    return;
+  }
+  parties.returnToLobby(party);
+  const state = parties.publicState(party);
+  io.to(`party:${party.id}`).emit('party:state', state);
+  io.to(`party:${party.id}`).emit('party:returned', state);
+  res.json({ ok: true, party: state });
+});
+
 /** @type {Map<string, { port: number, child: import('child_process').ChildProcess }>} */
 const running = new Map();
 
@@ -54,7 +99,8 @@ function ensureGameProcess(slug) {
     env: {
       ...process.env,
       PORT: String(port),
-      // Avoid clashing with hub PORT
+      HUB_INTERNAL_URL,
+      PARTY_INTERNAL_TOKEN,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -124,6 +170,20 @@ async function proxyToGame(slug, req, res) {
       headers,
     },
     (up) => {
+      up.on('error', () => {
+        try {
+          res.end();
+        } catch {
+          /* ignore */
+        }
+      });
+      res.on('error', () => {
+        try {
+          up.destroy();
+        } catch {
+          /* ignore */
+        }
+      });
       res.writeHead(up.statusCode || 502, up.headers);
       up.pipe(res);
     }
@@ -133,6 +193,13 @@ async function proxyToGame(slug, req, res) {
       res.status(502).send(`Spiel-Proxy-Fehler (${slug}): ${err.message}`);
     } else {
       res.end();
+    }
+  });
+  req.on('error', () => {
+    try {
+      upstream.destroy();
+    } catch {
+      /* ignore */
     }
   });
   req.pipe(upstream);
@@ -148,8 +215,16 @@ app.use('/g/:slug', (req, res) => {
   proxyToGame(req.params.slug, req, res);
 });
 
+attachPartySocket(io, parties, { getGame });
+
 server.on('upgrade', async (req, socket, head) => {
-  const match = String(req.url || '').match(/^\/g\/([^/]+)(.*)$/);
+  const url = String(req.url || '');
+  // Hub Socket.io owns non-game upgrades — do not destroy them.
+  if (!url.startsWith('/g/')) {
+    return;
+  }
+
+  const match = url.match(/^\/g\/([^/]+)(.*)$/);
   if (!match) {
     socket.destroy();
     return;
@@ -177,7 +252,22 @@ server.on('upgrade', async (req, socket, head) => {
     method: 'GET',
     headers: { ...req.headers, host: `127.0.0.1:${info.port}` },
   });
+  socket.on('error', () => {
+    try {
+      socket.destroy();
+    } catch {
+      /* ignore */
+    }
+  });
+
   upstream.on('upgrade', (upRes, upSocket, upHead) => {
+    upSocket.on('error', () => {
+      try {
+        socket.destroy();
+      } catch {
+        /* ignore */
+      }
+    });
     socket.write(
       `HTTP/1.1 101 Switching Protocols\r\n` +
         Object.entries(upRes.headers)
@@ -189,7 +279,13 @@ server.on('upgrade', async (req, socket, head) => {
     upSocket.pipe(socket);
     socket.pipe(upSocket);
   });
-  upstream.on('error', () => socket.destroy());
+  upstream.on('error', () => {
+    try {
+      socket.destroy();
+    } catch {
+      /* ignore */
+    }
+  });
   if (head && head.length) upstream.write(head);
   upstream.end();
 });
@@ -226,3 +322,13 @@ function shutdown() {
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+
+// Proxy sockets can emit ECONNRESET after clients disconnect — do not crash the hub.
+process.on('uncaughtException', (err) => {
+  if (err && (err.code === 'ECONNRESET' || err.code === 'EPIPE')) {
+    console.warn('[hub] ignored socket error:', err.code);
+    return;
+  }
+  console.error(err);
+  process.exit(1);
+});

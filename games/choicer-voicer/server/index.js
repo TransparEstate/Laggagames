@@ -43,6 +43,46 @@ const io = new Server(server, {
 
 const rooms = new RoomManager();
 
+
+const HUB_INTERNAL_URL = (process.env.HUB_INTERNAL_URL || `http://127.0.0.1:${process.env.HUB_PORT || 3000}`).replace(/\/$/, '');
+const PARTY_INTERNAL_TOKEN = process.env.PARTY_INTERNAL_TOKEN || 'dev-party-token';
+
+async function fetchHubParty(partyId) {
+  const id = String(partyId || '').toUpperCase();
+  if (!id) return { error: 'partyId fehlt.' };
+  try {
+    const res = await fetch(`${HUB_INTERNAL_URL}/api/party/${encodeURIComponent(id)}`, {
+      headers: { 'x-party-token': PARTY_INTERNAL_TOKEN },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: data.error || `Hub-Party ${res.status}` };
+    return { ok: true, party: data.party };
+  } catch (err) {
+    return { error: err.message || 'Hub nicht erreichbar.' };
+  }
+}
+
+async function postHubPartyReturn(partyId) {
+  const id = String(partyId || '').toUpperCase();
+  if (!id) return { error: 'partyId fehlt.' };
+  try {
+    const res = await fetch(`${HUB_INTERNAL_URL}/api/party/${encodeURIComponent(id)}/return`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-party-token': PARTY_INTERNAL_TOKEN,
+      },
+      body: '{}',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: data.error || `Hub-Return ${res.status}` };
+    return { ok: true, party: data.party };
+  } catch (err) {
+    return { error: err.message || 'Hub nicht erreichbar.' };
+  }
+}
+
+
 const uploadTmp = path.join(USER_PACKS_ROOT, '.tmp');
 fs.mkdirSync(uploadTmp, { recursive: true });
 
@@ -319,34 +359,12 @@ function emitPremiereStop(room) {
 }
 
 io.on('connection', (socket) => {
-  socket.on('room:create', (payload = {}, ack) => {
-    try {
-      const room = rooms.createRoom(socket.id);
-      if (payload.packId) {
-        const set = game.setPack(room, payload.packId);
-        if (set.error) {
-          rooms.leaveSocket(socket.id, { hard: true });
-          if (typeof ack === 'function') ack({ error: set.error });
-          return;
-        }
-      }
-      socket.join(room.code);
-      if (typeof ack === 'function') {
-        ack({
-          ok: true,
-          state: rooms.getPublicState(room),
-          playerId: socket.id,
-          isDisplayHost: true,
-        });
-      }
-      broadcastRoom(room);
-    } catch (err) {
-      if (typeof ack === 'function') ack({ error: err.message || 'Fehler beim Erstellen.' });
-    }
-  });
-
   socket.on('room:create-solo', (payload = {}, ack) => {
     try {
+      if (payload.partyId) {
+        if (typeof ack === 'function') ack({ error: 'In einer Party ist Solo gesperrt.' });
+        return;
+      }
       const room = rooms.createRoom(socket.id);
       room.solo = true;
       const join = rooms.joinRoom(room.code, socket.id, payload.name || 'Solo');
@@ -376,46 +394,95 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('room:create-multiplayer', (payload = {}, ack) => {
+
+  socket.on('session:join-party', async (payload = {}, ack) => {
     try {
+      const partyId = String(payload.partyId || '').toUpperCase();
       const name = String(payload.name || '').trim();
+      const memberId = String(payload.memberId || '').trim();
       const packId = payload.packId;
+      if (!partyId) {
+        if (typeof ack === 'function') ack({ error: 'partyId nötig.' });
+        return;
+      }
       if (!name) {
         if (typeof ack === 'function') ack({ error: 'Name nötig.' });
         return;
       }
-      if (!packId) {
-        if (typeof ack === 'function') ack({ error: 'Bitte ein Voicepack wählen.' });
+
+      const hub = await fetchHubParty(partyId);
+      if (hub.error) {
+        if (typeof ack === 'function') ack({ error: hub.error });
         return;
       }
-      const room = rooms.createRoom(socket.id);
+      const hubParty = hub.party;
+      if (!hubParty) {
+        if (typeof ack === 'function') ack({ error: 'Party nicht gefunden.' });
+        return;
+      }
+
+      const room = rooms.getOrCreatePartyRoom(partyId, socket.id);
       room.solo = false;
-      const set = game.setPack(room, packId);
-      if (set.error) {
-        rooms.leaveSocket(socket.id, { hard: true });
-        if (typeof ack === 'function') ack({ error: set.error });
-        return;
+      room.partyId = partyId;
+
+      // First joiner / lead sets pack
+      const isLead = hubParty.leadId && memberId && hubParty.leadId === memberId;
+      if (packId && (isLead || !room.packId)) {
+        const set = game.setPack(room, packId);
+        if (set.error) {
+          if (typeof ack === 'function') ack({ error: set.error });
+          return;
+        }
       }
+
       const join = rooms.joinRoom(room.code, socket.id, name);
       if (join.error) {
-        rooms.leaveSocket(socket.id, { hard: true });
         if (typeof ack === 'function') ack({ error: join.error });
         return;
       }
+
+      if (isLead || !room.hostId) {
+        room.hostId = socket.id;
+        room.hostSocketId = socket.id;
+      }
+
       socket.join(room.code);
       if (typeof ack === 'function') {
         ack({
           ok: true,
           state: rooms.getPublicState(room),
           playerId: socket.id,
-          isHost: true,
+          isHost: room.hostId === socket.id,
+          partyId,
         });
       }
       broadcastRoom(room);
     } catch (err) {
-      if (typeof ack === 'function') {
-        ack({ error: err.message || 'Multiplayer-Raum fehlgeschlagen.' });
+      if (typeof ack === 'function') ack({ error: err.message || 'Party-Join fehlgeschlagen.' });
+    }
+  });
+
+  socket.on('session:return-to-lobby', async (_payload, ack) => {
+    try {
+      const room = rooms.getRoomForSocket(socket.id);
+      if (!room) {
+        if (typeof ack === 'function') ack({ error: 'Keine Session.' });
+        return;
       }
+      if (room.hostId !== socket.id && room.hostSocketId !== socket.id) {
+        if (typeof ack === 'function') ack({ error: 'Nur der Lead kehrt zur Lobby zurück.' });
+        return;
+      }
+      const partyId = room.partyId || room.code;
+      const ret = await postHubPartyReturn(partyId);
+      if (ret.error) {
+        if (typeof ack === 'function') ack({ error: ret.error });
+        return;
+      }
+      io.to(room.code).emit('session:returned', { partyId, hub: '/' });
+      if (typeof ack === 'function') ack({ ok: true, hub: '/' });
+    } catch (err) {
+      if (typeof ack === 'function') ack({ error: err.message || 'Return fehlgeschlagen.' });
     }
   });
 
@@ -441,41 +508,6 @@ io.on('connection', (socket) => {
     const result = rooms.leaveSocket(socket.id, { hard: true });
     if (typeof ack === 'function') ack({ ok: true });
     if (result?.room && !result.empty) broadcastRoom(result.room);
-  });
-
-  socket.on('room:claim-host', (payload = {}, ack) => {
-    const result = rooms.reattachHost(payload.code, socket.id);
-    if (result.error) {
-      if (typeof ack === 'function') ack({ error: result.error });
-      return;
-    }
-    socket.join(result.room.code);
-    if (typeof ack === 'function') {
-      ack({
-        ok: true,
-        state: rooms.getPublicState(result.room),
-        playerId: socket.id,
-        isDisplayHost: true,
-      });
-    }
-    broadcastRoom(result.room);
-  });
-
-  socket.on('room:join', (payload = {}, ack) => {
-    const result = rooms.joinRoom(payload.code, socket.id, payload.name);
-    if (result.error) {
-      if (typeof ack === 'function') ack({ error: result.error });
-      return;
-    }
-    socket.join(result.room.code);
-    if (typeof ack === 'function') {
-      ack({
-        ok: true,
-        state: rooms.getPublicState(result.room),
-        playerId: socket.id,
-      });
-    }
-    broadcastRoom(result.room);
   });
 
   socket.on('pack:set', (payload = {}, ack) => {

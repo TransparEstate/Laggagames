@@ -9,20 +9,18 @@
   const uploadError = document.getElementById('uploadError');
   const uploadOk = document.getElementById('uploadOk');
   const storageHint = document.getElementById('storageHint');
-  const btnJoin = document.getElementById('btnJoin');
-  const joinCode = document.getElementById('joinCode');
-  const joinName = document.getElementById('joinName');
-  const mpName = document.getElementById('mpName');
-  const mpPack = document.getElementById('mpPack');
-  const btnMultiplayer = document.getElementById('btnMultiplayer');
-  const btnOpenMp = document.getElementById('btnOpenMp');
-  const btnOpenJoin = document.getElementById('btnOpenJoin');
-  const modalMp = document.getElementById('modalMp');
-  const modalJoin = document.getElementById('modalJoin');
   const projectList = document.getElementById('projectList');
   const projectPackFilter = document.getElementById('projectPackFilter');
   const btnImportProjectFile = document.getElementById('btnImportProjectFile');
   const projectFileInput = document.getElementById('projectFileInput');
+  const partyBanner = document.getElementById('partyBanner');
+  const partyBannerText = document.getElementById('partyBannerText');
+  const partyName = document.getElementById('partyName');
+  const partyPack = document.getElementById('partyPack');
+  const btnPartyStart = document.getElementById('btnPartyStart');
+  const soloSections = document.getElementById('soloSections');
+  const projectsSection = document.getElementById('projectsSection');
+  const dashTagline = document.getElementById('dashTagline');
 
   let maxUploadMb = 1500;
   let processPulse = null;
@@ -30,55 +28,20 @@
   let cachedProjects = [];
 
   const params = new URLSearchParams(location.search);
-  const code = (params.get('code') || '').toUpperCase();
-  if (code && joinCode) joinCode.value = code;
+  const partyId = (params.get('party') || '').toUpperCase();
+  const partyMemberId = params.get('member') || '';
+  const inParty = !!partyId;
 
-  function openModal(el) {
-    if (!el) return;
-    el.classList.remove('hidden');
-    const focusEl = el.querySelector('input, select, button.btn:not(.dash-modal-close)');
-    if (focusEl) setTimeout(() => focusEl.focus(), 30);
+  function gamePath(p) {
+    return typeof gameUrl === 'function' ? gameUrl(p) : p;
   }
 
-  function closeModal(el) {
-    if (!el) return;
-    el.classList.add('hidden');
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/"/g, '&quot;');
   }
-
-  function closeAllModals() {
-    closeModal(modalMp);
-    closeModal(modalJoin);
-  }
-
-  document.querySelectorAll('[data-close-modal]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      closeModal(document.getElementById(btn.getAttribute('data-close-modal')));
-    });
-  });
-
-  [modalMp, modalJoin].forEach((modal) => {
-    if (!modal) return;
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal(modal);
-    });
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeAllModals();
-  });
-
-  if (btnOpenMp) {
-    btnOpenMp.addEventListener('click', () => {
-      fillMpPackSelect(cachedPacks);
-      openModal(modalMp);
-    });
-  }
-  if (btnOpenJoin) {
-    btnOpenJoin.addEventListener('click', () => openModal(modalJoin));
-  }
-
-  // Deep-link ?code=… → Join-Modal öffnen
-  if (code) openModal(modalJoin);
 
   function formatSize(bytes) {
     if (!bytes || bytes < 1) return '—';
@@ -87,21 +50,23 @@
   }
 
   function showUploadError(msg) {
+    if (!uploadError) return;
     uploadError.textContent = msg || '';
     uploadError.classList.toggle('hidden', !msg);
-    if (msg) uploadOk.classList.add('hidden');
+    if (msg && uploadOk) uploadOk.classList.add('hidden');
   }
 
   function showUploadOk(msg) {
+    if (!uploadOk) return;
     uploadOk.textContent = msg || '';
     uploadOk.classList.toggle('hidden', !msg);
-    if (msg) uploadError.classList.add('hidden');
+    if (msg && uploadError) uploadError.classList.add('hidden');
   }
 
   function setProgress(pct, text) {
     const clamped = Math.max(0, Math.min(100, Math.round(pct)));
-    uploadProgressFill.style.width = `${clamped}%`;
-    uploadProgressText.textContent = text || `${clamped}%`;
+    if (uploadProgressFill) uploadProgressFill.style.width = `${clamped}%`;
+    if (uploadProgressText) uploadProgressText.textContent = text || `${clamped}%`;
   }
 
   function stopProcessPulse() {
@@ -114,42 +79,48 @@
   function startProcessPulse() {
     stopProcessPulse();
     let tick = 0;
-    // Stay in 70–92% while server extracts + stores — never claim 100% yet
     setProgress(72, 'Wird eingerichtet… bitte warten');
     processPulse = setInterval(() => {
       tick += 1;
-      const pct = 72 + Math.min(20, tick);
-      setProgress(pct, 'Wird eingerichtet… bitte warten');
+      setProgress(72 + Math.min(20, tick), 'Wird eingerichtet… bitte warten');
     }, 2500);
   }
 
-  async function loadPacks() {
-    try {
-      const res = await fetch('/api/packs');
-      const data = await res.json();
-      maxUploadMb = data.maxUploadMb || 1500;
-      cachedPacks = data.packs || [];
-      fillMpPackSelect(cachedPacks);
-      fillProjectPackFilter(cachedPacks);
-      renderPacks(cachedPacks);
-      updateStorageHint(data.r2);
-      await loadProjects();
-    } catch {
-      packGrid.innerHTML = `<p class="error">Packs konnten nicht geladen werden.</p>`;
+  function applyPartyMode() {
+    if (!inParty) return;
+    partyBanner?.classList.remove('hidden');
+    soloSections?.classList.add('hidden');
+    projectsSection?.classList.add('hidden');
+    if (dashTagline) {
+      dashTagline.textContent =
+        'Party-Modus: Solo ist gesperrt. Wähle ein Pack und starte die gemeinsame Session.';
+    }
+    if (partyName && params.get('name')) partyName.value = params.get('name');
+    if (partyBannerText) {
+      partyBannerText.textContent = `Party ${partyId} — Multiplayer-Session für alle Mitglieder.`;
     }
   }
 
-  function updateStorageHint(r2) {
-    if (!storageHint) return;
-    if (r2?.enabled) {
-      storageHint.textContent = `Dauerhafter Speicher aktiv (${r2.bucket || 'Object Storage'}) — Packs bleiben nach Redeploys.`;
-      storageHint.classList.remove('hidden', 'error');
+  function fillPartyPackSelect(packs) {
+    if (!partyPack) return;
+    partyPack.innerHTML = '';
+    if (!packs.length) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = 'Kein Pack verfügbar';
+      partyPack.appendChild(opt);
+      partyPack.disabled = true;
+      if (btnPartyStart) btnPartyStart.disabled = true;
       return;
     }
-    storageHint.textContent =
-      'Warnung: Object Storage ist aus — hochgeladene Packs gehen bei jedem Redeploy verloren.';
-    storageHint.classList.remove('hidden');
-    storageHint.classList.add('error');
+    partyPack.disabled = false;
+    if (btnPartyStart) btnPartyStart.disabled = false;
+    packs.forEach((p) => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${p.title} (${p.sceneCount} Clips)`;
+      partyPack.appendChild(opt);
+    });
   }
 
   function fillProjectPackFilter(packs) {
@@ -167,34 +138,43 @@
     }
   }
 
+  function updateStorageHint(r2) {
+    if (!storageHint) return;
+    if (r2?.enabled) {
+      storageHint.textContent = `Dauerhafter Speicher aktiv (${r2.bucket || 'Object Storage'}).`;
+      storageHint.classList.remove('hidden', 'error');
+      return;
+    }
+    storageHint.textContent =
+      'Hinweis: Object Storage aus — Packs können bei Redeploys verloren gehen.';
+    storageHint.classList.remove('hidden');
+  }
+
   async function loadProjects() {
-    if (!projectList || typeof CVProjects === 'undefined') return;
+    if (!projectList || typeof CVProjects === 'undefined' || inParty) return;
     try {
       cachedProjects = await CVProjects.listSummaries();
       renderProjects();
     } catch (err) {
-      projectList.innerHTML = `<p class="error">Projekte konnten nicht geladen werden.</p>`;
+      projectList.innerHTML = '<p class="error">Projekte konnten nicht geladen werden.</p>';
       console.warn(err);
     }
   }
 
   function renderProjects() {
-    if (!projectList) return;
+    if (!projectList || inParty) return;
     const filter = projectPackFilter?.value || '';
     const rows = cachedProjects.filter((p) => !filter || p.packId === filter);
     if (!rows.length) {
       projectList.innerHTML =
-        '<p class="muted">Noch keine lokalen Projekte — nach der Premiere „Projekt speichern“.</p>';
+        '<p class="muted">Noch keine lokalen Projekte — nach der Premiere speichern.</p>';
       return;
     }
     const packTitle = (id) => cachedPacks.find((p) => p.id === id)?.title || id;
     projectList.innerHTML = '';
     rows.forEach((p) => {
       const when = p.savedAt
-        ? new Date(p.savedAt).toLocaleString('de-DE', {
-            dateStyle: 'short',
-            timeStyle: 'short',
-          })
+        ? new Date(p.savedAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
         : '—';
       const el = document.createElement('div');
       el.className = 'project-row';
@@ -208,19 +188,22 @@
           <button type="button" class="btn btn-sm btn-secondary" data-edit-project="${escapeHtml(p.id)}">Bearbeiten</button>
           <button type="button" class="btn btn-sm btn-ghost" data-export-project="${escapeHtml(p.id)}">Datei</button>
           <button type="button" class="btn btn-sm btn-ghost" data-del-project="${escapeHtml(p.id)}" title="Löschen">✕</button>
-        </div>
-      `;
+        </div>`;
       projectList.appendChild(el);
     });
 
     projectList.querySelectorAll('[data-open-project]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        location.href = `/play.html?project=${encodeURIComponent(btn.getAttribute('data-open-project'))}`;
+        location.href = gamePath(
+          `/play.html?project=${encodeURIComponent(btn.getAttribute('data-open-project'))}`
+        );
       });
     });
     projectList.querySelectorAll('[data-edit-project]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        location.href = `/play.html?project=${encodeURIComponent(btn.getAttribute('data-edit-project'))}&edit=1`;
+        location.href = gamePath(
+          `/play.html?project=${encodeURIComponent(btn.getAttribute('data-edit-project'))}&edit=1`
+        );
       });
     });
     projectList.querySelectorAll('[data-export-project]').forEach((btn) => {
@@ -238,33 +221,8 @@
     });
   }
 
-  function fillMpPackSelect(packs) {
-    if (!mpPack) return;
-    const prev = mpPack.value;
-    mpPack.innerHTML = '';
-    if (!packs.length) {
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = 'Kein Pack verfügbar';
-      mpPack.appendChild(opt);
-      mpPack.disabled = true;
-      if (btnMultiplayer) btnMultiplayer.disabled = true;
-      if (btnOpenMp) btnOpenMp.disabled = true;
-      return;
-    }
-    mpPack.disabled = false;
-    if (btnMultiplayer) btnMultiplayer.disabled = false;
-    if (btnOpenMp) btnOpenMp.disabled = false;
-    packs.forEach((p) => {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = `${p.title} (${p.sceneCount} Clips)`;
-      mpPack.appendChild(opt);
-    });
-    if (prev && packs.some((p) => p.id === prev)) mpPack.value = prev;
-  }
-
   function renderPacks(packs) {
+    if (!packGrid) return;
     packGrid.innerHTML = '';
     if (!packs.length) {
       packGrid.innerHTML = '<p class="muted">Noch keine Packs — ZIP oben hochladen.</p>';
@@ -277,6 +235,9 @@
       const icon = pack.iconUrl
         ? `<img class="pack-card-icon" src="${pack.iconUrl}" alt="" />`
         : `<div class="pack-card-icon placeholder">🎙</div>`;
+      const action = inParty
+        ? `<button type="button" class="btn" data-party-pack="${escapeHtml(pack.id)}">Für Party</button>`
+        : `<button type="button" class="btn" data-solo="${escapeHtml(pack.id)}">Alleine</button>`;
       card.innerHTML = `
         <div class="pack-card-top">
           ${icon}
@@ -286,20 +247,27 @@
           </div>
         </div>
         <div class="pack-card-actions">
-          <button type="button" class="btn" data-solo="${escapeHtml(pack.id)}">Alleine</button>
+          ${action}
           ${
-            pack.source === 'user' || pack.source === 'r2'
+            !inParty && (pack.source === 'user' || pack.source === 'r2')
               ? `<button type="button" class="btn btn-ghost btn-sm" data-del="${escapeHtml(pack.id)}" title="Löschen">✕</button>`
               : ''
           }
-        </div>
-      `;
+        </div>`;
       packGrid.appendChild(card);
     });
 
     packGrid.querySelectorAll('[data-solo]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        location.href = `/play.html?solo=1&pack=${encodeURIComponent(btn.getAttribute('data-solo'))}`;
+        location.href = gamePath(
+          `/play.html?solo=1&pack=${encodeURIComponent(btn.getAttribute('data-solo'))}`
+        );
+      });
+    });
+    packGrid.querySelectorAll('[data-party-pack]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (partyPack) partyPack.value = btn.getAttribute('data-party-pack');
+        startPartySession();
       });
     });
     packGrid.querySelectorAll('[data-del]').forEach((btn) => {
@@ -317,62 +285,59 @@
     });
   }
 
-  function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/"/g, '&quot;');
+  async function loadPacks() {
+    try {
+      const res = await fetch('/api/packs');
+      const data = await res.json();
+      maxUploadMb = data.maxUploadMb || 1500;
+      cachedPacks = data.packs || [];
+      fillPartyPackSelect(cachedPacks);
+      fillProjectPackFilter(cachedPacks);
+      renderPacks(cachedPacks);
+      updateStorageHint(data.r2);
+      if (!inParty) await loadProjects();
+    } catch {
+      if (packGrid) packGrid.innerHTML = '<p class="error">Packs konnten nicht geladen werden.</p>';
+    }
   }
 
   function uploadZip(file) {
-    if (!file) return;
+    if (!file || inParty) return;
     const name = String(file.name || '');
     const looksZip = /\.zip$/i.test(name) || /zip/i.test(file.type || '');
     if (!looksZip) {
-      showUploadError('Bitte eine .zip Datei wählen (nicht Ordner / .rar).');
+      showUploadError('Bitte eine .zip Datei wählen.');
       return;
     }
     if (file.size > maxUploadMb * 1024 * 1024) {
       showUploadError(`Datei zu groß (max. ${maxUploadMb} MB).`);
       return;
     }
-    if (file.size < 64) {
-      showUploadError('Datei wirkt leer oder ungültig.');
-      return;
-    }
 
     stopProcessPulse();
     showUploadError('');
     showUploadOk('');
-    uploadProgressWrap.classList.remove('hidden');
+    uploadProgressWrap?.classList.remove('hidden');
     setProgress(0, 'Senden… 0%');
-    uploadDrop.classList.add('uploading');
+    uploadDrop?.classList.add('uploading');
 
     const form = new FormData();
-    // Keep original filename so server can detect .zip even if MIME is wrong
     form.append('pack', file, name || 'pack.zip');
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/packs/upload');
-    xhr.timeout = 20 * 60 * 1000; // match server convert/mirror window
+    xhr.timeout = 20 * 60 * 1000;
 
-    // Network send = 0–70%. Never hit 100% here — server still works after.
     xhr.upload.onprogress = (ev) => {
       if (!ev.lengthComputable) return;
       const pct = Math.round((ev.loaded / ev.total) * 70);
-      setProgress(
-        pct,
-        `Senden… ${Math.round((ev.loaded / ev.total) * 100)}% · ${formatSize(ev.loaded)} / ${formatSize(ev.total)}`
-      );
+      setProgress(pct, `Senden… ${Math.round((ev.loaded / ev.total) * 100)}%`);
     };
-
-    xhr.upload.onload = () => {
-      startProcessPulse();
-    };
+    xhr.upload.onload = () => startProcessPulse();
 
     xhr.onload = async () => {
       stopProcessPulse();
-      uploadDrop.classList.remove('uploading');
+      uploadDrop?.classList.remove('uploading');
       let data = {};
       try {
         data = JSON.parse(xhr.responseText);
@@ -381,129 +346,94 @@
       }
       if (xhr.status >= 200 && xhr.status < 300 && data.ok) {
         setProgress(100, 'Fertig');
-        const mirror =
-          data.r2?.ok === true
-            ? ' · im Dauer-Speicher gesichert'
-            : data.r2?.skipped
-              ? ' · nur lokal (kein Object Storage)'
-              : '';
-        showUploadOk(`„${data.pack?.title || data.pack?.id}“ ist bereit${mirror}.`);
+        showUploadOk(`„${data.pack?.title || data.pack?.id}“ ist bereit.`);
         await loadPacks();
         setTimeout(() => {
-          uploadProgressWrap.classList.add('hidden');
+          uploadProgressWrap?.classList.add('hidden');
           showUploadOk('');
         }, 2500);
       } else {
-        const detail =
-          data.error ||
-          (xhr.status === 413
-            ? 'Datei zu groß für den Server-Proxy.'
-            : xhr.status === 0
-              ? 'Verbindung abgebrochen.'
-              : `Upload fehlgeschlagen (${xhr.status}).`);
-        showUploadError(detail);
-        uploadProgressWrap.classList.add('hidden');
+        showUploadError(data.error || `Upload fehlgeschlagen (${xhr.status}).`);
+        uploadProgressWrap?.classList.add('hidden');
       }
     };
-
     xhr.onerror = () => {
       stopProcessPulse();
-      uploadDrop.classList.remove('uploading');
-      showUploadError('Netzwerkfehler beim Upload. Bitte erneut versuchen (HTTPS / stabile Verbindung).');
-      uploadProgressWrap.classList.add('hidden');
+      uploadDrop?.classList.remove('uploading');
+      showUploadError('Netzwerkfehler beim Upload.');
+      uploadProgressWrap?.classList.add('hidden');
     };
-
     xhr.ontimeout = () => {
       stopProcessPulse();
-      uploadDrop.classList.remove('uploading');
-      showUploadError('Zeitüberschreitung — Pack zu groß oder Server braucht länger. Bitte erneut versuchen.');
-      uploadProgressWrap.classList.add('hidden');
+      uploadDrop?.classList.remove('uploading');
+      showUploadError('Zeitüberschreitung beim Upload.');
+      uploadProgressWrap?.classList.add('hidden');
     };
-
     xhr.send(form);
   }
 
   function openPackPicker() {
-    if (uploadDrop.classList.contains('uploading')) return;
-    // Reset so choosing the same file again still fires change
+    if (!packFile || uploadDrop?.classList.contains('uploading') || inParty) return;
     packFile.value = '';
     packFile.click();
   }
 
-  uploadDrop.addEventListener('click', (e) => {
-    // Extra button has its own handler — avoid double-open
-    if (e.target === btnPickZip || btnPickZip?.contains(e.target)) return;
-    openPackPicker();
-  });
-  if (btnPickZip) {
-    btnPickZip.addEventListener('click', (e) => {
+  function startPartySession() {
+    if (!inParty) return;
+    const name = (partyName?.value || params.get('name') || '').trim();
+    const packId = partyPack?.value || '';
+    if (!name) {
+      alert('Bitte einen Namen eingeben.');
+      return;
+    }
+    const q = new URLSearchParams({ party: partyId, name });
+    if (packId) q.set('pack', packId);
+    if (partyMemberId) q.set('member', partyMemberId);
+    location.href = gamePath(`/play.html?${q.toString()}`);
+  }
+
+  if (uploadDrop && !inParty) {
+    uploadDrop.addEventListener('click', (e) => {
+      if (e.target === btnPickZip || btnPickZip?.contains(e.target)) return;
+      openPackPicker();
+    });
+    btnPickZip?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       openPackPicker();
     });
-  }
-  uploadDrop.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      openPackPicker();
-    }
-  });
-  packFile.addEventListener('change', () => {
-    uploadZip(packFile.files?.[0]);
-    packFile.value = '';
-  });
-
-  ['dragenter', 'dragover'].forEach((ev) => {
-    uploadDrop.addEventListener(ev, (e) => {
-      e.preventDefault();
-      uploadDrop.classList.add('dragover');
+    uploadDrop.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openPackPicker();
+      }
     });
-  });
-  ['dragleave', 'drop'].forEach((ev) => {
-    uploadDrop.addEventListener(ev, (e) => {
-      e.preventDefault();
-      uploadDrop.classList.remove('dragover');
+    packFile?.addEventListener('change', () => {
+      uploadZip(packFile.files?.[0]);
+      packFile.value = '';
     });
-  });
-  uploadDrop.addEventListener('drop', (e) => {
-    if (uploadDrop.classList.contains('uploading')) return;
-    uploadZip(e.dataTransfer?.files?.[0]);
-  });
-
-  btnMultiplayer.addEventListener('click', () => {
-    const name = (mpName.value || '').trim();
-    const packId = mpPack.value;
-    if (!name) {
-      alert('Bitte einen Namen eingeben.');
-      return;
-    }
-    if (!packId) {
-      alert('Bitte ein Voicepack wählen.');
-      return;
-    }
-    sessionStorage.removeItem('cv_roomCode');
-    sessionStorage.removeItem('cv_playerId');
-    location.href = `/play.html?mp=1&pack=${encodeURIComponent(packId)}&name=${encodeURIComponent(name)}`;
-  });
-
-  btnJoin.addEventListener('click', () => {
-    const codeVal = joinCode.value.trim().toUpperCase();
-    const name = joinName.value.trim();
-    if (!codeVal || codeVal.length < 4) {
-      alert('Bitte gültigen Room-Code eingeben.');
-      return;
-    }
-    if (!name) {
-      alert('Bitte einen Namen eingeben.');
-      return;
-    }
-    location.href = `/play.html?code=${encodeURIComponent(codeVal)}&name=${encodeURIComponent(name)}`;
-  });
-
-  if (projectPackFilter) {
-    projectPackFilter.addEventListener('change', () => renderProjects());
+    ['dragenter', 'dragover'].forEach((ev) => {
+      uploadDrop.addEventListener(ev, (e) => {
+        e.preventDefault();
+        uploadDrop.classList.add('dragover');
+      });
+    });
+    ['dragleave', 'drop'].forEach((ev) => {
+      uploadDrop.addEventListener(ev, (e) => {
+        e.preventDefault();
+        uploadDrop.classList.remove('dragover');
+      });
+    });
+    uploadDrop.addEventListener('drop', (e) => {
+      if (uploadDrop.classList.contains('uploading')) return;
+      uploadZip(e.dataTransfer?.files?.[0]);
+    });
   }
-  if (btnImportProjectFile && projectFileInput) {
+
+  btnPartyStart?.addEventListener('click', startPartySession);
+  projectPackFilter?.addEventListener('change', () => renderProjects());
+
+  if (btnImportProjectFile && projectFileInput && !inParty) {
     btnImportProjectFile.addEventListener('click', () => projectFileInput.click());
     projectFileInput.addEventListener('change', async () => {
       const file = projectFileInput.files?.[0];
@@ -518,5 +448,6 @@
     });
   }
 
+  applyPartyMode();
   loadPacks();
 })();

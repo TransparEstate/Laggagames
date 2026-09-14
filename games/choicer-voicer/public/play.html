@@ -19,19 +19,17 @@
       </div>
       <a class="btn btn-ghost btn-sm brand-nav" href="/" data-hub-exit="1">Lagga Club</a>
       <a class="btn btn-ghost btn-sm brand-nav" href="index.html" id="btnDashboard">Dashboard</a>
+      <button class="btn btn-ghost btn-sm brand-nav hidden" id="btnReturnLobby" type="button">← Lobby</button>
     </div>
 
     <div id="error" class="error-banner hidden"></div>
 
     <section class="card" id="joinCard">
-      <h2>Beitreten</h2>
-      <p class="muted">Charakter wählen — du siehst nur deine Szenen.</p>
-      <label for="code">Room-Code</label>
-      <input id="code" type="text" maxlength="6" style="text-transform: uppercase" />
-      <label for="name" style="margin-top: 12px">Name</label>
-      <input id="name" type="text" maxlength="24" />
+      <h2>Session</h2>
+      <p class="muted">Multiplayer startet über die Lagga-Party im Hub. Solo vom Dashboard.</p>
       <div class="btn-row">
-        <button class="btn" id="btnJoin" type="button">Beitreten</button>
+        <a class="btn" href="/">Zur Hub-Lobby</a>
+        <a class="btn btn-ghost" href="index.html">Dashboard (Solo)</a>
       </div>
     </section>
 
@@ -43,13 +41,12 @@
 
       <div id="castPanel" class="stack">
         <div id="hostLobbyMeta" class="host-lobby-meta hidden center">
-          <h2 style="margin:0 0 4px">Raum-Code</h2>
-          <div class="room-code" id="lobbyRoomCode">······</div>
-          <p class="muted">Freunde treten mit diesem Code bei:</p>
-          <p class="join-url" id="lobbyJoinUrl"></p>
+          <h2 style="margin:0 0 4px">Party-Session</h2>
+          <p class="muted" id="lobbyJoinUrl">Casting · Ready · Lead startet</p>
+          <div class="room-code hidden" id="lobbyRoomCode" aria-hidden="true"></div>
         </div>
         <p class="muted center" id="castIntro">
-          Charaktere wählen (mehrere möglich) · Ready · Host startet
+          Charaktere wählen (mehrere möglich) · Ready · Lead startet
         </p>
         <div class="btn-row" id="castButtons" style="justify-content: center"></div>
         <ul class="player-list" id="playerList"></ul>

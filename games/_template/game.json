@@ -5,6 +5,7 @@
   "description": "Längere Beschreibung.",
   "status": "wip",
   "entry": "server/index.js",
+  "partySupport": false,
   "routes": {
     "home": "/"
   }
