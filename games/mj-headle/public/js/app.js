@@ -81,8 +81,10 @@
     const data = await res.json();
     catalog = data.songs || [];
     stages = data.stages || stages;
+    const r2on = data.r2 && data.r2.enabled;
     $('catalogMeta').textContent =
-      `${catalog.length} Titel · ${data.playableCount || 0} spielbar (Audio + Cue)`;
+      `${catalog.length} Titel · ${data.playableCount || 0} spielbar` +
+      (r2on ? ' · R2 an' : ' · R2 aus (keine Clips vom Bucket)');
   }
 
   function filterSongs(query) {
@@ -265,7 +267,7 @@
       $('roundsField').hidden = !isHost();
       $('roundsInput').value = state.settings?.rounds || 5;
       $('lobbyHint').textContent = state.solo
-        ? 'Solo — starte, wenn Songs mit gültigem Cue vorhanden sind.'
+        ? 'Solo — Host startet die Runde.'
         : 'Party — Host startet, wenn alle bereit sind.';
       $('btnReady').textContent = ready ? 'Nicht bereit' : 'Bereit';
       return;
@@ -372,7 +374,13 @@
 
   $('btnStart').addEventListener('click', async () => {
     const res = await emit('game:start');
-    if (res.error) $('lobbyHint').textContent = res.error;
+    if (res.error) {
+      $('lobbyHint').textContent =
+        res.error +
+        (String(res.error).includes('spielbar')
+          ? ' → Server braucht R2-Keys (MJ_R2_*) und Songs unter audio/.'
+          : '');
+    }
   });
 
   $('btnPlay').addEventListener('click', () => playClip());
