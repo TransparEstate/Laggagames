@@ -84,11 +84,11 @@ function contentType(ext) {
 }
 
 function clientFromEnv() {
-  const accessKeyId = env('MJ_R2_ACCESS_KEY_ID') || env('R2_ACCESS_KEY_ID');
-  const secretAccessKey = env('MJ_R2_SECRET_ACCESS_KEY') || env('R2_SECRET_ACCESS_KEY');
+  const accessKeyId = env('MJ_R2_ACCESS_KEY_ID');
+  const secretAccessKey = env('MJ_R2_SECRET_ACCESS_KEY');
   const bucket = env('MJ_R2_BUCKET') || 'lagga-mj-headle';
-  let endpoint = env('MJ_R2_ENDPOINT') || env('R2_ENDPOINT');
-  const accountId = env('MJ_R2_ACCOUNT_ID') || env('R2_ACCOUNT_ID');
+  let endpoint = env('MJ_R2_ENDPOINT');
+  const accountId = env('MJ_R2_ACCOUNT_ID');
   if (!endpoint && accountId) endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
   if (!accessKeyId || !secretAccessKey || !endpoint) {
     throw new Error(
@@ -98,6 +98,7 @@ function clientFromEnv() {
   const client = new S3Client({
     region: env('MJ_R2_REGION') || 'auto',
     endpoint,
+    forcePathStyle: true,
     credentials: { accessKeyId, secretAccessKey },
   });
   return { client, bucket };
