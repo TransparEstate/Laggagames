@@ -117,6 +117,25 @@ app.get('/api/audio/:id', async (req, res) => {
   }
 });
 
+/** Short clip from cue — what the play button should use (fast + audible). */
+app.get('/api/clip/:id', async (req, res) => {
+  try {
+    const song = await catalog.getSong(req.params.id);
+    if (!song) return res.status(404).json({ error: 'Song nicht gefunden.' });
+    const dur = Math.min(15, Math.max(0.05, Number(req.query.dur) || 0.1));
+    const clip = await catalog.resolveClip(song, dur);
+    if (!clip) return res.status(404).json({ error: 'Clip fehlt (Audio/R2).' });
+    res.setHeader('Content-Type', clip.contentType || 'audio/mpeg');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('X-Cue-Start-Sec', String(clip.startSec ?? clip.song?.cueStartSec ?? 0));
+    res.setHeader('X-Clip-Dur', String(clip.durationSec || dur));
+    res.setHeader('X-Audio-Source', String(clip.source || ''));
+    res.send(clip.buffer);
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Clip-Fehler' });
+  }
+});
+
 app.get('/api/songs/:id/preview', async (req, res) => {
   try {
     const song = await catalog.getSong(req.params.id);
@@ -318,6 +337,14 @@ io.on('connection', (socket) => {
       const songs = await catalog.listPlayableSongs();
       const result = game.startMatch(room, songs);
       if (result.error) return typeof ack === 'function' && ack(result);
+      // Refine cue only for the active track (full library would be too slow).
+      if (room.current?.songId) {
+        const base = songs.find((s) => s.id === room.current.songId);
+        if (base) {
+          const refined = await catalog.ensureAudibleCue(base);
+          room.current.cueStartSec = Number(refined.cueStartSec) || 0;
+        }
+      }
       broadcastRoom(room);
       if (typeof ack === 'function') ack({ ok: true, state: rooms.getPublicState(room, socket.id) });
     } catch (err) {
@@ -357,6 +384,13 @@ io.on('connection', (socket) => {
       const songs = await catalog.listPlayableSongs();
       const result = game.nextRound(room, songs);
       if (result.error) return typeof ack === 'function' && ack(result);
+      if (room.current?.songId) {
+        const base = songs.find((s) => s.id === room.current.songId);
+        if (base) {
+          const refined = await catalog.ensureAudibleCue(base);
+          room.current.cueStartSec = Number(refined.cueStartSec) || 0;
+        }
+      }
       broadcastRoom(room);
       if (typeof ack === 'function') {
         ack({ ok: true, ...result, state: rooms.getPublicState(room, socket.id) });

@@ -1,8 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const r2 = require('./r2');
-const { isPlayableCue } = require('./cueDetect');
+const cueDetect = require('./cueDetect');
+const { isPlayableCue } = cueDetect;
 const { slugify, songsFromAudioObjects } = require('./titleClean');
+const { extractClip } = require('./clipExtract');
 
 const ROOT = path.join(__dirname, '..');
 const LOCAL_CATALOG = path.join(ROOT, 'catalog', 'songs.json');
@@ -237,6 +239,71 @@ async function resolveAudio(song) {
   return null;
 }
 
+function needsCueRefine(song) {
+  if (!song) return false;
+  const reason = String(song.cueReason || '');
+  if (/provisional|r2-upload|upload-default|after-audio/i.test(reason)) return true;
+  if ((Number(song.cueStartSec) || 0) <= 0.02) return true;
+  return false;
+}
+
+/**
+ * Provisional cues at 0s often land in silence — refine once via onset detect.
+ */
+async function ensureAudibleCue(song) {
+  if (!song || !needsCueRefine(song)) return song;
+  const audio = await resolveAudio(song);
+  if (!audio?.buffer) return song;
+  const ext = path.extname(song.audioKey || song.localPath || '.mp3') || '.mp3';
+  let analysis;
+  try {
+    analysis = cueDetect.analyzeBuffer(audio.buffer, ext);
+  } catch {
+    return song;
+  }
+  const cueStartSec = Number(analysis.cueStartSec);
+  if (!Number.isFinite(cueStartSec) || cueStartSec < 0) return song;
+  const cueQuality =
+    analysis.cueQuality === 'ok' || analysis.cueQuality === 'manual' ? analysis.cueQuality : 'ok';
+  saveCueOverride(song.id, {
+    cueStartSec,
+    cueQuality,
+    cueReason: analysis.reason || 'lazy-onset',
+  });
+  const refreshed = await getSong(song.id);
+  return refreshed || { ...song, cueStartSec, cueQuality, cueReason: analysis.reason || 'lazy-onset' };
+}
+
+const clipCache = new Map();
+
+async function resolveClip(song, durationSec) {
+  if (!song) return null;
+  const withCue = await ensureAudibleCue(song);
+  const startSec = Number(withCue.cueStartSec) || 0;
+  const dur = Math.min(15, Math.max(0.05, Number(durationSec) || 0.1));
+  const cacheKey = `${withCue.id}:${startSec.toFixed(3)}:${dur.toFixed(3)}`;
+  if (clipCache.has(cacheKey)) return { ...clipCache.get(cacheKey), song: withCue };
+
+  const audio = await resolveAudio(withCue);
+  if (!audio?.buffer) return null;
+  const ext = path.extname(withCue.audioKey || withCue.localPath || '.mp3') || '.mp3';
+  const clip = extractClip(audio.buffer, {
+    startSec,
+    durationSec: dur,
+    ext,
+  });
+  const payload = {
+    buffer: clip.buffer,
+    contentType: clip.contentType,
+    startSec: clip.startSec,
+    durationSec: clip.durationSec,
+    source: audio.source,
+  };
+  if (clipCache.size > 80) clipCache.clear();
+  clipCache.set(cacheKey, payload);
+  return { ...payload, song: withCue };
+}
+
 function saveCueOverride(id, { cueStartSec, cueQuality = 'manual', cueReason = 'manual-override' }) {
   const overrides = loadJsonSafe(LOCAL_OVERRIDES, {});
   overrides[id] = {
@@ -271,6 +338,8 @@ module.exports = {
   listPlayableSongs,
   getSong,
   resolveAudio,
+  resolveClip,
+  ensureAudibleCue,
   publicSong,
   saveCueOverride,
   syncFromStorage,

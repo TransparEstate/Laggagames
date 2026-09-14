@@ -226,30 +226,32 @@
     const cur = state?.current;
     if (!cur?.songId) return;
     stopAudio();
-    const url = `${GB}/api/audio/${encodeURIComponent(cur.songId)}`;
-    if (!audio || audio.dataset.songId !== cur.songId) {
-      audio = new Audio(url);
-      audio.dataset.songId = cur.songId;
-      audio.preload = 'auto';
-    }
-    const cue = Number(cur.cueStartSec) || 0;
     const dur = Number(cur.stageSeconds) || 0.1;
+    // Server cuts a short clip from the cue — no huge MP3 + seeking (often silent).
+    const url = `${GB}/api/clip/${encodeURIComponent(cur.songId)}?dur=${encodeURIComponent(dur)}&t=${Date.now()}`;
+    audio = new Audio(url);
+    audio.dataset.songId = cur.songId;
+    audio.preload = 'auto';
     const start = () => {
-      try {
-        audio.currentTime = cue;
-      } catch {
-        /* ignore */
-      }
       const p = audio.play();
-      if (p && p.catch) p.catch(() => {});
+      if (p && p.catch) {
+        p.catch((err) => {
+          const hint = $('playCaption');
+          if (hint) hint.textContent = `Audio-Fehler: ${err?.message || 'play blocked'}`;
+        });
+      }
       $('btnPlay').classList.add('playing');
       stopTimer = setTimeout(() => {
         audio.pause();
         $('btnPlay').classList.remove('playing');
-      }, Math.max(50, dur * 1000));
+      }, Math.max(80, dur * 1000 + 40));
     };
-    if (audio.readyState >= 1) start();
-    else audio.addEventListener('loadedmetadata', start, { once: true });
+    audio.addEventListener('error', () => {
+      const hint = $('playCaption');
+      if (hint) hint.textContent = 'Clip konnte nicht geladen werden (R2/Audio).';
+    });
+    if (audio.readyState >= 2) start();
+    else audio.addEventListener('canplay', start, { once: true });
   }
 
   function render() {
