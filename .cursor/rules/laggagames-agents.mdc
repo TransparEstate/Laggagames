@@ -6,9 +6,12 @@ alwaysApply: true
 # Laggagames Agent Rules
 
 - Produkt: multimodale Gamesite, eigene Spiele, Solo und synchronisierter Multiplayer (mit/gegen).
-- Stack beibehalten: Node/Express/Socket.io + statisches `public/`-Frontend. Kein Rewrite, kein neues Framework ohne Auftrag.
+- Architektur: Hub + isolierte Spiele unter `games/<slug>/`. Nur den genannten Spiel-Ordner anfassen.
+- Stack beibehalten: Node/Express/Socket.io + Vanilla-Frontend. Kein Rewrite, kein neues Framework ohne Auftrag.
 - Nicht anlügen: Unsicherheit, Fehler und ungetestete Teile klar benennen.
 - Code-Exploration minimal: nur Dateien des aktuellen Spiels und bei Bedarf Multiplayer/Sync/Rooms. Nicht die ganze Repo-Struktur durchlesen.
 - Kein Browser-E2E, keine Screenshots, kein Computer-Use, außer der Nutzer verlangt es ausdrücklich. Verifikation über Terminal.
 - Nicht-Ziele: Auth/Payments/Store, IP-Packs committen, große Engine-Abstraktion vor dem zweiten Spiel, Secrets/Prod-Deploys.
 - Änderungen klein und erweiternd halten; bestehende Room-/Sync-Pfade nutzen statt Parallelwelten.
+- Keine Pushs und keine Pull Requests von sich aus, außer ausdrücklich gefordert.
+- Keine kryptischen Branch-Namen (keine Hash-/UUID-/cursor-agent-Namen). Neue Branches nur bei Bedarf und nur sinnvoll benannt, z. B. `v3.1-Update-Michael-Jackson-Spiel` (Version + klarer Inhalt).

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Meine Szenen – Choicer Voicer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="page">
+    <div class="brand brand-with-nav">
+      <div class="brand-badge">🎙️</div>
+      <div>
+        <h1>Meine Szenen</h1>
+        <p id="subtitle">Verbinden…</p>
+      </div>
+      <a class="btn btn-ghost btn-sm brand-nav" href="/">Laggagames</a>
+      <a class="btn btn-ghost btn-sm brand-nav" href="index.html" id="btnDashboard">Dashboard</a>
+    </div>
+
+    <div id="error" class="error-banner hidden"></div>
+
+    <section class="card" id="joinCard">
+      <h2>Beitreten</h2>
+      <p class="muted">Charakter wählen — du siehst nur deine Szenen.</p>
+      <label for="code">Room-Code</label>
+      <input id="code" type="text" maxlength="6" style="text-transform: uppercase" />
+      <label for="name" style="margin-top: 12px">Name</label>
+      <input id="name" type="text" maxlength="24" />
+      <div class="btn-row">
+        <button class="btn" id="btnJoin" type="button">Beitreten</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="gameCard">
+      <div class="status-banner">
+        <span class="phase-pill" id="phasePill">Lobby</span>
+        <p style="margin: 8px 0 0" id="statusText"></p>
+      </div>
+
+      <div id="castPanel" class="stack">
+        <div id="hostLobbyMeta" class="host-lobby-meta hidden center">
+          <h2 style="margin:0 0 4px">Raum-Code</h2>
+          <div class="room-code" id="lobbyRoomCode">······</div>
+          <p class="muted">Freunde treten mit diesem Code bei:</p>
+          <p class="join-url" id="lobbyJoinUrl"></p>
+        </div>
+        <p class="muted center" id="castIntro">
+          Charaktere wählen (mehrere möglich) · Ready · Host startet
+        </p>
+        <div class="btn-row" id="castButtons" style="justify-content: center"></div>
+        <ul class="player-list" id="playerList"></ul>
+        <div class="btn-row" style="justify-content: center">
+          <button class="btn btn-success" id="btnReady" type="button">Ready</button>
+          <button class="btn hidden" id="btnStartMp" type="button">Start</button>
+        </div>
+        <p class="muted center" id="readyHint">Wähle einen oder mehrere Charaktere.</p>
+      </div>
+
+      <div id="waitPanel" class="stack hidden center">
+        <p class="clip-title">Du bist ready</p>
+        <p class="muted" id="waitLobbyText">Warte, bis der Host startet…</p>
+        <button class="btn btn-ghost" id="btnUnready" type="button">Ready zurücknehmen</button>
+      </div>
+
+      <div id="dubPanel" class="dub-layout hidden">
+        <div class="dub-stage">
+          <div class="video-wrap" id="videoWrap">
+            <video id="playerVideo" playsinline preload="auto" muted></video>
+            <div class="caption-overlay" id="captionOverlay"></div>
+          </div>
+          <p id="videoError" class="error-banner hidden"></p>
+
+          <div id="cinemaBar" class="cinema-bar hidden">
+            <h2 class="cinema-title">Filmpremiere</h2>
+            <p class="muted center" id="cinemaIntro">Euer fertiger Dub — ansehen und speichern</p>
+            <div class="btn-row cinema-actions">
+              <button class="btn btn-success" id="btnPlayMovie" type="button">▶ Film ansehen (sync)</button>
+              <button class="btn btn-ghost" id="btnStopMovie" type="button">⏸ Pause</button>
+              <button class="btn btn-secondary" id="btnDownloadVideo" type="button">Video laden</button>
+              <button class="btn" id="btnSaveProject" type="button" title="Takes lokal im Browser speichern — kein Cloud-Speicher">Projekt speichern</button>
+              <button class="btn btn-ghost hidden" id="btnBackToClips" type="button">Clips ändern</button>
+            </div>
+            <p class="muted center" id="cinemaStatus"></p>
+          </div>
+
+          <div id="dubWorkArea">
+          <div class="dub-now">
+            <div class="dub-now-nav">
+              <button class="scene-nav-btn" id="btnPrevScene" type="button" title="Vorheriger Clip">
+                <span class="scene-nav-arrow">‹</span>
+                <span class="scene-nav-label">Clip</span>
+              </button>
+              <div class="dub-now-text">
+                <p class="clip-title" id="sceneCaption">Szene wählen</p>
+                <p class="muted" id="sceneMeta"></p>
+              </div>
+              <button class="scene-nav-btn" id="btnNextScene" type="button" title="Nächster Clip">
+                <span class="scene-nav-label">Clip</span>
+                <span class="scene-nav-arrow">›</span>
+              </button>
+            </div>
+            <p class="muted center" id="segmentHint">Abschnitt bereit</p>
+          </div>
+
+          <div class="dub-controls" id="activeScene">
+            <button class="btn" id="btnRef" type="button" title="Clip-Originalton + stummes Video">▶ Original</button>
+            <button class="btn btn-secondary" id="btnPlayTake" type="button" title="Dein Take + stummes Video">Mein Take</button>
+            <button class="btn btn-ghost" id="btnPlaySeg" type="button" title="Video mit Filmsound">Filmton</button>
+            <button class="mic-btn mic-btn-inline" id="micBtn" type="button" title="Aufnehmen / ersetzen">🎙️</button>
+          </div>
+          <p class="muted center dub-mic-hint" id="micHint">Original = Clip-Ton · Filmton = Videosound · 🎙️ speichert automatisch</p>
+          <p class="muted center" id="takeDone"></p>
+          <div class="btn-row center" id="allDoneBar" style="display:none; justify-content:center; margin-top: 8px; flex-wrap: wrap; gap: 8px">
+            <button class="btn btn-success" id="btnSubmitFinal" type="button">Ich bin fertig</button>
+            <button class="btn btn-success hidden" id="btnStartPremiere" type="button">Premiere starten</button>
+            <p class="muted center" id="premiereWaitHint" style="margin: 0; width: 100%; font-size: 0.85rem"></p>
+          </div>
+          <button class="btn btn-success hidden" id="btnSubmit" type="button" aria-hidden="true"></button>
+          <button class="btn btn-ghost hidden" id="btnRerecord" type="button" aria-hidden="true"></button>
+
+          <div class="wave-panel" id="wavePanel">
+            <div class="wave-header">
+              <span class="wave-title">Timing-Vergleich</span>
+              <span class="wave-legend">
+                <span class="wave-dot wave-dot-original"></span> Original
+                <span class="wave-dot wave-dot-take"></span> Take
+              </span>
+            </div>
+            <div class="wave-canvas-wrap">
+              <canvas id="waveCanvas" class="wave-canvas" height="140"></canvas>
+            </div>
+            <div class="wave-timing-row" id="waveTimingRow" hidden>
+              <label class="wave-timing-label" for="timingOffset">Timing</label>
+              <button type="button" class="wave-timing-btn" id="btnTimingMinus" title="10 ms früher">−</button>
+              <input
+                type="range"
+                id="timingOffset"
+                class="wave-timing-slider"
+                min="-600"
+                max="600"
+                value="0"
+                step="10"
+                title="Take auf der Timeline verschieben"
+              />
+              <button type="button" class="wave-timing-btn" id="btnTimingPlus" title="10 ms später">+</button>
+              <span class="wave-timing-val" id="timingOffsetVal">0.00 s</span>
+              <button type="button" class="wave-timing-reset" id="btnTimingReset" title="Offset zurücksetzen">Reset</button>
+            </div>
+            <p class="muted center" id="waveHint" style="margin: 8px 0 0; font-size: 0.8rem">
+              Original vs. dein Take — Take auf der Wellenform ziehen zum Feintunen
+            </p>
+          </div>
+          </div>
+        </div>
+
+        <aside class="dub-side">
+          <details class="dub-drawer" id="scenesDrawer">
+            <summary>
+              <span id="myScenesHeading">Meine Clips</span>
+              <span class="muted" id="myScenesCount"></span>
+            </summary>
+            <ul class="scene-list" id="mySceneList"></ul>
+          </details>
+          <details class="dub-drawer" id="progressDrawer">
+            <summary>
+              <span>Team</span>
+              <span class="muted" id="progressSummary">0%</span>
+            </summary>
+            <div class="progress-board" id="progressBoardWrap">
+              <div class="progress-bar" aria-hidden="true">
+                <div class="progress-bar-fill" id="progressBarFill"></div>
+              </div>
+              <div class="progress-chars" id="progressChars"></div>
+              <ul class="scene-list progress-clip-list" id="progressClipList"></ul>
+            </div>
+          </details>
+          <details class="dub-drawer" id="micGainDrawer">
+            <summary>
+              <span>Mikrofon</span>
+              <span class="muted" id="micGainVal">100%</span>
+            </summary>
+            <div class="mic-gain-row" id="micGainRow">
+              <label class="mic-gain-label" for="micGain">Leise</label>
+              <input
+                type="range"
+                id="micGain"
+                class="mic-gain-slider"
+                min="40"
+                max="200"
+                value="100"
+                step="5"
+                title="Aufnahme-Lautstärke für dein Mikrofon"
+              />
+              <span class="mic-gain-label">Laut</span>
+            </div>
+            <p class="muted mic-gain-hint">Saubere Aufnahme (ohne Browser-Filter). Pegel wird für deinen Namen gespeichert.</p>
+          </details>
+        </aside>
+      </div>
+    </section>
+
+    <div id="submitPrompt" class="submit-prompt hidden" role="dialog" aria-modal="true" aria-labelledby="submitPromptTitle">
+      <div class="submit-prompt-card">
+        <h2 id="submitPromptTitle">Alle Clips fertig!</h2>
+        <p class="muted" id="submitPromptBody">Bist du mit deinen Takes zufrieden und bereit für die Premiere?</p>
+        <div class="btn-row" style="justify-content: center; margin-top: 16px">
+          <button class="btn btn-success" id="btnConfirmSubmit" type="button">Ja, ich bin fertig</button>
+          <button class="btn btn-ghost" id="btnDismissSubmit" type="button">Noch nicht</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="appToast" class="app-toast hidden" role="status" aria-live="polite"></div>
+  </main>
+
+  <script src="js/base.js"></script>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script src="js/socket-client.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/waveform.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/projects.js"></script>
+  <script src="js/play.js"></script>
+</body>
+</html>

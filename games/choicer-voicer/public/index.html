@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Choicer Voicer – Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="page page-wide">
+    <div class="brand brand-with-nav">
+      <div class="brand-badge">🎬</div>
+      <div>
+        <h1>Choicer Voicer</h1>
+        <p>Voicepacks hochladen, alleine dubben oder Multiplayer starten.</p>
+      </div>
+      <div class="dash-top-actions">
+        <a class="btn btn-sm btn-ghost" href="/">← Laggagames</a>
+        <button class="btn btn-sm" id="btnOpenMp" type="button">Multiplayer</button>
+        <button class="btn btn-sm btn-secondary" id="btnOpenJoin" type="button">Raum betreten</button>
+      </div>
+    </div>
+
+    <section class="card upload-card">
+      <h2>Voicepack hochladen</h2>
+      <p class="muted" id="uploadHint">ZIP im Choicer-Voicer-Format hier ablegen.</p>
+      <div class="upload-drop" id="uploadDrop" tabindex="0">
+        <!-- Kein accept=…: unter Windows filtert MIME/Extension-Accept oft ZIP weg -->
+        <input type="file" id="packFile" hidden />
+        <p><strong>ZIP hierher ziehen</strong> oder tippen/klicken</p>
+        <p class="muted" style="margin:6px 0 0;font-size:0.9rem">
+          Im Dialog „Alle Dateien“ wählen, dann die <strong>.zip</strong> auswählen.
+          Große Packs dauern (Konvertierung).
+        </p>
+        <button type="button" class="btn btn-sm btn-secondary" id="btnPickZip" style="margin-top:12px">
+          ZIP-Datei auswählen…
+        </button>
+      </div>
+      <p class="muted hidden" id="storageHint" style="margin:10px 0 0;font-size:0.9rem"></p>
+      <div class="upload-progress hidden" id="uploadProgressWrap">
+        <div class="progress-bar"><div class="progress-bar-fill" id="uploadProgressFill"></div></div>
+        <p class="muted" id="uploadProgressText">0%</p>
+      </div>
+      <p class="error hidden" id="uploadError"></p>
+      <p class="ok-msg hidden" id="uploadOk"></p>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <div class="dash-section-head" style="margin-bottom:10px">
+        <h2 style="margin:0">Gespeicherte Projekte</h2>
+        <div class="dash-top-actions" style="margin-left:0">
+          <button class="btn btn-sm btn-ghost" id="btnImportProjectFile" type="button">Datei importieren</button>
+          <input id="projectFileInput" type="file" accept=".json,application/json,.cvproject.json" hidden />
+        </div>
+      </div>
+      <p class="muted" style="margin:0 0 12px;font-size:0.9rem">
+        Nur auf diesem Gerät (Browser) — Takes zum Nachbearbeiten, kein Video in der Cloud.
+      </p>
+      <label for="projectPackFilter">Pack filtern</label>
+      <select id="projectPackFilter" style="max-width:360px;margin-bottom:12px">
+        <option value="">Alle Packs</option>
+      </select>
+      <div class="project-list" id="projectList">
+        <p class="muted">Keine lokalen Projekte.</p>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <h2 style="margin:0 0 14px">Deine Packs</h2>
+      <div class="pack-grid" id="packGrid">
+        <p class="muted">Lade Packs…</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="modalMp" class="dash-modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalMpTitle">
+    <div class="dash-modal-card">
+      <button type="button" class="dash-modal-close" data-close-modal="modalMp" aria-label="Schließen">×</button>
+      <h2 id="modalMpTitle">Multiplayer</h2>
+      <p class="muted">Name + Pack — dann Lobby mit Code teilen.</p>
+      <label for="mpName">Dein Name (Host)</label>
+      <input id="mpName" type="text" maxlength="24" placeholder="Host" autocomplete="nickname" />
+      <label for="mpPack" style="margin-top:12px">Voicepack</label>
+      <select id="mpPack"></select>
+      <div class="btn-row" style="margin-top:16px; justify-content:flex-end">
+        <button class="btn btn-ghost" type="button" data-close-modal="modalMp">Abbrechen</button>
+        <button class="btn" id="btnMultiplayer" type="button">Lobby erstellen</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalJoin" class="dash-modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalJoinTitle">
+    <div class="dash-modal-card">
+      <button type="button" class="dash-modal-close" data-close-modal="modalJoin" aria-label="Schließen">×</button>
+      <h2 id="modalJoinTitle">Raum betreten</h2>
+      <p class="muted">Code vom Host eingeben.</p>
+      <label for="joinCode">Room-Code</label>
+      <input id="joinCode" type="text" maxlength="6" placeholder="AB3K9X" style="text-transform: uppercase" autocomplete="off" />
+      <label for="joinName" style="margin-top:12px">Dein Name</label>
+      <input id="joinName" type="text" maxlength="24" placeholder="Spieler" autocomplete="nickname" />
+      <div class="btn-row" style="margin-top:16px; justify-content:flex-end">
+        <button class="btn btn-ghost" type="button" data-close-modal="modalJoin">Abbrechen</button>
+        <button class="btn btn-secondary" id="btnJoin" type="button">Beitreten</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/base.js"></script>
+  <script src="js/projects.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
