@@ -233,8 +233,12 @@
     packs.forEach((pack) => {
       const card = document.createElement('article');
       card.className = 'pack-card';
-      const icon = pack.iconUrl
-        ? `<img class="pack-card-icon" src="${pack.iconUrl}" alt="" />`
+      const iconSrc =
+        pack.iconUrl && typeof assetUrl === 'function'
+          ? assetUrl(pack.iconUrl)
+          : pack.iconUrl;
+      const icon = iconSrc
+        ? `<img class="pack-card-icon" src="${escapeHtml(iconSrc)}" alt="" />`
         : `<div class="pack-card-icon placeholder">🎙</div>`;
       const action = inParty
         ? `<button type="button" class="btn" data-party-pack="${escapeHtml(pack.id)}">Für Party</button>`

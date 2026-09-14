@@ -119,8 +119,9 @@
   /** Manueller Take-Shift (± Sekunden). */
   const TIMING_OFFSET_MAX_SEC = 0.6;
 
-  codeInput.value = (params.get('code') || '').toUpperCase();
-  nameInput.value = params.get('name') || '';
+  // Join-Inputs wurden entfernt (Hub-Party + Dashboard) — nur noch optional/legacy.
+  if (codeInput) codeInput.value = (params.get('code') || '').toUpperCase();
+  if (nameInput) nameInput.value = params.get('name') || '';
 
   const MIC_GAIN_DEFAULT_PCT = 100;
 
@@ -1666,8 +1667,9 @@
   }
 
   function bindVideo() {
-    const url = state?.pack?.videoUrl;
-    if (!url || !video) return;
+    const raw = state?.pack?.videoUrl;
+    if (!raw || !video) return;
+    const url = typeof assetUrl === 'function' ? assetUrl(raw) : raw;
     // Bust cache when switching ogv→mp4
     const full = url.includes('?') ? url : `${url}?v=mp4audio`;
     if (video.dataset.src === full) return;
@@ -1679,9 +1681,32 @@
     video.load();
   }
 
+  function localizePackUrls(pack) {
+    if (!pack || typeof assetUrl !== 'function') return pack;
+    const scenes = (pack.scenes || []).map((s) => ({
+      ...s,
+      imageUrl: s.imageUrl ? assetUrl(s.imageUrl) : s.imageUrl,
+      referenceUrl: s.referenceUrl ? assetUrl(s.referenceUrl) : s.referenceUrl,
+    }));
+    return {
+      ...pack,
+      iconUrl: pack.iconUrl ? assetUrl(pack.iconUrl) : pack.iconUrl,
+      videoUrl: pack.videoUrl ? assetUrl(pack.videoUrl) : pack.videoUrl,
+      backingTrackUrl: pack.backingTrackUrl
+        ? assetUrl(pack.backingTrackUrl)
+        : pack.backingTrackUrl,
+      scenes,
+    };
+  }
+
   function applyState(next) {
     const wasReview = state?.phase === 'review';
-    state = next;
+    state = next
+      ? {
+          ...next,
+          pack: next.pack ? localizePackUrls(next.pack) : next.pack,
+        }
+      : next;
     isRoomHost = isRoomHost || (playerId && playerId === state.hostId);
     phasePill.textContent =
       state.phase === 'review' ? 'Premiere' : state.phase;
@@ -1839,7 +1864,7 @@
     sessionStorage.setItem('cv_playerId', playerId);
     sessionStorage.setItem('cv_roomCode', res.state.code);
     const reconnectName =
-      (res.state?.players || []).find((p) => p.id === playerId)?.name || nameInput.value;
+      (res.state?.players || []).find((p) => p.id === playerId)?.name || nameInput?.value || '';
     loadMicGainForUser(reconnectName);
     joinCard.classList.add('hidden');
     gameCard.classList.remove('hidden');
@@ -1920,7 +1945,7 @@ async function startMultiplayer() {
     }
     activeLocalProjectId = null;
     sessionStorage.removeItem('cv_localProjectId');
-    const name = (params.get('name') || nameInput.value || 'Solo').trim() || 'Solo';
+    const name = (params.get('name') || nameInput?.value || 'Solo').trim() || 'Solo';
     joinCard.classList.add('hidden');
     gameCard.classList.remove('hidden');
     subtitle.textContent = 'Solo — alle Charaktere';
@@ -1939,15 +1964,17 @@ async function startMultiplayer() {
     applyState(res.state);
   }
 
-  btnJoin.addEventListener('click', async () => {
-    const code = codeInput.value.trim().toUpperCase();
-    const name = nameInput.value.trim();
-    if (!code || !name) {
-      CV.showError(errorEl, 'Code und Name nötig.');
-      return;
-    }
-    await joinRoom(code, name);
-  });
+  if (btnJoin && codeInput && nameInput) {
+    btnJoin.addEventListener('click', async () => {
+      const code = codeInput.value.trim().toUpperCase();
+      const name = nameInput.value.trim();
+      if (!code || !name) {
+        CV.showError(errorEl, 'Code und Name nötig.');
+        return;
+      }
+      await joinRoom(code, name);
+    });
+  }
 
   if (btnReady) {
     btnReady.addEventListener('click', async () => {

@@ -12,6 +12,16 @@
     return `${GB}${pathPart}`;
   };
 
+  /** Prefix absolute in-game media paths (/packs/...) when mounted under /g/<slug>/. */
+  global.assetUrl = function assetUrl(u) {
+    if (!u || typeof u !== "string") return u;
+    if (/^(https?:|blob:|data:)/i.test(u)) return u;
+    if (!GB) return u;
+    if (u === GB || u.startsWith(`${GB}/`)) return u;
+    if (u.startsWith("/")) return GB + u;
+    return u;
+  };
+
   if (!GB) return;
 
   const origFetch = global.fetch.bind(global);
