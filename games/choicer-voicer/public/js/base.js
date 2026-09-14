@@ -30,14 +30,16 @@
     return origOpen.call(this, method, url, ...rest);
   };
 
-  // Rewrite in-page assignments like location.href = "/play.html..."
-  // by intercepting property sets is too heavy; instead fix common anchors on DOM ready.
+  // Rewrite absolute in-game links (/play.html, /api/...) to stay under /g/<slug>/.
+  // Do NOT rewrite hub exits: "/" and "/#..." must leave the game for Lagga Club.
   global.document?.addEventListener("click", (ev) => {
     const a = ev.target?.closest?.("a[href]");
     if (!a) return;
     const href = a.getAttribute("href");
     if (!href || !href.startsWith("/") || href.startsWith("//")) return;
     if (href.startsWith("/g/")) return;
+    if (href === "/" || href.startsWith("/#") || href.startsWith("/?")) return;
+    if (a.hasAttribute("data-hub-exit")) return;
     ev.preventDefault();
     global.location.href = GB + href;
   });
