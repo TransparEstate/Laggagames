@@ -11,27 +11,34 @@ function env(name, fallback = '') {
 }
 
 function accessKeyId() {
-  return env('MJ_R2_ACCESS_KEY_ID') || env('R2_ACCESS_KEY_ID') || env('AWS_ACCESS_KEY_ID');
+  // Prefer MJ_R2_* only — do not silently pick Railway/AWS globals.
+  return env('MJ_R2_ACCESS_KEY_ID') || env('R2_ACCESS_KEY_ID');
 }
 
 function secretAccessKey() {
-  return env('MJ_R2_SECRET_ACCESS_KEY') || env('R2_SECRET_ACCESS_KEY') || env('AWS_SECRET_ACCESS_KEY');
+  return env('MJ_R2_SECRET_ACCESS_KEY') || env('R2_SECRET_ACCESS_KEY');
 }
 
 function bucket() {
   return env('MJ_R2_BUCKET') || 'lagga-mj-headle';
 }
 
+function accountId() {
+  return env('MJ_R2_ACCOUNT_ID') || env('R2_ACCOUNT_ID');
+}
+
 function endpoint() {
-  const custom = env('MJ_R2_ENDPOINT') || env('R2_ENDPOINT') || env('AWS_ENDPOINT_URL');
+  // Never fall back to AWS_ENDPOINT_URL — Railway often sets that to S3 and
+  // breaks R2 with "bucket does not exist" / auth errors.
+  const custom = env('MJ_R2_ENDPOINT') || env('R2_ENDPOINT');
   if (custom) return custom.replace(/\/$/, '');
-  const accountId = env('MJ_R2_ACCOUNT_ID') || env('R2_ACCOUNT_ID');
-  if (accountId) return `https://${accountId}.r2.cloudflarestorage.com`;
+  const id = accountId();
+  if (id) return `https://${id}.r2.cloudflarestorage.com`;
   return '';
 }
 
 function region() {
-  return env('MJ_R2_REGION') || env('R2_REGION') || env('AWS_DEFAULT_REGION') || 'auto';
+  return env('MJ_R2_REGION') || env('R2_REGION') || 'auto';
 }
 
 function isEnabled() {
@@ -43,10 +50,13 @@ let client = null;
 function getClient() {
   if (!isEnabled()) return null;
   if (client) return client;
+  // R2 expects path-style URLs; virtual-hosted style is flaky across SDK versions.
+  const forcePathStyle =
+    env('MJ_R2_FORCE_PATH_STYLE') !== '0' && env('R2_FORCE_PATH_STYLE') !== '0';
   client = new S3Client({
     region: region(),
     endpoint: endpoint(),
-    forcePathStyle: env('MJ_R2_FORCE_PATH_STYLE') === '1' || env('R2_FORCE_PATH_STYLE') === '1',
+    forcePathStyle,
     credentials: {
       accessKeyId: accessKeyId(),
       secretAccessKey: secretAccessKey(),
@@ -131,12 +141,16 @@ async function ping() {
     };
   } catch (err) {
     const msg = err?.message || String(err);
+    let error = msg;
+    if (/specified bucket does not exist/i.test(msg)) {
+      error = `Bucket existiert nicht: "${bucket()}" — Railway: MJ_R2_BUCKET=lagga-mj-headle und MJ_R2_ACCOUNT_ID prüfen.`;
+    } else if (/access denied/i.test(msg)) {
+      error = `R2 Access Denied für Bucket "${bucket()}" — Account-ID / Keys / Bucket-Name in Railway prüfen (soll: lagga-mj-headle).`;
+    }
     return {
       ok: false,
       bucket: bucket(),
-      error: msg.includes('specified bucket does not exist')
-        ? `Bucket existiert nicht: "${bucket()}" — in Railway MJ_R2_BUCKET=lagga-mj-headle und Account-ID prüfen.`
-        : msg,
+      error,
     };
   }
 }
