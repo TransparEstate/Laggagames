@@ -1,4 +1,4 @@
-# Laggagames – Hinweise für Agents
+# Lagga Club – Hinweise für Agents
 
 ## Produkt
 

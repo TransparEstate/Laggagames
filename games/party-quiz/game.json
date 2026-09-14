@@ -1,0 +1,9 @@
+{
+  "id": "party-quiz",
+  "name": "Party Quiz",
+  "tagline": "Fragen gegen die Gruppe – Platzhalter",
+  "description": "Platzhalter im Lagga Club-Hub. Spielinhalt folgt.",
+  "status": "wip",
+  "entry": "server/index.js",
+  "routes": { "home": "/" }
+}

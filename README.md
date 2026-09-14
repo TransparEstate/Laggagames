@@ -1,4 +1,4 @@
-# Laggagames
+# Lagga Club
 
 Hub für **eigene Party-Spiele**. Jedes Spiel lebt isoliert unter `games/<slug>/`.
 

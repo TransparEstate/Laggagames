@@ -14,6 +14,15 @@ const server = http.createServer(app);
 const hubPublic = path.join(__dirname, '..', 'hub', 'public');
 app.use(express.static(hubPublic));
 
+// Railway / Render healthcheck — must exist on the hub, not only on games
+app.get('/health', (_req, res) => {
+  res.json({
+    ok: true,
+    service: 'lagga-club-hub',
+    games: listGames().map((g) => g.slug),
+  });
+});
+
 app.get('/api/games', (_req, res) => {
   const games = listGames().map(({ dir, ...rest }) => rest);
   res.json({ games });
@@ -188,7 +197,9 @@ server.on('upgrade', async (req, socket, head) => {
 // Express 5: no bare "*". Fallback after static / API / game mounts.
 app.use((req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
-  if (req.path.startsWith('/api/') || req.path.startsWith('/g/')) return next();
+  if (req.path.startsWith('/api/') || req.path.startsWith('/g/') || req.path === '/health') {
+    return next();
+  }
   res.sendFile(path.join(hubPublic, 'index.html'), (err) => {
     if (err) next();
   });
@@ -196,7 +207,7 @@ app.use((req, res, next) => {
 
 server.listen(PORT, () => {
   const games = listGames();
-  console.log(`Laggagames Hub on :${PORT}`);
+  console.log(`Lagga Club Hub on :${PORT}`);
   console.log(
     `Games: ${games.map((g) => `${g.slug} → /g/${g.slug}/`).join(', ') || '(noch keine)'}`
   );

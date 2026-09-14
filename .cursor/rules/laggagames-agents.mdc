@@ -1,9 +1,9 @@
 ---
-description: Verbindliche Arbeitsregeln für Laggagames-Agents
+description: Verbindliche Arbeitsregeln für Lagga Club-Agents
 alwaysApply: true
 ---
 
-# Laggagames Agent Rules
+# Lagga Club Agent Rules
 
 - Produkt: multimodale Gamesite, eigene Spiele, Solo und synchronisierter Multiplayer (mit/gegen).
 - Architektur: Hub + isolierte Spiele unter `games/<slug>/`. Nur den genannten Spiel-Ordner anfassen.
