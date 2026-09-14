@@ -1,7 +1,7 @@
 {
-  "name": "laggagames",
+  "name": "lagga-club",
   "version": "1.0.0",
-  "description": "Laggagames – Hub für eigene Party-Spiele (isolierte games/<slug> Ordner)",
+  "description": "Lagga Club – Hub für eigene Party-Spiele (isolierte games/<slug> Ordner)",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",

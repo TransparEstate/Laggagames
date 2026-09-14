@@ -18,7 +18,7 @@ app.use(express.static(hubPublic));
 app.get('/health', (_req, res) => {
   res.json({
     ok: true,
-    service: 'laggagames-hub',
+    service: 'lagga-club-hub',
     games: listGames().map((g) => g.slug),
   });
 });
@@ -207,7 +207,7 @@ app.use((req, res, next) => {
 
 server.listen(PORT, () => {
   const games = listGames();
-  console.log(`Laggagames Hub on :${PORT}`);
+  console.log(`Lagga Club Hub on :${PORT}`);
   console.log(
     `Games: ${games.map((g) => `${g.slug} → /g/${g.slug}/`).join(', ') || '(noch keine)'}`
   );

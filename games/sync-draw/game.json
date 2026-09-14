@@ -2,7 +2,7 @@
   "id": "sync-draw",
   "name": "Sync Draw",
   "tagline": "Gemeinsam zeichnen – Platzhalter",
-  "description": "Platzhalter im Laggagames-Hub. Spielinhalt folgt.",
+  "description": "Platzhalter im Lagga Club-Hub. Spielinhalt folgt.",
   "status": "wip",
   "entry": "server/index.js",
   "routes": { "home": "/" }

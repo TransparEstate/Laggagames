@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: laggagames
+    name: lagga-club
     runtime: node
     plan: free
     buildCommand: npm install
