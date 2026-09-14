@@ -20,11 +20,13 @@
   let socket = null;
   let state = null;
   let playerId = null;
-  let ready = false;
   let catalog = [];
   let stages = [0.1, 0.5, 1, 5, 13];
   let audio = null;
+  let audioToken = 0;
   let stopTimer = null;
+  let lastRoundKey = null;
+  let revealPlaying = false;
 
   function show(name) {
     Object.entries(views).forEach(([key, el]) => {
@@ -52,6 +54,16 @@
 
   function me() {
     return (state?.players || []).find((p) => p.id === playerId) || null;
+  }
+
+  function syncRevealOn() {
+    return state?.settings?.syncReveal !== false;
+  }
+
+  function seesReveal() {
+    const cur = state?.current;
+    if (!cur) return false;
+    return !!(cur.revealed || cur.revealedForMe);
   }
 
   function connect() {
@@ -100,16 +112,14 @@
       .normalize('NFKD')
       .replace(/[\u0300-\u036f]/g, '')
       .trim();
-    if (!q) return catalog.slice(0, 12);
-    return catalog
-      .filter((s) => {
-        const t = String(s.title || '')
-          .toLowerCase()
-          .normalize('NFKD')
-          .replace(/[\u0300-\u036f]/g, '');
-        return t.includes(q);
-      })
-      .slice(0, 12);
+    if (!q) return catalog.slice();
+    return catalog.filter((s) => {
+      const t = String(s.title || '')
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '');
+      return t.includes(q);
+    });
   }
 
   function renderGuessResults(query, { open } = { open: true }) {
@@ -191,16 +201,15 @@
     });
   }
 
-  function renderPlayers(listEl, withReady) {
+  function renderPlayers(listEl, mode) {
     listEl.innerHTML = (state?.players || [])
       .map((p) => {
         const you = p.id === playerId ? ' (du)' : '';
         const host = p.id === state.hostId ? ' ★' : '';
-        const right = withReady
-          ? p.ready
-            ? '<span class="ready">bereit</span>'
-            : '<span>wartet</span>'
-          : `<span>${p.score || 0} P</span>`;
+        let right = `<span>${p.score || 0} P</span>`;
+        if (mode === 'lobby') {
+          right = p.connected === false ? '<span>offline</span>' : '<span>da</span>';
+        }
         return `<li><span>${escapeHtml(p.name)}${you}${host}</span>${right}</li>`;
       })
       .join('');
@@ -220,40 +229,95 @@
       cur?.stageSeconds != null ? fmtSec(cur.stageSeconds) : '—';
   }
 
-  function stopAudio() {
+  function setPlayUi({ playing, caption, disabled }) {
+    const btn = $('btnPlay');
+    const core = btn?.querySelector('.play-orb-core');
+    const cap = $('playCaption');
+    if (btn) {
+      btn.classList.toggle('playing', !!playing);
+      btn.disabled = !!disabled;
+    }
+    if (core) core.textContent = playing ? '❚❚' : '▶';
+    if (cap && caption != null) cap.textContent = caption;
+  }
+
+  function stopAudio({ expected = true } = {}) {
     if (stopTimer) {
       clearTimeout(stopTimer);
       stopTimer = null;
     }
-    if (audio) audio.pause();
-    $('btnPlay').classList.remove('playing');
+    audioToken += 1;
+    if (audio) {
+      try {
+        audio.pause();
+      } catch {
+        /* ignore */
+      }
+      audio = null;
+    }
+    revealPlaying = false;
+    const revealBtn = $('btnRevealPlay');
+    if (revealBtn) revealBtn.textContent = '▶ Song anhören';
+    setPlayUi({
+      playing: false,
+      caption: expected ? 'Ab Cue hören' : undefined,
+      disabled: false,
+    });
+  }
+
+  function isBenignPlayError(err) {
+    const msg = String(err?.message || err || '').toLowerCase();
+    return (
+      msg.includes('interrupted') ||
+      msg.includes('aborted') ||
+      msg.includes('the play() request was interrupted')
+    );
   }
 
   function playClip() {
     const cur = state?.current;
-    if (!cur?.songId) return;
-    stopAudio();
+    if (!cur?.songId || seesReveal()) return;
+    stopAudio({ expected: true });
+    const token = audioToken;
     const dur = Number(cur.stageSeconds) || 0.1;
-    // Server cuts a short clip from the cue — no huge MP3 + seeking (often silent).
     const url = `${GB}/api/clip/${encodeURIComponent(cur.songId)}?dur=${encodeURIComponent(dur)}&t=${Date.now()}`;
-    audio = new Audio(url);
-    audio.dataset.songId = cur.songId;
-    audio.preload = 'auto';
+    const el = new Audio(url);
+    audio = el;
+    el.preload = 'auto';
+    setPlayUi({ playing: false, caption: 'Lädt Clip…', disabled: true });
+
     const start = () => {
-      const p = audio.play();
+      if (token !== audioToken || audio !== el) return;
+      const p = el.play();
       if (p && p.catch) {
         p.catch((err) => {
-          const hint = $('playCaption');
-          if (hint) hint.textContent = `Audio-Fehler: ${err?.message || 'play blocked'}`;
+          if (token !== audioToken) return;
+          if (isBenignPlayError(err)) return;
+          setPlayUi({
+            playing: false,
+            caption: `Audio-Fehler: ${err?.message || 'play blocked'}`,
+            disabled: false,
+          });
         });
       }
-      $('btnPlay').classList.add('playing');
+      setPlayUi({
+        playing: true,
+        caption: `Spielt ${fmtSec(dur)}…`,
+        disabled: false,
+      });
       stopTimer = setTimeout(() => {
-        audio.pause();
-        $('btnPlay').classList.remove('playing');
+        if (token !== audioToken) return;
+        try {
+          el.pause();
+        } catch {
+          /* ignore */
+        }
+        setPlayUi({ playing: false, caption: 'Ab Cue hören', disabled: false });
       }, Math.max(80, dur * 1000 + 40));
     };
-    audio.addEventListener('error', async () => {
+
+    el.addEventListener('error', async () => {
+      if (token !== audioToken || audio !== el) return;
       const hint = $('playCaption');
       if (!hint) return;
       try {
@@ -263,9 +327,158 @@
       } catch {
         hint.textContent = 'Clip konnte nicht geladen werden (R2/Audio).';
       }
+      setPlayUi({ playing: false, caption: hint.textContent, disabled: false });
     });
-    if (audio.readyState >= 2) start();
-    else audio.addEventListener('canplay', start, { once: true });
+
+    if (el.readyState >= 2) start();
+    else el.addEventListener('canplay', start, { once: true });
+  }
+
+  function playRevealTrack() {
+    const cur = state?.current;
+    if (!cur?.songId || !seesReveal()) return;
+    if (revealPlaying && audio) {
+      stopAudio({ expected: true });
+      return;
+    }
+    stopAudio({ expected: true });
+    const token = audioToken;
+    const cue = Number(cur.cueStartSec) || 0;
+    const url = `${GB}/api/audio/${encodeURIComponent(cur.songId)}?t=${Date.now()}`;
+    const el = new Audio(url);
+    audio = el;
+    el.preload = 'auto';
+    const btn = $('btnRevealPlay');
+    if (btn) btn.textContent = 'Lädt…';
+
+    const start = () => {
+      if (token !== audioToken || audio !== el) return;
+      try {
+        if (cue > 0 && Number.isFinite(el.duration) && cue < el.duration) {
+          el.currentTime = cue;
+        }
+      } catch {
+        /* seek best-effort */
+      }
+      const p = el.play();
+      if (p && p.catch) {
+        p.catch((err) => {
+          if (token !== audioToken) return;
+          if (isBenignPlayError(err)) return;
+          if (btn) btn.textContent = `▶ Fehler: ${err?.message || 'play'}`;
+          revealPlaying = false;
+        });
+      }
+      revealPlaying = true;
+      if (btn) btn.textContent = '❚❚ Pause';
+    };
+
+    el.addEventListener('ended', () => {
+      if (token !== audioToken) return;
+      revealPlaying = false;
+      if (btn) btn.textContent = '▶ Song anhören';
+    });
+    el.addEventListener('error', () => {
+      if (token !== audioToken) return;
+      revealPlaying = false;
+      if (btn) btn.textContent = '▶ Audio fehlt';
+    });
+
+    if (el.readyState >= 2) start();
+    else el.addEventListener('canplay', start, { once: true });
+  }
+
+  function maybeResetRoundUi() {
+    const cur = state?.current;
+    if (!cur?.songId) return;
+    const key = `${state.roundIndex}:${cur.songId}`;
+    if (key === lastRoundKey) return;
+    lastRoundKey = key;
+    const input = $('guessInput');
+    const feedback = $('feedback');
+    if (input) {
+      input.value = '';
+      input.disabled = false;
+    }
+    if (feedback) {
+      feedback.textContent = '';
+      feedback.className = 'feedback';
+    }
+    renderGuessResults('', { open: false });
+    stopAudio({ expected: true });
+  }
+
+  function renderLobby() {
+    show('lobby');
+    renderPlayers($('playerList'), 'lobby');
+    $('btnStart').hidden = !isHost();
+    $('roundsField').hidden = !isHost();
+    $('roundsInput').value = state.settings?.rounds || 5;
+
+    const syncField = $('syncRevealField');
+    const syncToggle = $('syncRevealToggle');
+    if (syncField && syncToggle) {
+      // Solo: Switch ausgeblendet — nur in der Multiplayer-Lobby relevant.
+      syncField.hidden = !!state.solo;
+      syncToggle.checked = syncRevealOn();
+      syncToggle.disabled = !isHost() || state.phase !== 'lobby';
+    }
+
+    if (state.solo) {
+      $('lobbyHint').textContent = 'Solo — starte direkt, wenn du bereit bist.';
+    } else if (isHost()) {
+      $('lobbyHint').textContent = syncRevealOn()
+        ? 'Party-Host — starte direkt. Gemeinsames Aufdecken: an (alle warten).'
+        : 'Party-Host — starte direkt. Gemeinsames Aufdecken: aus (jeder sieht Score sofort).';
+    } else {
+      $('lobbyHint').textContent = 'Party — warte, bis der Host startet.';
+    }
+  }
+
+  function renderPlay() {
+    show('play');
+    maybeResetRoundUi();
+    const cur = state.current;
+    $('roundLabel').textContent =
+      `Runde ${cur?.round || 1}/${cur?.totalRounds || state.totalRounds}`;
+    renderStageTrack();
+    const done = !!cur?.myGuess?.done;
+    $('guessInput').disabled = done;
+    $('btnSkip').disabled = done;
+    const submit = $('guessForm').querySelector('button[type="submit"]');
+    if (submit) submit.disabled = done;
+    setPlayUi({
+      playing: $('btnPlay')?.classList.contains('playing'),
+      caption: done ? 'Runde für dich beendet' : 'Ab Cue hören',
+      disabled: done,
+    });
+    if (done) {
+      $('feedback').textContent = cur.myGuess.correct
+        ? `Richtig! +${cur.myGuess.points} Punkte — warte auf die anderen…`
+        : 'Runde beendet — warte auf die anderen…';
+      $('feedback').className = `feedback ${cur.myGuess.correct ? 'ok' : ''}`;
+    }
+  }
+
+  function renderRevealView() {
+    show('reveal');
+    const cur = state.current;
+    $('revealTitle').textContent = cur?.title || '—';
+    $('revealSub').textContent = cur?.artist || '';
+    renderPlayers($('revealList'), 'scores');
+    const shared = !!cur?.revealed || state.phase === 'reveal';
+    $('btnNext').hidden = !(isHost() && shared);
+    const wait = $('revealWaitHint');
+    if (wait) {
+      if (!shared && !syncRevealOn()) {
+        wait.hidden = false;
+        const done = cur?.playersDone ?? 0;
+        const total = (state.players || []).filter((p) => p.connected !== false).length;
+        wait.textContent = `Du bist fertig (${done}/${total}). Andere spielen noch — nächste Runde erst wenn alle durch sind.`;
+      } else {
+        wait.hidden = true;
+      }
+    }
   }
 
   function render() {
@@ -277,45 +490,9 @@
     }
 
     if (state.phase === 'lobby') {
-      show('lobby');
-      renderPlayers($('playerList'), true);
-      $('btnStart').hidden = !isHost();
-      $('roundsField').hidden = !isHost();
-      $('roundsInput').value = state.settings?.rounds || 5;
-      $('lobbyHint').textContent = state.solo
-        ? 'Solo — Host startet die Runde.'
-        : 'Party — Host startet, wenn alle bereit sind.';
-      $('btnReady').textContent = ready ? 'Nicht bereit' : 'Bereit';
-      return;
-    }
-
-    if (state.phase === 'playing') {
-      show('play');
-      const cur = state.current;
-      $('roundLabel').textContent =
-        `Runde ${cur?.round || 1}/${cur?.totalRounds || state.totalRounds}`;
-      renderStageTrack();
-      const done = !!cur?.myGuess?.done;
-      $('guessInput').disabled = done;
-      $('btnSkip').disabled = done;
-      $('guessForm').querySelector('button[type="submit"]').disabled = done;
-      if (done) {
-        $('feedback').textContent = cur.myGuess.correct
-          ? `Richtig! +${cur.myGuess.points} Punkte`
-          : 'Runde beendet — warte auf Reveal…';
-        $('feedback').className = `feedback ${cur.myGuess.correct ? 'ok' : ''}`;
-      }
-      return;
-    }
-
-    if (state.phase === 'reveal') {
-      show('reveal');
-      const cur = state.current;
-      $('revealTitle').textContent = cur?.title || '—';
-      $('revealSub').textContent = cur?.artist || '';
-      renderPlayers($('revealList'), false);
-      $('btnNext').hidden = !isHost();
-      stopAudio();
+      stopAudio({ expected: true });
+      lastRoundKey = null;
+      renderLobby();
       return;
     }
 
@@ -327,7 +504,21 @@
             `<li><span>${escapeHtml(p.name)}</span><strong>${p.score || 0}</strong></li>`
         )
         .join('');
-      stopAudio();
+      stopAudio({ expected: true });
+      return;
+    }
+
+    // Personal early reveal (async mode) or shared reveal phase.
+    if (state.phase === 'reveal' || (state.phase === 'playing' && seesReveal())) {
+      if (state.phase === 'playing' && seesReveal()) {
+        // Keep clip UI out of the way once this player finished.
+      }
+      renderRevealView();
+      return;
+    }
+
+    if (state.phase === 'playing') {
+      renderPlay();
     }
   }
 
@@ -376,16 +567,21 @@
     startSolo();
   });
 
-  $('btnReady').addEventListener('click', async () => {
-    ready = !ready;
-    await emit('lobby:ready', { ready });
-  });
-
   $('roundsInput').addEventListener('change', async () => {
     if (!isHost()) return;
     await emit('lobby:set-rounds', {
       rounds: Number($('roundsInput').value) || 5,
     });
+  });
+
+  $('syncRevealToggle')?.addEventListener('change', async () => {
+    if (!isHost()) return;
+    const on = !!$('syncRevealToggle').checked;
+    const res = await emit('lobby:set-sync-reveal', { syncReveal: on });
+    if (res.error) {
+      $('lobbyHint').textContent = res.error;
+      $('syncRevealToggle').checked = syncRevealOn();
+    }
   });
 
   $('btnStart').addEventListener('click', async () => {
@@ -400,6 +596,7 @@
   });
 
   $('btnPlay').addEventListener('click', () => playClip());
+  $('btnRevealPlay')?.addEventListener('click', () => playRevealTrack());
 
   $('guessForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -414,7 +611,7 @@
     if (res.correct) {
       $('feedback').textContent = `Richtig! +${res.points}`;
       $('feedback').className = 'feedback ok';
-      stopAudio();
+      stopAudio({ expected: true });
     } else {
       $('feedback').textContent = 'Nicht getroffen — nächste Stufe';
       $('feedback').className = 'feedback bad';
@@ -430,17 +627,19 @@
       $('feedback').className = 'feedback bad';
       return;
     }
+    stopAudio({ expected: true });
     $('guessInput').focus();
   });
 
   $('btnNext').addEventListener('click', async () => {
+    stopAudio({ expected: true });
     await emit('round:next');
   });
 
   $('btnAgain').addEventListener('click', () => {
     state = null;
     playerId = null;
-    ready = false;
+    lastRoundKey = null;
     show('home');
     startSolo();
   });

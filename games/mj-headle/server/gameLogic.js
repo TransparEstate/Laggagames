@@ -40,7 +40,11 @@ function createEmptyRoom(code, hostSocketId) {
     hostId: hostSocketId,
     hostSocketId,
     players: [],
-    settings: { rounds: DEFAULT_ROUNDS },
+    settings: {
+      rounds: DEFAULT_ROUNDS,
+      // true = alle müssen fertig sein bevor Reveal; false = jeder sieht Reveal sofort nach eigenem Finish
+      syncReveal: true,
+    },
     roundIndex: 0,
     totalRounds: DEFAULT_ROUNDS,
     trackIds: [],
@@ -61,29 +65,58 @@ function publicPlayer(p) {
   };
 }
 
+function ensureProgress(room, socketId) {
+  if (!room.current) return null;
+  if (!room.current.guesses[socketId]) {
+    room.current.guesses[socketId] = {
+      text: '',
+      correct: false,
+      points: 0,
+      stageIndex: 0,
+      done: false,
+      giveUp: false,
+      at: null,
+    };
+  }
+  return room.current.guesses[socketId];
+}
+
+function playerSeesReveal(room, me) {
+  if (!room.current) return false;
+  if (room.current.revealed) return true;
+  // Async mode: finished players see the answer immediately without waiting.
+  if (room.settings.syncReveal === false && me?.done) return true;
+  return false;
+}
+
 function publicState(room, forSocketId = null) {
   const cur = room.current;
   let currentPublic = null;
   if (cur) {
-    const me = forSocketId ? cur.guesses?.[forSocketId] : null;
+    const me = forSocketId ? ensureProgress(room, forSocketId) : null;
+    const myStage = me ? Number(me.stageIndex) || 0 : 0;
+    const showAnswer = playerSeesReveal(room, me);
     currentPublic = {
       round: room.roundIndex + 1,
       totalRounds: room.totalRounds,
       songId: cur.songId,
       cueStartSec: cur.cueStartSec,
-      stageIndex: cur.stageIndex,
-      stageSeconds: CLIP_STAGES[cur.stageIndex] ?? null,
+      // Per-player stage — async skip/guess must not move others.
+      stageIndex: myStage,
+      stageSeconds: CLIP_STAGES[myStage] ?? null,
       stages: CLIP_STAGES,
       revealed: !!cur.revealed,
-      title: cur.revealed ? cur.title : null,
-      artist: cur.revealed ? cur.artist : null,
+      revealedForMe: showAnswer,
+      title: showAnswer ? cur.title : null,
+      artist: showAnswer ? cur.artist : null,
       myGuess: me
         ? {
             text: me.text,
             correct: !!me.correct,
             points: me.points || 0,
-            stageIndex: me.stageIndex,
+            stageIndex: myStage,
             done: !!me.done,
+            giveUp: !!me.giveUp,
           }
         : null,
       playersDone: Object.values(cur.guesses || {}).filter((g) => g.done).length,
@@ -96,7 +129,10 @@ function publicState(room, forSocketId = null) {
     solo: !!room.solo,
     phase: room.phase,
     hostId: room.hostId,
-    settings: room.settings,
+    settings: {
+      rounds: room.settings.rounds,
+      syncReveal: room.settings.syncReveal !== false,
+    },
     players: room.players.map(publicPlayer),
     roundIndex: room.roundIndex,
     totalRounds: room.totalRounds,
@@ -204,89 +240,105 @@ function beginRound(room, playableSongs) {
     title: song.title,
     artist: song.artist,
     cueStartSec: Number(song.cueStartSec) || 0,
-    stageIndex: 0,
     guesses: {},
     revealed: false,
     startedAt: Date.now(),
   };
+  // Seed per-player progress so everyone starts at stage 0 independently.
+  for (const p of room.players) {
+    if (p.connected !== false) ensureProgress(room, p.id);
+  }
   room.phase = 'playing';
   room.lastActivity = Date.now();
   return { ok: true };
 }
 
-function finishPlayerRound(room, socketId, { text = '', correct = false, giveUp = false } = {}) {
-  room.current.guesses[socketId] = {
-    text: String(text || '').trim(),
-    correct: !!correct,
-    points: 0,
-    stageIndex: room.current.stageIndex,
-    done: true,
-    giveUp: !!giveUp,
-    at: Date.now(),
-  };
+function finishPlayerRound(
+  room,
+  socketId,
+  { text = '', correct = false, giveUp = false, points = 0, stageIndex = 0 } = {}
+) {
+  const progress = ensureProgress(room, socketId);
+  progress.text = String(text || '').trim();
+  progress.correct = !!correct;
+  progress.points = Number(points) || 0;
+  progress.stageIndex = Number(stageIndex) || 0;
+  progress.done = true;
+  progress.giveUp = !!giveUp;
+  progress.at = Date.now();
   room.lastActivity = Date.now();
   maybeReveal(room);
-  return { ok: true, correct: false, points: 0, giveUp: true };
+  return {
+    ok: true,
+    correct: !!correct,
+    points: progress.points,
+    giveUp: !!giveUp,
+    stageIndex: progress.stageIndex,
+  };
 }
 
 function skipStage(room, socketId) {
   if (room.phase !== 'playing' || !room.current || room.current.revealed) {
     return { error: 'Keine aktive Runde.' };
   }
-  const g = room.current.guesses[socketId];
-  if (g?.done) return { error: 'Du bist in dieser Runde fertig.' };
+  const progress = ensureProgress(room, socketId);
+  if (progress.done) return { error: 'Du bist in dieser Runde fertig.' };
 
-  if (room.current.stageIndex >= CLIP_STAGES.length - 1) {
-    return finishPlayerRound(room, socketId, { text: '', correct: false, giveUp: true });
+  if (progress.stageIndex >= CLIP_STAGES.length - 1) {
+    return finishPlayerRound(room, socketId, {
+      text: '',
+      correct: false,
+      giveUp: true,
+      stageIndex: progress.stageIndex,
+    });
   }
-  room.current.stageIndex += 1;
+  progress.stageIndex += 1;
+  progress.at = Date.now();
   room.lastActivity = Date.now();
-  return { ok: true, stageIndex: room.current.stageIndex };
+  return { ok: true, stageIndex: progress.stageIndex };
 }
 
 function submitGuess(room, socketId, text) {
   if (room.phase !== 'playing' || !room.current || room.current.revealed) {
     return { error: 'Keine aktive Runde.' };
   }
-  const existing = room.current.guesses[socketId];
-  if (existing?.done) return { error: 'Bereits geraten.' };
+  const progress = ensureProgress(room, socketId);
+  if (progress.done) return { error: 'Bereits geraten.' };
 
   const correct = titlesMatch(text, room.current.title);
   if (correct) {
-    const stageIndex = room.current.stageIndex;
+    const stageIndex = progress.stageIndex;
     const points = STAGE_POINTS[stageIndex] ?? 0;
-    room.current.guesses[socketId] = {
-      text: String(text || '').trim(),
-      correct: true,
-      points,
-      stageIndex,
-      done: true,
-      at: Date.now(),
-    };
     const player = room.players.find((p) => p.id === socketId);
     if (player) {
       player.score = (player.score || 0) + points;
       room.scores[socketId] = player.score;
     }
-    room.lastActivity = Date.now();
-    maybeReveal(room);
-    return { ok: true, correct: true, points, stageIndex };
+    return finishPlayerRound(room, socketId, {
+      text,
+      correct: true,
+      giveUp: false,
+      points,
+      stageIndex,
+    });
   }
 
-  room.current.guesses[socketId] = {
-    text: String(text || '').trim(),
-    correct: false,
-    points: 0,
-    stageIndex: room.current.stageIndex,
-    done: false,
-    at: Date.now(),
-  };
-  if (room.current.stageIndex >= CLIP_STAGES.length - 1) {
-    return finishPlayerRound(room, socketId, { text, correct: false, giveUp: true });
+  progress.text = String(text || '').trim();
+  progress.correct = false;
+  progress.points = 0;
+  progress.at = Date.now();
+
+  if (progress.stageIndex >= CLIP_STAGES.length - 1) {
+    return finishPlayerRound(room, socketId, {
+      text,
+      correct: false,
+      giveUp: true,
+      stageIndex: progress.stageIndex,
+    });
   }
-  room.current.stageIndex += 1;
+  progress.stageIndex += 1;
   room.lastActivity = Date.now();
-  return { ok: true, correct: false, stageIndex: room.current.stageIndex };
+  return { ok: true, correct: false, stageIndex: progress.stageIndex };
 }
 
 function maybeReveal(room) {
@@ -328,6 +380,14 @@ function setRounds(room, socketId, rounds) {
   return { ok: true };
 }
 
+function setSyncReveal(room, socketId, syncReveal) {
+  if (room.hostId !== socketId) return { error: 'Nur der Host ändert den Reveal-Modus.' };
+  if (room.phase !== 'lobby') return { error: 'Nur in der Lobby.' };
+  room.settings.syncReveal = !!syncReveal;
+  room.lastActivity = Date.now();
+  return { ok: true, syncReveal: room.settings.syncReveal };
+}
+
 module.exports = {
   CLIP_STAGES,
   STAGE_POINTS,
@@ -346,4 +406,5 @@ module.exports = {
   nextRound,
   setReady,
   setRounds,
+  setSyncReveal,
 };

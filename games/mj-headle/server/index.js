@@ -326,6 +326,18 @@ io.on('connection', (socket) => {
     if (typeof ack === 'function') ack({ ok: true, state: rooms.getPublicState(room, socket.id) });
   });
 
+  socket.on('lobby:set-sync-reveal', (payload = {}, ack) => {
+    const room = rooms.getRoomForSocket(socket.id);
+    if (!room) return typeof ack === 'function' && ack({ error: 'Keine Session.' });
+    const result = game.setSyncReveal(room, socket.id, payload.syncReveal);
+    if (result.error) return typeof ack === 'function' && ack(result);
+    broadcastRoom(room);
+    if (typeof ack === 'function') {
+      ack({ ok: true, syncReveal: result.syncReveal, state: rooms.getPublicState(room, socket.id) });
+    }
+  });
+
+  // Kept for older clients; Ready is no longer required to start.
   socket.on('lobby:ready', (payload = {}, ack) => {
     const room = rooms.getRoomForSocket(socket.id);
     if (!room) return typeof ack === 'function' && ack({ error: 'Keine Session.' });
