@@ -68,7 +68,7 @@ app.get('/api/meta', (_req, res) => {
 });
 
 app.get('/api/world', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'data', 'world.geojson'));
+  res.sendFile(path.join(__dirname, '..', 'assets', 'geo', 'world.geojson'));
 });
 
 app.get('/api/suggest', (req, res) => {

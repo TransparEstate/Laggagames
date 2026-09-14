@@ -1,0 +1,29 @@
+{
+  "countryCount": 176,
+  "playableCount": 156,
+  "islandCount": 20,
+  "islands": [
+    "FJ",
+    "BS",
+    "FK",
+    "GL",
+    "TF",
+    "PR",
+    "JM",
+    "CU",
+    "MG",
+    "VU",
+    "NC",
+    "SB",
+    "NZ",
+    "AU",
+    "LK",
+    "TW",
+    "IS",
+    "PH",
+    "JP",
+    "TT"
+  ],
+  "edgeCount": 311,
+  "generatedAt": "2026-09-14T23:26:22.926Z"
+}

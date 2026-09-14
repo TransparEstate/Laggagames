@@ -26,8 +26,8 @@ v1: Solo-Spiel nach Launch; Return zur Hub-Party. Kein Sync-Rennen.
 
 ## Daten
 
-- `data/world.geojson` — vereinfachte Länderpolygone
-- `data/adjacency.json` — Nachbargraph (+ manuelle Brücken)
-- `data/aliases.json` — DE/EN-Aliase
+- `assets/geo/world.geojson` — vereinfachte Länderpolygone
+- `assets/geo/adjacency.json` — Nachbargraph (+ manuelle Brücken)
+- `assets/geo/aliases.json` — DE/EN-Aliase
 - Rebuild: `node tools/build-geo.js`
 - Checks: `node tools/verify.js`

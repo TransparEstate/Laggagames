@@ -8,7 +8,7 @@ const path = require('path');
 const https = require('https');
 
 const ROOT = path.join(__dirname, '..');
-const DATA = path.join(ROOT, 'data');
+const DATA = path.join(ROOT, 'assets', 'geo');
 const INPUT = path.join(DATA, 'ne_raw.geojson');
 const SOURCE_URL =
   'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson';

@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 
-const DATA = path.join(__dirname, '..', 'data');
+const DATA = path.join(__dirname, '..', 'assets', 'geo');
 
 const adjacency = JSON.parse(fs.readFileSync(path.join(DATA, 'adjacency.json'), 'utf8'));
 const aliases = JSON.parse(fs.readFileSync(path.join(DATA, 'aliases.json'), 'utf8'));
