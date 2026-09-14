@@ -13,6 +13,7 @@
     home: $('view-home'),
     lobby: $('view-lobby'),
     play: $('view-play'),
+    wait: $('view-wait'),
     reveal: $('view-reveal'),
     finished: $('view-finished'),
   };
@@ -27,6 +28,8 @@
   let stopTimer = null;
   let lastRoundKey = null;
   let revealPlaying = false;
+  let lastRevealAutoKey = null;
+  let leaving = false;
 
   function show(name) {
     Object.entries(views).forEach(([key, el]) => {
@@ -60,10 +63,10 @@
     return state?.settings?.syncReveal !== false;
   }
 
-  function seesReveal() {
+  function seesSharedReveal() {
     const cur = state?.current;
     if (!cur) return false;
-    return !!(cur.revealed || cur.revealedForMe);
+    return !!(cur.revealed || state.phase === 'reveal');
   }
 
   function connect() {
@@ -73,6 +76,7 @@
       transports: ['websocket', 'polling'],
     });
     socket.on('state:update', (next) => {
+      if (leaving) return;
       state = next;
       render();
     });
@@ -96,13 +100,9 @@
     const ping = data.r2 && data.r2.ping;
     const r2on = ping ? !!ping.ok : !!(data.r2 && data.r2.enabled);
     let meta = `${catalog.length} Titel · ${data.playableCount || 0} spielbar`;
-    if (ping && !ping.ok) {
-      meta += ` · R2-Fehler: ${ping.error || 'Bucket nicht erreichbar'}`;
-    } else if (r2on) {
-      meta += ' · R2 an';
-    } else {
-      meta += ' · R2 aus (keine Clips vom Bucket)';
-    }
+    if (ping && !ping.ok) meta += ` · R2-Fehler: ${ping.error || 'Bucket nicht erreichbar'}`;
+    else if (r2on) meta += ' · R2 an';
+    else meta += ' · R2 aus (keine Clips vom Bucket)';
     $('catalogMeta').textContent = meta;
   }
 
@@ -139,9 +139,7 @@
     box.innerHTML = hits
       .map(
         (s, i) =>
-          `<li data-title="${escapeHtml(s.title)}" class="${i === 0 ? 'active' : ''}">${escapeHtml(
-            s.title
-          )}</li>`
+          `<li data-title="${escapeHtml(s.title)}" class="${i === 0 ? 'active' : ''}">${escapeHtml(s.title)}</li>`
       )
       .join('');
     box.hidden = false;
@@ -151,13 +149,8 @@
     const input = $('guessInput');
     const box = $('guessResults');
     if (!input || !box) return;
-
-    input.addEventListener('input', () => {
-      renderGuessResults(input.value, { open: true });
-    });
-    input.addEventListener('focus', () => {
-      renderGuessResults(input.value, { open: true });
-    });
+    input.addEventListener('input', () => renderGuessResults(input.value, { open: true }));
+    input.addEventListener('focus', () => renderGuessResults(input.value, { open: true }));
     input.addEventListener('keydown', (e) => {
       const items = [...box.querySelectorAll('li[data-title]')];
       if (!items.length) return;
@@ -185,7 +178,6 @@
         renderGuessResults('', { open: false });
       }
     });
-
     box.addEventListener('mousedown', (e) => {
       const li = e.target.closest('li[data-title]');
       if (!li) return;
@@ -194,7 +186,6 @@
       renderGuessResults('', { open: false });
       input.focus();
     });
-
     document.addEventListener('click', (e) => {
       if (e.target === input || box.contains(e.target)) return;
       renderGuessResults('', { open: false });
@@ -202,6 +193,7 @@
   }
 
   function renderPlayers(listEl, mode) {
+    if (!listEl) return;
     listEl.innerHTML = (state?.players || [])
       .map((p) => {
         const you = p.id === playerId ? ' (du)' : '';
@@ -225,8 +217,7 @@
         return `<span class="${cls}" title="${fmtSec(sec)}"></span>`;
       })
       .join('');
-    $('stageLabel').textContent =
-      cur?.stageSeconds != null ? fmtSec(cur.stageSeconds) : '—';
+    $('stageLabel').textContent = cur?.stageSeconds != null ? fmtSec(cur.stageSeconds) : '—';
   }
 
   function setPlayUi({ playing, caption, disabled }) {
@@ -248,35 +239,24 @@
     }
     audioToken += 1;
     if (audio) {
-      try {
-        audio.pause();
-      } catch {
-        /* ignore */
-      }
+      try { audio.pause(); } catch { /* ignore */ }
       audio = null;
     }
     revealPlaying = false;
     const revealBtn = $('btnRevealPlay');
     if (revealBtn) revealBtn.textContent = '▶ Song anhören';
-    setPlayUi({
-      playing: false,
-      caption: expected ? 'Ab Cue hören' : undefined,
-      disabled: false,
-    });
+    setPlayUi({ playing: false, caption: expected ? 'Ab Cue hören' : undefined, disabled: false });
   }
 
   function isBenignPlayError(err) {
     const msg = String(err?.message || err || '').toLowerCase();
-    return (
-      msg.includes('interrupted') ||
-      msg.includes('aborted') ||
-      msg.includes('the play() request was interrupted')
-    );
+    return msg.includes('interrupted') || msg.includes('aborted') || msg.includes('the play() request was interrupted');
   }
 
   function playClip() {
     const cur = state?.current;
-    if (!cur?.songId || seesReveal()) return;
+    if (!cur?.songId || seesSharedReveal()) return;
+    if (cur.matchDone || cur.waitingForOthers) return;
     stopAudio({ expected: true });
     const token = audioToken;
     const dur = Number(cur.stageSeconds) || 0.1;
@@ -293,25 +273,13 @@
         p.catch((err) => {
           if (token !== audioToken) return;
           if (isBenignPlayError(err)) return;
-          setPlayUi({
-            playing: false,
-            caption: `Audio-Fehler: ${err?.message || 'play blocked'}`,
-            disabled: false,
-          });
+          setPlayUi({ playing: false, caption: `Audio-Fehler: ${err?.message || 'play blocked'}`, disabled: false });
         });
       }
-      setPlayUi({
-        playing: true,
-        caption: `Spielt ${fmtSec(dur)}…`,
-        disabled: false,
-      });
+      setPlayUi({ playing: true, caption: `Spielt ${fmtSec(dur)}…`, disabled: false });
       stopTimer = setTimeout(() => {
         if (token !== audioToken) return;
-        try {
-          el.pause();
-        } catch {
-          /* ignore */
-        }
+        try { el.pause(); } catch { /* ignore */ }
         setPlayUi({ playing: false, caption: 'Ab Cue hören', disabled: false });
       }, Math.max(80, dur * 1000 + 40));
     };
@@ -334,10 +302,10 @@
     else el.addEventListener('canplay', start, { once: true });
   }
 
-  function playRevealTrack() {
+  function playRevealTrack({ auto = false } = {}) {
     const cur = state?.current;
-    if (!cur?.songId || !seesReveal()) return;
-    if (revealPlaying && audio) {
+    if (!cur?.songId || !seesSharedReveal()) return;
+    if (!auto && revealPlaying && audio) {
       stopAudio({ expected: true });
       return;
     }
@@ -354,18 +322,14 @@
     const start = () => {
       if (token !== audioToken || audio !== el) return;
       try {
-        if (cue > 0 && Number.isFinite(el.duration) && cue < el.duration) {
-          el.currentTime = cue;
-        }
-      } catch {
-        /* seek best-effort */
-      }
+        if (cue > 0 && Number.isFinite(el.duration) && cue < el.duration) el.currentTime = cue;
+      } catch { /* seek best-effort */ }
       const p = el.play();
       if (p && p.catch) {
         p.catch((err) => {
           if (token !== audioToken) return;
           if (isBenignPlayError(err)) return;
-          if (btn) btn.textContent = `▶ Fehler: ${err?.message || 'play'}`;
+          if (btn) btn.textContent = auto ? '▶ Tippen zum Abspielen' : `▶ Fehler: ${err?.message || 'play'}`;
           revealPlaying = false;
         });
       }
@@ -391,9 +355,9 @@
   function maybeResetRoundUi() {
     const cur = state?.current;
     if (!cur?.songId) return;
-    const key = `${state.roundIndex}:${cur.songId}`;
-    if (key === lastRoundKey) return;
-    lastRoundKey = key;
+    const roundKey = `${cur.round}:${cur.songId}`;
+    if (roundKey === lastRoundKey) return;
+    lastRoundKey = roundKey;
     const input = $('guessInput');
     const feedback = $('feedback');
     if (input) {
@@ -408,28 +372,58 @@
     stopAudio({ expected: true });
   }
 
+  function updateLeaveButton() {
+    const btn = $('btnLeave');
+    if (!btn) return;
+    btn.hidden = !(state && ['lobby', 'playing', 'reveal', 'finished'].includes(state.phase));
+  }
+
+  function openLeaveModal() {
+    const modal = $('leaveModal');
+    if (modal) modal.hidden = false;
+  }
+
+  function closeLeaveModal() {
+    const modal = $('leaveModal');
+    if (modal) modal.hidden = true;
+  }
+
+  async function confirmLeave() {
+    leaving = true;
+    closeLeaveModal();
+    stopAudio({ expected: true });
+    try {
+      await emit('session:return-to-lobby');
+    } catch { /* navigate anyway */ }
+    state = null;
+    playerId = null;
+    lastRoundKey = null;
+    lastRevealAutoKey = null;
+    try {
+      history.replaceState({}, '', `${GB || location.pathname}`);
+    } catch { /* ignore */ }
+    location.href = '/';
+  }
+
   function renderLobby() {
     show('lobby');
     renderPlayers($('playerList'), 'lobby');
     $('btnStart').hidden = !isHost();
     $('roundsField').hidden = !isHost();
     $('roundsInput').value = state.settings?.rounds || 5;
-
     const syncField = $('syncRevealField');
     const syncToggle = $('syncRevealToggle');
     if (syncField && syncToggle) {
-      // Solo: Switch ausgeblendet — nur in der Multiplayer-Lobby relevant.
       syncField.hidden = !!state.solo;
       syncToggle.checked = syncRevealOn();
       syncToggle.disabled = !isHost() || state.phase !== 'lobby';
     }
-
     if (state.solo) {
       $('lobbyHint').textContent = 'Solo — starte direkt, wenn du bereit bist.';
     } else if (isHost()) {
       $('lobbyHint').textContent = syncRevealOn()
-        ? 'Party-Host — starte direkt. Gemeinsames Aufdecken: an (alle warten).'
-        : 'Party-Host — starte direkt. Gemeinsames Aufdecken: aus (jeder sieht Score sofort).';
+        ? 'Party-Host — starte direkt. Gemeinsames Aufdecken: an.'
+        : 'Party-Host — starte direkt. Ohne Zwischenstand: unabhängig spielen, Scoreboard erst am Ende.';
     } else {
       $('lobbyHint').textContent = 'Party — warte, bis der Host startet.';
     }
@@ -439,8 +433,7 @@
     show('play');
     maybeResetRoundUi();
     const cur = state.current;
-    $('roundLabel').textContent =
-      `Runde ${cur?.round || 1}/${cur?.totalRounds || state.totalRounds}`;
+    $('roundLabel').textContent = `Runde ${cur?.round || 1}/${cur?.totalRounds || state.totalRounds}`;
     renderStageTrack();
     const done = !!cur?.myGuess?.done;
     $('guessInput').disabled = done;
@@ -449,15 +442,25 @@
     if (submit) submit.disabled = done;
     setPlayUi({
       playing: $('btnPlay')?.classList.contains('playing'),
-      caption: done ? 'Runde für dich beendet' : 'Ab Cue hören',
+      caption: done ? (syncRevealOn() ? 'Runde für dich beendet' : 'Nächste Runde…') : 'Ab Cue hören',
       disabled: done,
     });
-    if (done) {
+    if (done && syncRevealOn()) {
       $('feedback').textContent = cur.myGuess.correct
         ? `Richtig! +${cur.myGuess.points} Punkte — warte auf die anderen…`
         : 'Runde beendet — warte auf die anderen…';
       $('feedback').className = `feedback ${cur.myGuess.correct ? 'ok' : ''}`;
     }
+  }
+
+  function renderWait() {
+    show('wait');
+    stopAudio({ expected: true });
+    const done = state.current?.playersDone ?? 0;
+    const total = (state.players || []).filter((p) => p.connected !== false).length;
+    $('waitHint').textContent =
+      `Du hast alle Runden gespielt (${done}/${total} fertig). Kein Zwischenstand — das Scoreboard kommt, wenn alle durch sind.`;
+    renderPlayers($('waitList'), 'scores');
   }
 
   function renderRevealView() {
@@ -466,19 +469,49 @@
     $('revealTitle').textContent = cur?.title || '—';
     $('revealSub').textContent = cur?.artist || '';
     renderPlayers($('revealList'), 'scores');
-    const shared = !!cur?.revealed || state.phase === 'reveal';
-    $('btnNext').hidden = !(isHost() && shared);
+    $('btnNext').hidden = !(isHost() && seesSharedReveal());
     const wait = $('revealWaitHint');
-    if (wait) {
-      if (!shared && !syncRevealOn()) {
-        wait.hidden = false;
-        const done = cur?.playersDone ?? 0;
-        const total = (state.players || []).filter((p) => p.connected !== false).length;
-        wait.textContent = `Du bist fertig (${done}/${total}). Andere spielen noch — nächste Runde erst wenn alle durch sind.`;
-      } else {
-        wait.hidden = true;
-      }
+    if (wait) wait.hidden = true;
+    const autoKey = `${state.roundIndex}:${cur?.songId || ''}`;
+    if (seesSharedReveal() && cur?.songId && autoKey !== lastRevealAutoKey) {
+      lastRevealAutoKey = autoKey;
+      playRevealTrack({ auto: true });
     }
+  }
+
+  function renderRoundRecap() {
+    const box = $('roundRecap');
+    if (!box) return;
+    const recap = state.roundRecap || [];
+    if (!recap.length) {
+      box.innerHTML = '<p class="hint">Keine Runden-Details verfügbar.</p>';
+      return;
+    }
+    box.innerHTML = recap
+      .map((entry) => {
+        const rows = (entry.results || [])
+          .map((r) => {
+            const pts = r.points > 0 ? `+${r.points}` : r.giveUp ? '0 (Skip)' : '0';
+            return `<li><span>${escapeHtml(r.name)}</span><span>${pts}</span></li>`;
+          })
+          .join('');
+        return `<article class="recap-round">
+          <header><strong>Runde ${entry.round}</strong> — ${escapeHtml(entry.title || '?')}
+            <span class="recap-artist">${escapeHtml(entry.artist || '')}</span>
+          </header>
+          <ul class="player-list">${rows}</ul>
+        </article>`;
+      })
+      .join('');
+  }
+
+  function renderFinished() {
+    show('finished');
+    stopAudio({ expected: true });
+    $('leaderboard').innerHTML = (state.leaderboard || [])
+      .map((p) => `<li><span>${escapeHtml(p.name)}</span><strong>${p.score || 0}</strong></li>`)
+      .join('');
+    renderRoundRecap();
   }
 
   function render() {
@@ -488,38 +521,36 @@
       $('scoreChip').hidden = false;
       $('scoreValue').textContent = String(self.score || 0);
     }
+    updateLeaveButton();
 
     if (state.phase === 'lobby') {
       stopAudio({ expected: true });
       lastRoundKey = null;
+      lastRevealAutoKey = null;
       renderLobby();
       return;
     }
 
     if (state.phase === 'finished') {
-      show('finished');
-      $('leaderboard').innerHTML = (state.leaderboard || [])
-        .map(
-          (p) =>
-            `<li><span>${escapeHtml(p.name)}</span><strong>${p.score || 0}</strong></li>`
-        )
-        .join('');
-      stopAudio({ expected: true });
+      renderFinished();
       return;
     }
 
-    // Personal early reveal (async mode) or shared reveal phase.
-    if (state.phase === 'reveal' || (state.phase === 'playing' && seesReveal())) {
-      if (state.phase === 'playing' && seesReveal()) {
-        // Keep clip UI out of the way once this player finished.
-      }
+    if (
+      !syncRevealOn() &&
+      state.phase === 'playing' &&
+      (state.current?.matchDone || state.current?.waitingForOthers)
+    ) {
+      renderWait();
+      return;
+    }
+
+    if (syncRevealOn() && (state.phase === 'reveal' || seesSharedReveal())) {
       renderRevealView();
       return;
     }
 
-    if (state.phase === 'playing') {
-      renderPlay();
-    }
+    if (state.phase === 'playing') renderPlay();
   }
 
   async function startSolo() {
@@ -538,6 +569,7 @@
     }
     playerId = res.playerId;
     state = res.state;
+    leaving = false;
     render();
   }
 
@@ -559,6 +591,7 @@
     }
     playerId = res.playerId;
     state = res.state;
+    leaving = false;
     render();
   }
 
@@ -569,9 +602,7 @@
 
   $('roundsInput').addEventListener('change', async () => {
     if (!isHost()) return;
-    await emit('lobby:set-rounds', {
-      rounds: Number($('roundsInput').value) || 5,
-    });
+    await emit('lobby:set-rounds', { rounds: Number($('roundsInput').value) || 5 });
   });
 
   $('syncRevealToggle')?.addEventListener('change', async () => {
@@ -596,7 +627,7 @@
   });
 
   $('btnPlay').addEventListener('click', () => playClip());
-  $('btnRevealPlay')?.addEventListener('click', () => playRevealTrack());
+  $('btnRevealPlay')?.addEventListener('click', () => playRevealTrack({ auto: false }));
 
   $('guessForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -633,6 +664,7 @@
 
   $('btnNext').addEventListener('click', async () => {
     stopAudio({ expected: true });
+    lastRevealAutoKey = null;
     await emit('round:next');
   });
 
@@ -640,8 +672,25 @@
     state = null;
     playerId = null;
     lastRoundKey = null;
+    lastRevealAutoKey = null;
+    leaving = false;
     show('home');
     startSolo();
+  });
+
+  $('btnLeave')?.addEventListener('click', () => openLeaveModal());
+  $('btnFinishedLeave')?.addEventListener('click', () => openLeaveModal());
+  $('btnLeaveCancel')?.addEventListener('click', () => closeLeaveModal());
+  $('btnLeaveConfirm')?.addEventListener('click', () => confirmLeave());
+  $('leaveModal')?.addEventListener('click', (e) => {
+    if (e.target === $('leaveModal')) closeLeaveModal();
+  });
+
+  $('hubLink')?.addEventListener('click', (e) => {
+    if (!state) return;
+    if (state.phase === 'lobby' && !partyId) return;
+    e.preventDefault();
+    openLeaveModal();
   });
 
   $('nameInput').value = prefillName;

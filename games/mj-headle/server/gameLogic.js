@@ -36,13 +36,12 @@ function createEmptyRoom(code, hostSocketId) {
     code,
     partyId: null,
     solo: false,
-    phase: 'lobby', // lobby | playing | reveal | finished
+    phase: 'lobby',
     hostId: hostSocketId,
     hostSocketId,
     players: [],
     settings: {
       rounds: DEFAULT_ROUNDS,
-      // true = alle müssen fertig sein bevor Reveal; false = jeder sieht Reveal sofort nach eigenem Finish
       syncReveal: true,
     },
     roundIndex: 0,
@@ -50,6 +49,9 @@ function createEmptyRoom(code, hostSocketId) {
     trackIds: [],
     current: null,
     scores: {},
+    playerRuns: {},
+    roundRecap: [],
+    songMeta: {},
     createdAt: Date.now(),
     lastActivity: Date.now(),
   };
@@ -65,50 +67,117 @@ function publicPlayer(p) {
   };
 }
 
+function syncOn(room) {
+  return room.settings.syncReveal !== false;
+}
+
+function emptyProgress() {
+  return {
+    text: '',
+    correct: false,
+    points: 0,
+    stageIndex: 0,
+    done: false,
+    giveUp: false,
+    at: null,
+  };
+}
+
+function emptyRun() {
+  return { roundIndex: 0, matchDone: false, progress: emptyProgress() };
+}
+
+function ensureRun(room, socketId) {
+  if (!room.playerRuns[socketId]) room.playerRuns[socketId] = emptyRun();
+  return room.playerRuns[socketId];
+}
+
 function ensureProgress(room, socketId) {
-  if (!room.current) return null;
-  if (!room.current.guesses[socketId]) {
-    room.current.guesses[socketId] = {
-      text: '',
-      correct: false,
-      points: 0,
-      stageIndex: 0,
-      done: false,
-      giveUp: false,
-      at: null,
-    };
+  if (syncOn(room)) {
+    if (!room.current) return null;
+    if (!room.current.guesses[socketId]) room.current.guesses[socketId] = emptyProgress();
+    return room.current.guesses[socketId];
   }
-  return room.current.guesses[socketId];
+  return ensureRun(room, socketId).progress;
 }
 
-function playerSeesReveal(room, me) {
-  if (!room.current) return false;
-  if (room.current.revealed) return true;
-  // Async mode: finished players see the answer immediately without waiting.
-  if (room.settings.syncReveal === false && me?.done) return true;
-  return false;
+function rememberSong(room, song) {
+  if (!song || !song.id) return;
+  room.songMeta[song.id] = {
+    id: song.id,
+    title: song.title,
+    artist: song.artist,
+    cueStartSec: Number(song.cueStartSec) || 0,
+  };
 }
 
-function publicState(room, forSocketId = null) {
-  const cur = room.current;
+function songAt(room, roundIndex) {
+  const songId = room.trackIds[roundIndex];
+  return room.songMeta[songId] || { id: songId, title: '?', artist: '', cueStartSec: 0 };
+}
+
+function connectedPlayers(room) {
+  return room.players.filter((p) => p.connected !== false);
+}
+
+function allMatchDone(room) {
+  const connected = connectedPlayers(room);
+  return connected.length > 0 && connected.every((p) => room.playerRuns[p.id] && room.playerRuns[p.id].matchDone);
+}
+
+function upsertRecap(room, roundIndex, song, playerResult) {
+  let entry = room.roundRecap.find((r) => r.round === roundIndex + 1 && r.songId === song.id);
+  if (!entry) {
+    entry = { round: roundIndex + 1, songId: song.id, title: song.title, artist: song.artist, results: [] };
+    room.roundRecap.push(entry);
+  }
+  const idx = entry.results.findIndex((r) => r.playerId === playerResult.playerId);
+  if (idx >= 0) entry.results[idx] = playerResult;
+  else entry.results.push(playerResult);
+  room.roundRecap.sort((a, b) => a.round - b.round || String(a.songId).localeCompare(String(b.songId)));
+}
+
+function recordRecap(room, socketId, roundIndex, song, progress) {
+  const player = room.players.find((p) => p.id === socketId);
+  upsertRecap(room, roundIndex, song, {
+    playerId: socketId,
+    name: (player && player.name) || 'Spieler',
+    points: progress.points || 0,
+    correct: !!progress.correct,
+    giveUp: !!progress.giveUp,
+    stageIndex: progress.stageIndex || 0,
+  });
+}
+
+function finalizeSyncRecap(room) {
+  if (!room.current) return;
+  const song = { id: room.current.songId, title: room.current.title, artist: room.current.artist };
+  for (const p of connectedPlayers(room)) {
+    recordRecap(room, p.id, room.roundIndex, song, room.current.guesses[p.id] || emptyProgress());
+  }
+}
+
+function publicState(room, forSocketId) {
+  if (forSocketId === undefined) forSocketId = null;
+  const sync = syncOn(room);
   let currentPublic = null;
-  if (cur) {
+
+  if (sync && room.current) {
     const me = forSocketId ? ensureProgress(room, forSocketId) : null;
     const myStage = me ? Number(me.stageIndex) || 0 : 0;
-    const showAnswer = playerSeesReveal(room, me);
+    const showAnswer = !!room.current.revealed;
     currentPublic = {
       round: room.roundIndex + 1,
       totalRounds: room.totalRounds,
-      songId: cur.songId,
-      cueStartSec: cur.cueStartSec,
-      // Per-player stage — async skip/guess must not move others.
+      songId: room.current.songId,
+      cueStartSec: room.current.cueStartSec,
       stageIndex: myStage,
-      stageSeconds: CLIP_STAGES[myStage] ?? null,
+      stageSeconds: CLIP_STAGES[myStage] != null ? CLIP_STAGES[myStage] : null,
       stages: CLIP_STAGES,
-      revealed: !!cur.revealed,
+      revealed: !!room.current.revealed,
       revealedForMe: showAnswer,
-      title: showAnswer ? cur.title : null,
-      artist: showAnswer ? cur.artist : null,
+      title: showAnswer ? room.current.title : null,
+      artist: showAnswer ? room.current.artist : null,
       myGuess: me
         ? {
             text: me.text,
@@ -119,7 +188,38 @@ function publicState(room, forSocketId = null) {
             giveUp: !!me.giveUp,
           }
         : null,
-      playersDone: Object.values(cur.guesses || {}).filter((g) => g.done).length,
+      playersDone: Object.values(room.current.guesses || {}).filter((g) => g.done).length,
+      matchDone: false,
+      waitingForOthers: false,
+    };
+  } else if (!sync && forSocketId && (room.phase === 'playing' || room.phase === 'finished')) {
+    const run = ensureRun(room, forSocketId);
+    const song = songAt(room, Math.min(run.roundIndex, Math.max(0, room.totalRounds - 1)));
+    const me = run.progress;
+    const myStage = Number(me.stageIndex) || 0;
+    currentPublic = {
+      round: Math.min(run.roundIndex + 1, room.totalRounds),
+      totalRounds: room.totalRounds,
+      songId: run.matchDone ? null : song.id,
+      cueStartSec: run.matchDone ? 0 : song.cueStartSec,
+      stageIndex: myStage,
+      stageSeconds: CLIP_STAGES[myStage] != null ? CLIP_STAGES[myStage] : null,
+      stages: CLIP_STAGES,
+      revealed: false,
+      revealedForMe: false,
+      title: null,
+      artist: null,
+      myGuess: {
+        text: me.text,
+        correct: !!me.correct,
+        points: me.points || 0,
+        stageIndex: myStage,
+        done: !!me.done,
+        giveUp: !!me.giveUp,
+      },
+      playersDone: connectedPlayers(room).filter((p) => room.playerRuns[p.id] && room.playerRuns[p.id].matchDone).length,
+      matchDone: !!run.matchDone,
+      waitingForOthers: !!run.matchDone && room.phase === 'playing',
     };
   }
 
@@ -129,18 +229,23 @@ function publicState(room, forSocketId = null) {
     solo: !!room.solo,
     phase: room.phase,
     hostId: room.hostId,
-    settings: {
-      rounds: room.settings.rounds,
-      syncReveal: room.settings.syncReveal !== false,
-    },
+    settings: { rounds: room.settings.rounds, syncReveal: sync },
     players: room.players.map(publicPlayer),
     roundIndex: room.roundIndex,
     totalRounds: room.totalRounds,
     current: currentPublic,
-    leaderboard: [...room.players]
+    leaderboard: room.players
       .map((p) => ({ id: p.id, name: p.name, score: p.score || 0 }))
+      .slice()
       .sort((a, b) => b.score - a.score),
+    roundRecap: room.phase === 'finished' ? room.roundRecap : [],
   };
+}
+
+function migrateMapKey(map, oldId, newId) {
+  if (!map || map[oldId] == null) return;
+  map[newId] = map[oldId];
+  delete map[oldId];
 }
 
 function addPlayer(room, socketId, name) {
@@ -157,9 +262,16 @@ function addPlayer(room, socketId, name) {
       room.hostId = socketId;
       room.hostSocketId = socketId;
     }
-    if (room.scores[oldId] != null) {
-      room.scores[socketId] = room.scores[oldId];
-      delete room.scores[oldId];
+    migrateMapKey(room.scores, oldId, socketId);
+    migrateMapKey(room.playerRuns, oldId, socketId);
+    if (room.current && room.current.guesses && room.current.guesses[oldId]) {
+      room.current.guesses[socketId] = room.current.guesses[oldId];
+      delete room.current.guesses[oldId];
+    }
+    for (const entry of room.roundRecap || []) {
+      for (const r of entry.results || []) {
+        if (r.playerId === oldId) r.playerId = socketId;
+      }
     }
     reclaim.score = room.scores[socketId] || reclaim.score || 0;
     room.lastActivity = Date.now();
@@ -184,12 +296,14 @@ function removePlayer(room, socketId) {
   const idx = room.players.findIndex((p) => p.id === socketId);
   if (idx === -1) return { empty: room.players.length === 0 };
   room.players.splice(idx, 1);
+  delete room.playerRuns[socketId];
   let hostLeft = false;
   if (room.hostId === socketId) {
     hostLeft = true;
-    room.hostId = room.players[0]?.id || null;
+    room.hostId = room.players[0] ? room.players[0].id : null;
     room.hostSocketId = room.hostId;
   }
+  if (!syncOn(room) && room.phase === 'playing' && allMatchDone(room)) room.phase = 'finished';
   return { empty: room.players.length === 0, hostLeft };
 }
 
@@ -199,42 +313,25 @@ function softDisconnect(room, socketId) {
   p.connected = false;
   p.disconnectedAt = Date.now();
   room.lastActivity = Date.now();
+  if (!syncOn(room) && room.phase === 'playing' && allMatchDone(room)) room.phase = 'finished';
 }
 
 function shuffle(arr) {
-  const a = [...arr];
+  const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+    const tmp = a[i];
+    a[i] = a[j];
+    a[j] = tmp;
   }
   return a;
-}
-
-function startMatch(room, playableSongs) {
-  if (!playableSongs.length) {
-    return { error: 'Keine spielbaren Songs (Audio + gültiger Cue fehlen).' };
-  }
-  const rounds = Math.min(
-    Math.max(1, Number(room.settings.rounds) || DEFAULT_ROUNDS),
-    playableSongs.length
-  );
-  room.totalRounds = rounds;
-  room.roundIndex = 0;
-  room.trackIds = shuffle(playableSongs.map((s) => s.id)).slice(0, rounds);
-  room.scores = {};
-  for (const p of room.players) {
-    p.score = 0;
-    p.ready = false;
-    room.scores[p.id] = 0;
-  }
-  room.phase = 'playing';
-  return beginRound(room, playableSongs);
 }
 
 function beginRound(room, playableSongs) {
   const songId = room.trackIds[room.roundIndex];
   const song = playableSongs.find((s) => s.id === songId) || playableSongs[0];
   if (!song) return { error: 'Song fehlt.' };
+  rememberSong(room, song);
   room.current = {
     songId: song.id,
     title: song.title,
@@ -244,7 +341,6 @@ function beginRound(room, playableSongs) {
     revealed: false,
     startedAt: Date.now(),
   };
-  // Seed per-player progress so everyone starts at stage 0 independently.
   for (const p of room.players) {
     if (p.connected !== false) ensureProgress(room, p.id);
   }
@@ -253,44 +349,126 @@ function beginRound(room, playableSongs) {
   return { ok: true };
 }
 
-function finishPlayerRound(
-  room,
-  socketId,
-  { text = '', correct = false, giveUp = false, points = 0, stageIndex = 0 } = {}
-) {
+function startMatch(room, playableSongs) {
+  if (!playableSongs.length) {
+    return { error: 'Keine spielbaren Songs (Audio + gültiger Cue fehlen).' };
+  }
+  const rounds = Math.min(Math.max(1, Number(room.settings.rounds) || DEFAULT_ROUNDS), playableSongs.length);
+  room.totalRounds = rounds;
+  room.roundIndex = 0;
+  room.trackIds = shuffle(playableSongs.map((s) => s.id)).slice(0, rounds);
+  room.scores = {};
+  room.playerRuns = {};
+  room.roundRecap = [];
+  room.songMeta = {};
+  for (const song of playableSongs) {
+    if (room.trackIds.indexOf(song.id) !== -1) rememberSong(room, song);
+  }
+  for (const p of room.players) {
+    p.score = 0;
+    p.ready = false;
+    room.scores[p.id] = 0;
+  }
+  room.phase = 'playing';
+
+  if (syncOn(room)) return beginRound(room, playableSongs);
+
+  room.current = null;
+  for (const p of room.players) {
+    if (p.connected === false) continue;
+    const run = ensureRun(room, p.id);
+    run.roundIndex = 0;
+    run.matchDone = false;
+    run.progress = emptyProgress();
+  }
+  room.lastActivity = Date.now();
+  return { ok: true };
+}
+
+function advanceAsyncPlayer(room, socketId) {
+  const run = ensureRun(room, socketId);
+  const song = songAt(room, run.roundIndex);
+  recordRecap(room, socketId, run.roundIndex, song, run.progress);
+  if (run.roundIndex + 1 >= room.totalRounds) {
+    run.matchDone = true;
+    run.progress = emptyProgress();
+    run.progress.done = true;
+    if (allMatchDone(room)) room.phase = 'finished';
+    room.lastActivity = Date.now();
+    return { ok: true, matchDone: true };
+  }
+  run.roundIndex += 1;
+  run.progress = emptyProgress();
+  room.lastActivity = Date.now();
+  return { ok: true, matchDone: false, roundIndex: run.roundIndex };
+}
+
+function finishPlayerRound(room, socketId, opts) {
+  opts = opts || {};
+  const text = opts.text || '';
+  const correct = !!opts.correct;
+  const giveUp = !!opts.giveUp;
+  const points = Number(opts.points) || 0;
+  const stageIndex = Number(opts.stageIndex) || 0;
+
+  if (!syncOn(room)) {
+    const run = ensureRun(room, socketId);
+    if (run.matchDone) return { error: 'Match bereits beendet.' };
+    if (run.progress.done) return { error: 'Runde bereits beendet.' };
+    run.progress.text = String(text || '').trim();
+    run.progress.correct = correct;
+    run.progress.points = points;
+    run.progress.stageIndex = stageIndex;
+    run.progress.done = true;
+    run.progress.giveUp = giveUp;
+    run.progress.at = Date.now();
+    const advanced = advanceAsyncPlayer(room, socketId);
+    return {
+      ok: true,
+      correct,
+      points,
+      giveUp,
+      stageIndex,
+      matchDone: !!advanced.matchDone,
+      asyncAdvanced: true,
+    };
+  }
+
   const progress = ensureProgress(room, socketId);
   progress.text = String(text || '').trim();
-  progress.correct = !!correct;
-  progress.points = Number(points) || 0;
-  progress.stageIndex = Number(stageIndex) || 0;
+  progress.correct = correct;
+  progress.points = points;
+  progress.stageIndex = stageIndex;
   progress.done = true;
-  progress.giveUp = !!giveUp;
+  progress.giveUp = giveUp;
   progress.at = Date.now();
   room.lastActivity = Date.now();
   maybeReveal(room);
-  return {
-    ok: true,
-    correct: !!correct,
-    points: progress.points,
-    giveUp: !!giveUp,
-    stageIndex: progress.stageIndex,
-  };
+  return { ok: true, correct, points: progress.points, giveUp, stageIndex: progress.stageIndex };
 }
 
 function skipStage(room, socketId) {
-  if (room.phase !== 'playing' || !room.current || room.current.revealed) {
-    return { error: 'Keine aktive Runde.' };
+  if (room.phase !== 'playing') return { error: 'Keine aktive Runde.' };
+
+  if (!syncOn(room)) {
+    const run = ensureRun(room, socketId);
+    if (run.matchDone) return { error: 'Du bist durch — warte auf die anderen.' };
+    const progress = run.progress;
+    if (progress.done) return { error: 'Runde bereits beendet.' };
+    if (progress.stageIndex >= CLIP_STAGES.length - 1) {
+      return finishPlayerRound(room, socketId, { text: '', correct: false, giveUp: true, stageIndex: progress.stageIndex });
+    }
+    progress.stageIndex += 1;
+    progress.at = Date.now();
+    room.lastActivity = Date.now();
+    return { ok: true, stageIndex: progress.stageIndex };
   }
+
+  if (!room.current || room.current.revealed) return { error: 'Keine aktive Runde.' };
   const progress = ensureProgress(room, socketId);
   if (progress.done) return { error: 'Du bist in dieser Runde fertig.' };
-
   if (progress.stageIndex >= CLIP_STAGES.length - 1) {
-    return finishPlayerRound(room, socketId, {
-      text: '',
-      correct: false,
-      giveUp: true,
-      stageIndex: progress.stageIndex,
-    });
+    return finishPlayerRound(room, socketId, { text: '', correct: false, giveUp: true, stageIndex: progress.stageIndex });
   }
   progress.stageIndex += 1;
   progress.at = Date.now();
@@ -298,43 +476,63 @@ function skipStage(room, socketId) {
   return { ok: true, stageIndex: progress.stageIndex };
 }
 
+function titleForPlayer(room, socketId) {
+  if (syncOn(room)) return (room.current && room.current.title) || '';
+  const run = ensureRun(room, socketId);
+  return songAt(room, run.roundIndex).title || '';
+}
+
 function submitGuess(room, socketId, text) {
-  if (room.phase !== 'playing' || !room.current || room.current.revealed) {
-    return { error: 'Keine aktive Runde.' };
+  if (room.phase !== 'playing') return { error: 'Keine aktive Runde.' };
+
+  if (!syncOn(room)) {
+    const run = ensureRun(room, socketId);
+    if (run.matchDone) return { error: 'Du bist durch — warte auf die anderen.' };
+    const progress = run.progress;
+    if (progress.done) return { error: 'Bereits geraten.' };
+    const correct = titlesMatch(text, titleForPlayer(room, socketId));
+    if (correct) {
+      const stageIndex = progress.stageIndex;
+      const points = STAGE_POINTS[stageIndex] != null ? STAGE_POINTS[stageIndex] : 0;
+      const player = room.players.find((p) => p.id === socketId);
+      if (player) {
+        player.score = (player.score || 0) + points;
+        room.scores[socketId] = player.score;
+      }
+      return finishPlayerRound(room, socketId, { text, correct: true, giveUp: false, points, stageIndex });
+    }
+    progress.text = String(text || '').trim();
+    progress.correct = false;
+    progress.points = 0;
+    progress.at = Date.now();
+    if (progress.stageIndex >= CLIP_STAGES.length - 1) {
+      return finishPlayerRound(room, socketId, { text, correct: false, giveUp: true, stageIndex: progress.stageIndex });
+    }
+    progress.stageIndex += 1;
+    room.lastActivity = Date.now();
+    return { ok: true, correct: false, stageIndex: progress.stageIndex };
   }
+
+  if (!room.current || room.current.revealed) return { error: 'Keine aktive Runde.' };
   const progress = ensureProgress(room, socketId);
   if (progress.done) return { error: 'Bereits geraten.' };
-
   const correct = titlesMatch(text, room.current.title);
   if (correct) {
     const stageIndex = progress.stageIndex;
-    const points = STAGE_POINTS[stageIndex] ?? 0;
+    const points = STAGE_POINTS[stageIndex] != null ? STAGE_POINTS[stageIndex] : 0;
     const player = room.players.find((p) => p.id === socketId);
     if (player) {
       player.score = (player.score || 0) + points;
       room.scores[socketId] = player.score;
     }
-    return finishPlayerRound(room, socketId, {
-      text,
-      correct: true,
-      giveUp: false,
-      points,
-      stageIndex,
-    });
+    return finishPlayerRound(room, socketId, { text, correct: true, giveUp: false, points, stageIndex });
   }
-
   progress.text = String(text || '').trim();
   progress.correct = false;
   progress.points = 0;
   progress.at = Date.now();
-
   if (progress.stageIndex >= CLIP_STAGES.length - 1) {
-    return finishPlayerRound(room, socketId, {
-      text,
-      correct: false,
-      giveUp: true,
-      stageIndex: progress.stageIndex,
-    });
+    return finishPlayerRound(room, socketId, { text, correct: false, giveUp: true, stageIndex: progress.stageIndex });
   }
   progress.stageIndex += 1;
   room.lastActivity = Date.now();
@@ -342,20 +540,21 @@ function submitGuess(room, socketId, text) {
 }
 
 function maybeReveal(room) {
-  if (!room.current) return;
-  const connected = room.players.filter((p) => p.connected !== false);
-  const allDone =
-    connected.length > 0 && connected.every((p) => room.current.guesses[p.id]?.done);
+  if (!room.current || !syncOn(room)) return;
+  const connected = connectedPlayers(room);
+  const allDone = connected.length > 0 && connected.every((p) => room.current.guesses[p.id] && room.current.guesses[p.id].done);
   if (allDone) {
     room.current.revealed = true;
     room.phase = 'reveal';
+    finalizeSyncRecap(room);
   }
 }
 
 function nextRound(room, playableSongs) {
+  if (!syncOn(room)) return { error: 'Im Async-Modus gibt es keine gemeinsame nächste Runde.' };
   if (room.roundIndex + 1 >= room.totalRounds) {
     room.phase = 'finished';
-    room.current = room.current ? { ...room.current, revealed: true } : null;
+    room.current = room.current ? Object.assign({}, room.current, { revealed: true }) : null;
     return { ok: true, finished: true };
   }
   room.roundIndex += 1;

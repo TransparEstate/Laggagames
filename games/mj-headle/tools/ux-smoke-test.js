@@ -1,14 +1,16 @@
 /**
- * Terminal checks for mj-headle UX / syncReveal / async stages.
+ * Terminal checks for mj-headle UX: async rounds, syncReveal, recap, leave.
  * Run: node games/mj-headle/tools/ux-smoke-test.js
  */
 const assert = require('assert');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
+const { spawn } = require('child_process');
 
 const root = path.join(__dirname, '..');
 const game = require(path.join(root, 'server', 'gameLogic'));
+const RoomManager = require(path.join(root, 'server', 'roomManager'));
 
 const songs = [
   { id: 's1', title: 'Billie Jean', artist: 'Michael Jackson', cueStartSec: 1, hasAudio: true },
@@ -27,9 +29,27 @@ function section(title) {
   console.log(`\n== ${title}`);
 }
 
-section('async skip: stages independent');
+function drainSkips(room, socketId) {
+  let guard = 0;
+  while (guard++ < 40) {
+    const run = room.playerRuns[socketId];
+    if (!run || run.matchDone) break;
+    const before = run.roundIndex;
+    const r = game.skipStage(room, socketId);
+    assert.ok(r.ok || r.error, r.error || 'skip ok');
+    if (r.error) break;
+    if (run.roundIndex > before || run.matchDone) {
+      // advanced or finished match
+      if (run.matchDone) break;
+      // finished one round; continue until match done for drain helpers that want full match
+    }
+  }
+}
+
+section('async skip: stages independent (syncReveal on)');
 {
   const room = roomWithTwo();
+  room.settings.syncReveal = true;
   const start = game.startMatch(room, songs);
   assert.ok(start.ok, start.error);
   assert.strictEqual(room.phase, 'playing');
@@ -50,6 +70,7 @@ section('async skip: stages independent');
 section('wrong guess only advances own stage');
 {
   const room = roomWithTwo();
+  room.settings.syncReveal = true;
   game.startMatch(room, songs);
   const bad = game.submitGuess(room, 'guest', 'Definitely Wrong Title XYZ');
   assert.ok(bad.ok && bad.correct === false);
@@ -76,35 +97,70 @@ section('syncReveal ON: no early personal reveal');
   console.log('ok: host waits, answer hidden');
 }
 
-section('syncReveal OFF: early personal reveal + shared when all done');
+section('syncReveal OFF: independent rounds, no mid reveal, no push');
 {
   const room = roomWithTwo();
   const set = game.setSyncReveal(room, 'host', false);
   assert.ok(set.ok);
   assert.strictEqual(set.syncReveal, false);
   game.startMatch(room, songs);
-  const title = room.current.title;
-  const ok = game.submitGuess(room, 'host', title);
-  assert.ok(ok.correct);
+  assert.strictEqual(room.current, null);
+
+  // Host finishes round 0 via skips → moves to round 1 alone
+  let guard = 0;
+  while (room.playerRuns.host.roundIndex === 0 && !room.playerRuns.host.matchDone && guard++ < 20) {
+    const r = game.skipStage(room, 'host');
+    assert.ok(r.ok, r.error);
+  }
+  assert.strictEqual(room.playerRuns.host.roundIndex, 1);
+  assert.strictEqual(room.playerRuns.guest.roundIndex, 0);
+  assert.strictEqual(room.phase, 'playing');
+
   const stHost = game.publicState(room, 'host');
   const stGuest = game.publicState(room, 'guest');
-  assert.strictEqual(stHost.current.revealedForMe, true);
-  assert.strictEqual(stHost.current.title, title);
-  assert.strictEqual(stGuest.current.revealedForMe, false);
+  assert.notStrictEqual(stHost.current.songId, stGuest.current.songId);
+  assert.strictEqual(stHost.current.title, null);
   assert.strictEqual(stGuest.current.title, null);
-  assert.strictEqual(room.phase, 'playing', 'still playing until guest done');
+  assert.strictEqual(stHost.current.revealedForMe, false);
+  console.log('ok: host on song 2, guest still song 1, no titles');
 
-  // guest gives up via skips
-  while (!room.current.guesses.guest?.done) {
-    const r = game.skipStage(room, 'guest');
-    assert.ok(r.ok || r.error);
-    if (r.error) break;
+  // Finish both matches
+  while (!room.playerRuns.host.matchDone) {
+    const r = game.skipStage(room, 'host');
+    assert.ok(r.ok, r.error);
   }
-  assert.ok(room.current.guesses.guest.done);
+  while (!room.playerRuns.guest.matchDone) {
+    const r = game.skipStage(room, 'guest');
+    assert.ok(r.ok, r.error);
+  }
+  assert.strictEqual(room.phase, 'finished');
+  const fin = game.publicState(room, 'host');
+  assert.ok(Array.isArray(fin.roundRecap));
+  assert.ok(fin.roundRecap.length >= 1);
+  assert.ok(fin.roundRecap[0].title);
+  assert.ok(fin.roundRecap[0].results.length >= 1);
+  console.log('ok: finished with roundRecap', fin.roundRecap.length);
+}
+
+section('syncReveal ON: reveal + recap after all done + next to finish');
+{
+  const room = roomWithTwo();
+  game.setRounds(room, 'host', 1);
+  room.settings.syncReveal = true;
+  game.startMatch(room, songs);
+  const title = room.current.title;
+  assert.ok(game.submitGuess(room, 'host', title).correct);
+  assert.strictEqual(room.phase, 'playing');
+  while (!room.current.guesses.guest?.done) {
+    assert.ok(game.skipStage(room, 'guest').ok);
+  }
   assert.strictEqual(room.phase, 'reveal');
-  assert.strictEqual(room.current.revealed, true);
   assert.strictEqual(game.publicState(room, 'guest').current.title, title);
-  console.log('ok: early reveal for host, shared reveal after guest');
+  const next = game.nextRound(room, songs);
+  assert.ok(next.ok && next.finished);
+  assert.strictEqual(room.phase, 'finished');
+  assert.ok(game.publicState(room, 'host').roundRecap.length >= 1);
+  console.log('ok: sync reveal + finished recap');
 }
 
 section('setSyncReveal host-only / lobby-only');
@@ -116,6 +172,20 @@ section('setSyncReveal host-only / lobby-only');
   console.log('ok: guarded');
 }
 
+section('leave empties room');
+{
+  const rooms = new RoomManager();
+  const room = rooms.createRoom('host');
+  rooms.joinRoom(room.code, 'host', 'Host');
+  rooms.joinRoom(room.code, 'guest', 'Guest');
+  const leaveGuest = rooms.leaveSocket('guest', { hard: true });
+  assert.strictEqual(leaveGuest.empty, false);
+  const leaveHost = rooms.leaveSocket('host', { hard: true });
+  assert.strictEqual(leaveHost.empty, true);
+  assert.strictEqual(rooms.getRoom(room.code), null);
+  console.log('ok: hard leave deletes empty room');
+}
+
 section('static UI markers');
 {
   const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
@@ -125,17 +195,21 @@ section('static UI markers');
   assert.ok(html.includes('id="syncRevealToggle"'));
   assert.ok(html.includes('Skippen'));
   assert.ok(html.includes('id="btnRevealPlay"'));
-  assert.ok(!js.includes('.slice(0, 12)'));
-  assert.ok(css.includes('min(50vh, 420px)'));
+  assert.ok(html.includes('id="leaveModal"'));
+  assert.ok(html.includes('id="roundRecap"'));
+  assert.ok(html.includes('id="view-wait"'));
+  assert.ok(js.includes('session:return-to-lobby'));
+  assert.ok(js.includes('waitingForOthers'));
+  assert.ok(js.includes('roundRecap'));
+  assert.ok(css.includes('line-height: 1.05') || css.includes('line-height:1.05'));
+  assert.ok(css.includes('.modal'));
+  assert.ok(css.includes('.btn-danger') || css.includes('btn-danger'));
   console.log('ok: html/js/css markers');
 }
 
-section('live catalog length via game server');
+section('live catalog + socket syncReveal');
 (async () => {
-  const PORT = 3017;
-  process.env.PORT = String(PORT);
-  // Requiring index starts listen — spawn instead.
-  const { spawn } = require('child_process');
+  const PORT = 3027;
   const child = spawn('node', ['server/index.js'], {
     cwd: root,
     env: { ...process.env, PORT: String(PORT) },
@@ -154,9 +228,8 @@ section('live catalog length via game server');
       try {
         await new Promise((resolve, reject) => {
           const req = http.get(`http://127.0.0.1:${PORT}/api/songs`, (res) => {
-            let body = '';
-            res.on('data', (c) => (body += c));
-            res.on('end', () => resolve({ status: res.statusCode, body }));
+            res.resume();
+            res.on('end', resolve);
           });
           req.on('error', reject);
         });
@@ -189,12 +262,11 @@ section('live catalog length via game server');
     assert.ok(n > 12, `expected >12 songs, got ${n}`);
     console.log(`ok: catalog ${n} songs, playable=${data.playableCount}`);
 
-    // Socket multiplayer via socket.io-client from root node_modules
     let ioClient;
     try {
       ioClient = require('socket.io-client');
     } catch {
-      ioClient = require('/workspace/node_modules/socket.io-client');
+      ioClient = require(path.join(root, '..', '..', 'node_modules', 'socket.io-client'));
     }
 
     const connect = (name) =>
@@ -214,8 +286,6 @@ section('live catalog length via game server');
     const emit = (s, event, payload = {}) =>
       new Promise((resolve) => s.emit(event, payload, (res) => resolve(res || {})));
 
-    // Solo create + second player can't join without party — use gameLogic for 2p already.
-    // Still verify lobby:set-sync-reveal over socket for solo host.
     const a = await connect('a');
     const solo = await emit(a, 'room:create-solo', { name: 'A', rounds: 3 });
     assert.ok(solo.ok, solo.error);
@@ -224,7 +294,10 @@ section('live catalog length via game server');
     assert.ok(toggled.ok, toggled.error);
     assert.strictEqual(toggled.syncReveal, false);
     assert.strictEqual(toggled.state.settings.syncReveal, false);
-    console.log('ok: socket lobby:set-sync-reveal');
+
+    const left = await emit(a, 'session:return-to-lobby', {});
+    assert.ok(left.ok, left.error);
+    console.log('ok: socket syncReveal + leave');
     a.close();
 
     console.log('\nALL CHECKS PASSED');
