@@ -79,9 +79,10 @@ function songsFromAudioObjects(objects) {
       title,
       artist: 'Michael Jackson',
       audioKey: key,
+      // Provisional: playable immediately after upload. Refine later with find-cue.
       cueStartSec: 0,
-      cueQuality: 'missing',
-      cueReason: 'awaiting-cue',
+      cueQuality: 'ok',
+      cueReason: 'r2-upload-default',
       hasAudio: true,
       _score: score,
       _size: size,
