@@ -1,7 +1,7 @@
 {
   "id": "sound-clash",
-  "name": "Sound Clash",
-  "tagline": "Rhythmus-Duell – Platzhalter",
+  "name": "Platzhalter",
+  "tagline": "Platzhalter",
   "description": "Platzhalter im Lagga Club-Hub. Spielinhalt folgt.",
   "status": "wip",
   "entry": "server/index.js",

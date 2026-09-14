@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MJ Headle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true"></div>
+  <div class="groove" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="back" href="/">← Lagga Club</a>
+    <div class="scorechip" id="scoreChip" hidden>Score <strong id="scoreValue">0</strong></div>
+  </header>
+
+  <main>
+    <section id="view-home" class="view view-home">
+      <p class="brand">MJ Headle</p>
+      <h1 class="tag">Errate den Song am ersten Beat</h1>
+      <p class="lede">0,1s · 0,5s · 1s · 5s · 13s — je früher, desto mehr Punkte. Nur Michael Jackson.</p>
+      <div class="cta-row">
+        <button type="button" class="btn btn-primary" id="btnSolo">Solo starten</button>
+      </div>
+      <p class="hint" id="homeHint">Party? Starte MJ Headle über die Lagga-Lobby.</p>
+      <p class="meta" id="catalogMeta">Katalog wird geladen…</p>
+    </section>
+
+    <section id="view-lobby" class="view" hidden>
+      <p class="brand brand-sm">MJ Headle</p>
+      <h2>Lobby</h2>
+      <div class="lobby-grid">
+        <label class="field">
+          <span>Dein Name</span>
+          <input id="nameInput" maxlength="24" placeholder="Name" />
+        </label>
+        <label class="field" id="roundsField">
+          <span>Runden</span>
+          <input id="roundsInput" type="number" min="1" max="20" value="5" />
+        </label>
+      </div>
+      <ul class="player-list" id="playerList"></ul>
+      <div class="cta-row">
+        <button type="button" class="btn" id="btnReady">Bereit</button>
+        <button type="button" class="btn btn-primary" id="btnStart" hidden>Spiel starten</button>
+      </div>
+      <p class="hint" id="lobbyHint"></p>
+    </section>
+
+    <section id="view-play" class="view view-play" hidden>
+      <div class="round-meta">
+        <span id="roundLabel">Runde 1/5</span>
+        <span id="stageLabel">0,1s</span>
+      </div>
+      <div class="stage-track" id="stageTrack" aria-label="Clip-Stufen"></div>
+      <button type="button" class="play-orb" id="btnPlay" aria-label="Clip abspielen">
+        <span class="play-orb-core">▶</span>
+      </button>
+      <p class="play-caption" id="playCaption">Ab Cue hören</p>
+      <form id="guessForm" class="guess-form" autocomplete="off">
+        <label class="sr-only" for="guessInput">Songtitel</label>
+        <div class="search-wrap">
+          <input id="guessInput" placeholder="MJ-Song suchen und raten…" autocomplete="off" />
+          <ul id="guessResults" class="search-results" hidden></ul>
+        </div>
+        <div class="cta-row">
+          <button type="submit" class="btn btn-primary">Raten</button>
+          <button type="button" class="btn" id="btnSkip">Weiterhören</button>
+        </div>
+      </form>
+      <p class="feedback" id="feedback"></p>
+    </section>
+
+    <section id="view-reveal" class="view" hidden>
+      <p class="reveal-flash" id="revealTitle">—</p>
+      <p class="lede" id="revealSub"></p>
+      <ul class="player-list" id="revealList"></ul>
+      <div class="cta-row">
+        <button type="button" class="btn btn-primary" id="btnNext" hidden>Nächste Runde</button>
+      </div>
+    </section>
+
+    <section id="view-finished" class="view" hidden>
+      <p class="brand brand-sm">Finale</p>
+      <h2>Scoreboard</h2>
+      <ol class="leaderboard" id="leaderboard"></ol>
+      <div class="cta-row">
+        <button type="button" class="btn btn-primary" id="btnAgain">Nochmal Solo</button>
+        <a class="btn" href="/">Zur Lobby</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
