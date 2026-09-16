@@ -113,8 +113,24 @@ const partyPlayers = new Map();
 /** partyId → versus room */
 const versusRooms = new Map();
 
+const BETWEEN_MS = 2800;
+
 function getVersusRoom(partyId) {
   return versusRooms.get(partyId) || null;
+}
+
+function createPlayerState(name, memberId) {
+  return {
+    name,
+    memberId,
+    round: null,
+    matchHintsLeft: game.VERSUS_MATCH.matchHints,
+    matchHintsUsed: 0,
+    totalScore: 0,
+    totalFinishTimeMs: 0,
+    roundsWon: 0,
+    roundResults: [],
+  };
 }
 
 function getOrCreateVersusRoom(partyId) {
@@ -128,15 +144,25 @@ function getOrCreateVersusRoom(partyId) {
       puzzle: null,
       players: new Map(),
       startedAt: null,
+      roundIndex: 0,
+      totalRounds: game.VERSUS_MATCH.rounds,
+      matchHints: game.VERSUS_MATCH.matchHints,
+      _nextTimer: null,
     };
     versusRooms.set(partyId, room);
   }
   return room;
 }
 
+function clearBetweenTimer(room) {
+  if (room._nextTimer) {
+    clearTimeout(room._nextTimer);
+    room._nextTimer = null;
+  }
+}
+
 function publicPlayerSummary(socketId, player, selfId) {
   const round = player.round;
-  const scored = round ? game.scoreVersusPlayer(round) : { score: 0, finishTimeMs: null };
   const summary = {
     playerId: socketId,
     name: player.name,
@@ -154,14 +180,22 @@ function publicPlayerSummary(socketId, player, selfId) {
       : null,
     guessesLeft: round ? round.guessesLeft : null,
     guessesUsed: round ? round.guesses.length : 0,
-    hintsLeft: round ? round.hintsLeft : null,
-    hintsUsed: round ? round.hintsUsed || 0 : 0,
-    score: scored.score,
-    finishTimeMs: scored.finishTimeMs,
+    matchHintsLeft: player.matchHintsLeft,
+    matchHintsUsed: player.matchHintsUsed || 0,
+    hintsLeft: player.matchHintsLeft,
+    hintsUsed: player.matchHintsUsed || 0,
+    score: player.totalScore || 0,
+    finishTimeMs: player.totalFinishTimeMs > 0 ? player.totalFinishTimeMs : null,
+    roundsWon: player.roundsWon || 0,
     perfect: round ? !!round.perfect : false,
   };
   if (socketId === selfId && round) {
     summary.state = game.serializeRoundState(round, null);
+    if (summary.state) {
+      summary.state.hintsLeft = player.matchHintsLeft;
+      summary.state.matchHintsLeft = player.matchHintsLeft;
+      summary.state.matchHintsTotal = game.VERSUS_MATCH.matchHints;
+    }
   }
   return summary;
 }
@@ -175,7 +209,7 @@ function serializeVersusRoom(room, selfId = null) {
   }
 
   let ranking = null;
-  if (room.status === 'finished') {
+  if (room.status === 'finished' || room.status === 'between') {
     ranking = game.rankVersusPlayers(
       players.map((p) => ({
         playerId: p.playerId,
@@ -184,6 +218,7 @@ function serializeVersusRoom(room, selfId = null) {
         finishTimeMs: p.finishTimeMs,
         status: p.status,
         perfect: p.perfect,
+        roundsWon: p.roundsWon,
       }))
     );
   }
@@ -195,6 +230,9 @@ function serializeVersusRoom(room, selfId = null) {
     difficulty: room.difficulty,
     startedAt: room.startedAt,
     hostSocketId: room.hostSocketId,
+    roundIndex: room.roundIndex,
+    totalRounds: room.totalRounds,
+    matchHints: room.matchHints,
     puzzle:
       room.puzzle && room.status !== 'lobby'
         ? {
@@ -217,7 +255,20 @@ function serializeVersusRoom(room, selfId = null) {
       ? {
           playerId: selfId,
           isHost: selfId === room.hostSocketId,
-          state: self?.round ? game.serializeRoundState(self.round, null) : null,
+          matchHintsLeft: self?.matchHintsLeft ?? room.matchHints,
+          matchHintsUsed: self?.matchHintsUsed || 0,
+          totalScore: self?.totalScore || 0,
+          totalFinishTimeMs: self?.totalFinishTimeMs || 0,
+          state: (() => {
+            if (!self?.round) return null;
+            const s = game.serializeRoundState(self.round, null);
+            if (s) {
+              s.hintsLeft = self.matchHintsLeft;
+              s.matchHintsLeft = self.matchHintsLeft;
+              s.matchHintsTotal = room.matchHints;
+            }
+            return s;
+          })(),
         }
       : null,
   };
@@ -232,20 +283,80 @@ function emitVersusState(partyId) {
   }
 }
 
-function refreshRoomFinished(room) {
+function settleCurrentRound(room) {
+  for (const player of room.players.values()) {
+    if (!player.round) continue;
+    const scored = game.scoreVersusPlayer(player.round);
+    player.totalScore += scored.score;
+    if (scored.finishTimeMs != null) player.totalFinishTimeMs += scored.finishTimeMs;
+    if (player.round.status === 'won') player.roundsWon += 1;
+    player.roundResults.push({
+      roundIndex: room.roundIndex,
+      score: scored.score,
+      finishTimeMs: scored.finishTimeMs,
+      status: player.round.status,
+      perfect: !!player.round.perfect,
+      hintsUsed: player.round.hintsUsed || 0,
+    });
+  }
+}
+
+function beginRound(room) {
+  const puzzle = game.createSharedPuzzle(room.difficulty);
+  room.puzzle = puzzle;
+  room.status = 'playing';
+  for (const player of room.players.values()) {
+    player.round = game.createRoundFromPuzzle(puzzle, room.difficulty, {
+      hintsLeft: player.matchHintsLeft,
+    });
+  }
+}
+
+function advanceMatch(room) {
   if (room.status !== 'playing') return;
   const players = [...room.players.values()];
   if (!players.length) return;
   const allDone = players.every((p) => p.round && p.round.status !== 'playing');
-  if (allDone) {
+  if (!allDone) return;
+
+  settleCurrentRound(room);
+
+  if (room.roundIndex >= room.totalRounds) {
+    clearBetweenTimer(room);
     room.status = 'finished';
+    emitVersusState(room.partyId);
+    return;
   }
+
+  room.status = 'between';
+  emitVersusState(room.partyId);
+  clearBetweenTimer(room);
+  room._nextTimer = setTimeout(() => {
+    room._nextTimer = null;
+    if (!versusRooms.has(room.partyId)) return;
+    if (room.status !== 'between') return;
+    room.roundIndex += 1;
+    beginRound(room);
+    emitVersusState(room.partyId);
+  }, BETWEEN_MS);
 }
 
 function ensureHost(room) {
   if (room.hostSocketId && room.players.has(room.hostSocketId)) return;
   const first = room.players.keys().next().value || null;
   room.hostSocketId = first;
+}
+
+function resetMatchPlayers(room) {
+  for (const player of room.players.values()) {
+    player.round = null;
+    player.matchHintsLeft = room.matchHints;
+    player.matchHintsUsed = 0;
+    player.totalScore = 0;
+    player.totalFinishTimeMs = 0;
+    player.roundsWon = 0;
+    player.roundResults = [];
+  }
 }
 
 io.on('connection', (socket) => {
@@ -271,15 +382,23 @@ io.on('connection', (socket) => {
       socket.join(`party:${partyId}`);
 
       const room = getOrCreateVersusRoom(partyId);
-      room.players.set(socket.id, {
-        name,
-        memberId,
-        round: room.status === 'playing' && room.puzzle
-          ? game.createRoundFromPuzzle(room.puzzle, room.difficulty)
-          : null,
-      });
+      const existing = room.players.get(socket.id);
+      if (existing) {
+        existing.name = name;
+        existing.memberId = memberId;
+      } else {
+        const player = createPlayerState(name, memberId);
+        if (room.status === 'playing' && room.puzzle) {
+          // Late join: get remaining match hints and current puzzle
+          player.matchHintsLeft = room.matchHints;
+          player.round = game.createRoundFromPuzzle(room.puzzle, room.difficulty, {
+            hintsLeft: player.matchHintsLeft,
+          });
+        }
+        room.players.set(socket.id, player);
+      }
       ensureHost(room);
-      if (room.status === 'playing') refreshRoomFinished(room);
+      if (room.status === 'playing') advanceMatch(room);
 
       const versus = serializeVersusRoom(room, socket.id);
       if (typeof ack === 'function') {
@@ -320,15 +439,14 @@ io.on('connection', (socket) => {
       }
 
       const difficulty = String(payload.difficulty || room.difficulty || 'medium');
-      const puzzle = game.createSharedPuzzle(difficulty);
-      room.difficulty = puzzle.difficulty;
-      room.puzzle = puzzle;
-      room.status = 'playing';
+      clearBetweenTimer(room);
+      room.difficulty = (game.DIFFICULTY[difficulty] || game.DIFFICULTY.medium).id;
+      room.totalRounds = game.VERSUS_MATCH.rounds;
+      room.matchHints = game.VERSUS_MATCH.matchHints;
+      room.roundIndex = 1;
       room.startedAt = Date.now();
-
-      for (const player of room.players.values()) {
-        player.round = game.createRoundFromPuzzle(puzzle, room.difficulty);
-      }
+      resetMatchPlayers(room);
+      beginRound(room);
 
       emitVersusState(info.partyId);
       if (typeof ack === 'function') ack({ ok: true, versus: serializeVersusRoom(room, socket.id) });
@@ -361,7 +479,7 @@ io.on('connection', (socket) => {
         }
         return;
       }
-      refreshRoomFinished(room);
+      advanceMatch(room);
       emitVersusState(info.partyId);
       if (typeof ack === 'function') {
         ack({
@@ -388,6 +506,18 @@ io.on('connection', (socket) => {
         if (typeof ack === 'function') ack({ error: 'Keine laufende Versus-Runde.' });
         return;
       }
+      if (player.matchHintsLeft <= 0) {
+        if (typeof ack === 'function') {
+          ack({
+            error: 'Keine Match-Hinweise mehr — sparsam einsetzen.',
+            code: 'no_hints',
+            versus: serializeVersusRoom(room, socket.id),
+          });
+        }
+        return;
+      }
+      // Sync pool into round before progressive hint consumes one
+      player.round.hintsLeft = player.matchHintsLeft;
       const result = game.applyHintToRound(player.round);
       if (result.error) {
         if (typeof ack === 'function') {
@@ -399,6 +529,8 @@ io.on('connection', (socket) => {
         }
         return;
       }
+      player.matchHintsLeft = player.round.hintsLeft;
+      player.matchHintsUsed = (player.matchHintsUsed || 0) + 1;
       emitVersusState(info.partyId);
       if (typeof ack === 'function') {
         ack({
@@ -422,11 +554,12 @@ io.on('connection', (socket) => {
       const { partyId } = info;
       const room = getVersusRoom(partyId);
       if (room) {
+        clearBetweenTimer(room);
         room.players.delete(socket.id);
         ensureHost(room);
         if (!room.players.size) versusRooms.delete(partyId);
         else {
-          refreshRoomFinished(room);
+          advanceMatch(room);
           emitVersusState(partyId);
         }
       }
@@ -446,11 +579,12 @@ io.on('connection', (socket) => {
     if (info?.partyId) {
       const room = getVersusRoom(info.partyId);
       if (room) {
+        clearBetweenTimer(room);
         room.players.delete(socket.id);
         ensureHost(room);
         if (!room.players.size) versusRooms.delete(info.partyId);
         else {
-          refreshRoomFinished(room);
+          advanceMatch(room);
           emitVersusState(info.partyId);
         }
       }

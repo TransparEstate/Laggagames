@@ -385,10 +385,25 @@
     $('meterGuesses').textContent = `Versuche: ${next.guessesLeft}`;
     $('meterRemain').textContent = `Rest: ${next.remaining}`;
     const stage = next.hintStage || 0;
-    $('meterHints').textContent =
-      next.hintsLeft != null
-        ? `Hinweise: ${next.hintsLeft}${stage ? ` · Stufe ${stage}/3` : ''}`
-        : 'Hinweise: —';
+    if (versusMode && versusState) {
+      const pool =
+        next.matchHintsLeft != null
+          ? next.matchHintsLeft
+          : versusState.you?.matchHintsLeft != null
+            ? versusState.you.matchHintsLeft
+            : next.hintsLeft;
+      const total = next.matchHintsTotal || versusState.matchHints || 4;
+      const ri = versusState.roundIndex || 1;
+      const tr = versusState.totalRounds || 3;
+      $('meterHints').textContent = `Hints: ${pool}/${total}${
+        stage ? ` · Stufe ${stage}/3` : ''
+      } · Runde ${ri}/${tr}`;
+    } else {
+      $('meterHints').textContent =
+        next.hintsLeft != null
+          ? `Hinweise: ${next.hintsLeft}${stage ? ` · Stufe ${stage}/3` : ''}`
+          : 'Hinweise: —';
+    }
 
     const list = $('guessList');
     list.innerHTML = '';
@@ -428,13 +443,17 @@
       if (opts.ranking) {
         const secs =
           p.finishTimeMs != null ? `${(p.finishTimeMs / 1000).toFixed(1)}s` : '—';
-        right.textContent = `${p.score} Pkt · ${secs}`;
+        right.textContent = `${p.score} Pkt · ${secs}${
+          p.roundsWon != null ? ` · ${p.roundsWon}×` : ''
+        }`;
       } else if (versusState?.status === 'lobby') {
         right.textContent = 'bereit';
+      } else if (versusState?.status === 'between') {
+        right.textContent = `${p.score} Pkt · Hints ${p.matchHintsLeft ?? p.hintsLeft ?? '—'}`;
       } else {
         const st =
           p.status === 'won' ? 'fertig' : p.status === 'lost' ? 'raus' : `Rest ${p.remaining ?? '—'}`;
-        right.textContent = `${st} · ${p.guessesLeft ?? '—'} Tipps`;
+        right.textContent = `${st} · Hints ${p.matchHintsLeft ?? p.hintsLeft ?? '—'}`;
       }
       li.appendChild(left);
       li.appendChild(right);
@@ -459,25 +478,44 @@
     }
     if (btnSolo) btnSolo.hidden = true;
     if (btnVs) {
-      btnVs.hidden = !(isVersusHost && versus.status !== 'playing');
+      btnVs.hidden = !(isVersusHost && (versus.status === 'lobby' || versus.status === 'finished'));
       btnVs.textContent =
         versus.status === 'finished' ? 'Nochmal Versus' : 'Versus starten';
     }
     if ($('homeHint')) {
       $('homeHint').textContent =
-        'Versus: gleiches Puzzle · Punkte für direkten Weg · Zeit nur als Tiebreaker';
+        'Versus: 3 Runden, 4 Hinweise fürs Match · Punkte zuerst, Zeit als Tiebreaker';
+    }
+    if ($('versusLobbyHint')) {
+      $('versusLobbyHint').textContent = `${versus.totalRounds || 3} Runden · ${
+        versus.matchHints || 4
+      } Hinweise fürs ganze Match (aufsparen oder in einer Runde stapeln) · Punkte, Zeit als Tiebreaker`;
     }
 
     if (versus.status === 'playing' && versus.you?.state) {
       show('play');
       if (hud) {
         hud.hidden = false;
+        if ($('versusHudTitle')) {
+          $('versusHudTitle').textContent = `Runde ${versus.roundIndex || 1}/${
+            versus.totalRounds || 3
+          }`;
+        }
+        if ($('versusMeta')) {
+          const pool = versus.you.matchHintsLeft;
+          const total = versus.matchHints || 4;
+          $('versusMeta').textContent = `Dein Hint-Pool: ${pool}/${total} · Score: ${
+            versus.you.totalScore || 0
+          }`;
+        }
         renderVersusPlayers(
           $('versusPlayerList'),
           versus.players.filter((p) => p.playerId !== myPlayerId)
         );
       }
       paintState(versus.you.state);
+    } else if (versus.status === 'between') {
+      showVersusBetween(versus);
     } else if (versus.status === 'finished') {
       if (versus.you?.state) paintState(versus.you.state);
       showVersusEnd(versus);
@@ -487,16 +525,42 @@
     }
   }
 
+  function showVersusBetween(versus) {
+    show('end');
+    const ri = versus.roundIndex || 1;
+    const tr = versus.totalRounds || 3;
+    $('endTitle').textContent = `Runde ${ri}/${tr}`;
+    const me = versus.you;
+    $('endText').textContent = `Zwischenstand: ${me?.totalScore ?? 0} Pkt · Hints übrig: ${
+      me?.matchHintsLeft ?? '—'
+    }/${versus.matchHints || 4}. Nächste Route startet gleich…`;
+    const rankEl = $('versusRank');
+    if (rankEl) {
+      rankEl.hidden = false;
+      renderVersusPlayers(rankEl, versus.ranking || versus.players, { ranking: true });
+    }
+    const ol = $('pathList');
+    ol.innerHTML = '';
+    for (const c of versus.you?.state?.optimalPath || []) {
+      const li = document.createElement('li');
+      li.textContent = `${c.nameDe} / ${c.nameEn}`;
+      ol.appendChild(li);
+    }
+    if ($('btnAgain')) $('btnAgain').hidden = true;
+  }
+
   function showVersusEnd(versus) {
     show('end');
     const ranking = versus.ranking || [];
     const winner = ranking[0];
-    $('endTitle').textContent = 'Versus-Ergebnis';
+    $('endTitle').textContent = 'Versus-Match';
     $('endText').textContent = winner
-      ? `${winner.name} gewinnt mit ${winner.score} Punkten${
-          winner.finishTimeMs != null ? ` (${(winner.finishTimeMs / 1000).toFixed(1)}s)` : ''
+      ? `${winner.name} gewinnt mit ${winner.score} Punkten über ${
+          versus.totalRounds || 3
+        } Runden${
+          winner.finishTimeMs != null ? ` (${(winner.finishTimeMs / 1000).toFixed(1)}s gesamt)` : ''
         }.`
-      : 'Runde beendet.';
+      : 'Match beendet.';
     const rankEl = $('versusRank');
     if (rankEl) {
       rankEl.hidden = false;

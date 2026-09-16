@@ -133,22 +133,23 @@ assert.ok(['green', 'orange', 'red'].includes(afterHintGuess.guess.quality));
 assert.ok(!afterHintGuess.state.revealedHintIds.includes(h3.hint.targetId));
 ok(`guess after hint clears outline (${afterHintGuess.guess.quality})`);
 
-// --- Versus scoring ---
+// --- Versus match pool ---
+assert.strictEqual(game.VERSUS_MATCH.rounds, 3);
+assert.strictEqual(game.VERSUS_MATCH.matchHints, 4);
 const puzzle = game.createSharedPuzzle('easy');
-const pA = game.createRoundFromPuzzle(puzzle, 'easy');
-const pB = game.createRoundFromPuzzle(puzzle, 'easy');
+const pA = game.createRoundFromPuzzle(puzzle, 'easy', { hintsLeft: 4 });
+const pB = game.createRoundFromPuzzle(puzzle, 'easy', { hintsLeft: 4 });
+assert.strictEqual(pA.hintsLeft, 4);
 for (const id of puzzle.path.slice(1, -1)) {
   game.applyGuessToRound(pA, game.countryLabel(id, 'de'));
   if (pA.status !== 'playing') break;
 }
 assert.strictEqual(pA.status, 'won');
-game.applyGuessToRound(pB, 'Japan');
-while (pB.status === 'playing' && pB.guessesLeft > 0) {
-  game.applyGuessToRound(pB, 'Australia');
-  if (pB.status !== 'playing') break;
-  // burn budget with duplicates avoided — use random far countries
-  break;
-}
+const hBurn = game.applyHintToRound(pB);
+assert.ok(hBurn.ok);
+assert.strictEqual(pB.hintsLeft, 3);
+ok('versus round can start with match hint pool (4)');
+
 const scoreA = game.scoreVersusPlayer(pA);
 assert.ok(scoreA.score >= 100);
 const ranked = game.rankVersusPlayers([

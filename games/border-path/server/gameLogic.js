@@ -16,6 +16,12 @@ const DIFFICULTY = {
 
 const HINT_STAGES = 3;
 
+/** Versus: mehrere Runden, Hinweise aus einem Match-Pool sparsam einsetzen. */
+const VERSUS_MATCH = {
+  rounds: 3,
+  matchHints: 4,
+};
+
 const sessions = new Map();
 
 function normalizeAlias(s) {
@@ -179,8 +185,9 @@ function createSharedPuzzle(difficultyId) {
   };
 }
 
-function createRoundFromPuzzle(puzzle, difficultyId) {
+function createRoundFromPuzzle(puzzle, difficultyId, opts = {}) {
   const cfg = DIFFICULTY[difficultyId || puzzle.difficulty] || DIFFICULTY.medium;
+  const hintsLeft = Number.isFinite(opts.hintsLeft) ? Math.max(0, opts.hintsLeft) : cfg.hints;
   return {
     difficulty: cfg.id,
     start: puzzle.start,
@@ -188,7 +195,7 @@ function createRoundFromPuzzle(puzzle, difficultyId) {
     path: [...puzzle.path],
     hops: puzzle.hops,
     guessesLeft: puzzle.hops + cfg.extraGuesses,
-    hintsLeft: cfg.hints,
+    hintsLeft,
     hintsUsed: 0,
     hintTargetId: null,
     hintStage: 0,
@@ -446,6 +453,15 @@ function scoreVersusPlayer(round) {
   return { score, finishTimeMs };
 }
 
+function scoreVersusMatch(player) {
+  const totalScore = Number(player?.totalScore) || 0;
+  const totalFinishTimeMs = Number(player?.totalFinishTimeMs) || 0;
+  return {
+    score: totalScore,
+    finishTimeMs: totalFinishTimeMs > 0 ? totalFinishTimeMs : null,
+  };
+}
+
 function rankVersusPlayers(entries) {
   return [...entries].sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
@@ -492,6 +508,7 @@ function difficulties() {
 module.exports = {
   DIFFICULTY,
   HINT_STAGES,
+  VERSUS_MATCH,
   meta,
   adjacency,
   aliases,
@@ -512,6 +529,7 @@ module.exports = {
   createSharedPuzzle,
   createRoundFromPuzzle,
   scoreVersusPlayer,
+  scoreVersusMatch,
   rankVersusPlayers,
   suggestNames,
   difficulties,

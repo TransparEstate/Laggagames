@@ -339,6 +339,11 @@ main {
   font-size: 1rem;
   letter-spacing: 0.02em;
 }
+.versus-meta {
+  margin: 0 0 0.55rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
 .versus-list,
 .versus-rank {
   list-style: none;

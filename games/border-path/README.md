@@ -24,7 +24,11 @@ Travle-ähnliches Geografie-Rätsel: Von einem Startland zum Zielland über **La
 
 `/g/border-path/?party=<partyId>&name=<displayName>&member=<memberId>`
 
-Versus-Hybrid: gleiches Puzzle für alle, eigene Tipps/Hinweise. Ranking nach **Punkten** (Win, Restversuche, Grün/Rot, Hinweis-Abzug); bei Gleichstand entscheidet die **Zeit**. Host startet die Runde.
+Versus-Hybrid über **3 Runden** mit gemeinsamem Puzzle je Runde:
+
+- **4 Hinweise** fürs ganze Match (Pool) — aufsparen oder in einer Runde mehrere Stufen nehmen
+- Ranking nach **Punkten** (Summe über Runden); bei Gleichstand **Gesamtzeit**
+- Host startet; nach jeder Runde kurzer Zwischenstand, dann nächste Route
 
 ## Daten
 
