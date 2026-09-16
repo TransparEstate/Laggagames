@@ -317,14 +317,96 @@ main {
 .guess-list li.orange { border-color: var(--orange); color: #e6d5b5; }
 .guess-list li.red { border-color: var(--red); color: #e6c2c2; }
 .status-line { min-height: 1.3em; margin: 0; color: var(--muted); }
-.end { animation: rise 0.5s ease both; }
-.end h2 {
+.end {
+  animation: rise 0.5s ease both;
+  position: relative;
+}
+.end h2,
+.end .winner-name {
   font-family: var(--font-display);
-  font-size: clamp(2rem, 6vw, 3rem);
+  font-size: clamp(2.4rem, 9vw, 4.2rem);
   margin: 0 0 0.4rem;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+.end.is-win .winner-name {
+  color: #dfe4ea;
+  text-shadow: 0 0 28px rgba(125, 154, 124, 0.45);
+  animation: winnerPop 0.85s cubic-bezier(0.22, 1.15, 0.36, 1) both;
+}
+.end .win-label {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  font-size: clamp(0.95rem, 3vw, 1.25rem);
+  letter-spacing: 0.28em;
+  color: var(--green);
+  animation: winLabelIn 0.5s ease both;
+}
+.end #endText {
+  animation: fadeUp 0.55s 0.15s ease both;
+}
+.confetti-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: min(100%, 520px);
+  pointer-events: none;
+  z-index: 0;
+}
+.end > *:not(.confetti-canvas) {
+  position: relative;
+  z-index: 1;
+}
+@keyframes winnerPop {
+  from { opacity: 0; transform: scale(0.55) translateY(16px); filter: blur(5px); }
+  55% { opacity: 1; transform: scale(1.05); filter: none; }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes winLabelIn {
+  from { opacity: 0; letter-spacing: 0.5em; }
+  to { opacity: 1; letter-spacing: 0.28em; }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
 }
 .path-list { margin: 1rem 0 1.4rem; padding-left: 1.2rem; color: var(--muted); }
 .end-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.win-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.4rem;
+  transform: translateX(-50%);
+  z-index: 40;
+  min-width: min(90vw, 320px);
+  padding: 0.85rem 1.2rem;
+  border: 1px solid rgba(125, 154, 124, 0.55);
+  border-radius: 16px;
+  background: linear-gradient(165deg, rgba(36, 42, 38, 0.96), rgba(22, 24, 26, 0.96));
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  animation: toastIn 0.45s ease both;
+  pointer-events: none;
+}
+.win-toast-label {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--green);
+  font-family: var(--font-display);
+}
+.win-toast-name {
+  margin: 0.2rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, 18px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
 .versus-lobby,
 .versus-hud {
   margin-top: 1rem;

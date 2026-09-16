@@ -117,14 +117,18 @@
     </section>
 
     <section id="view-finished" class="view view-finished" hidden>
-      <p class="brand brand-sm">Finale</p>
-      <h2>Scoreboard</h2>
+      <canvas class="confetti-canvas" id="finishedConfetti" aria-hidden="true"></canvas>
+      <p class="brand brand-sm win-eyebrow" id="finishedEyebrow">Finale</p>
+      <p class="win-label" id="finishedWinLabel">SIEGER</p>
+      <h2 class="winner-name" id="winnerName">—</h2>
+      <p class="winner-score" id="winnerScore"></p>
       <ol class="leaderboard" id="leaderboard"></ol>
       <h3 class="recap-title">Runden</h3>
       <div class="round-recap" id="roundRecap"></div>
+      <p class="hint" id="finishedHostHint" hidden>Warte auf den Host — noch eine Runde…</p>
       <div class="cta-row">
-        <button type="button" class="btn btn-primary" id="btnAgain">Nochmal Solo</button>
-        <button type="button" class="btn" id="btnFinishedLeave">Zur Lobby</button>
+        <button type="button" class="btn btn-primary" id="btnAgain">Noch eine Runde</button>
+        <button type="button" class="btn" id="btnFinishedLeave">Zur Hub-Lobby</button>
       </div>
     </section>
   </main>

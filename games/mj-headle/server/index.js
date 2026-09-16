@@ -523,6 +523,19 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('game:restart', (_payload, ack) => {
+    const room = rooms.getRoomForSocket(socket.id);
+    if (!room) return typeof ack === 'function' && ack({ error: 'Keine Session.' });
+    if (room.hostId !== socket.id) {
+      return typeof ack === 'function' && ack({ error: 'Nur der Host startet eine neue Runde.' });
+    }
+    clearRaceTimers(room);
+    const result = game.restartSession(room);
+    if (result.error) return typeof ack === 'function' && ack(result);
+    broadcastRoom(room);
+    if (typeof ack === 'function') ack({ ok: true, state: rooms.getPublicState(room, socket.id) });
+  });
+
   socket.on('round:guess', (payload = {}, ack) => {
     const room = rooms.getRoomForSocket(socket.id);
     if (!room) return typeof ack === 'function' && ack({ error: 'Keine Session.' });

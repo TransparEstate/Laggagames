@@ -27,6 +27,10 @@
   let versusState = null;
   let myPlayerId = null;
   let isVersusHost = false;
+  let endFanfareKey = null;
+  let confettiRaf = null;
+  let winToastTimer = null;
+  let lastAnnouncedWinKey = null;
 
   const MAP_W = 960;
   const MAP_H = 480;
@@ -422,11 +426,127 @@
             next.status === 'won'
               ? 'Fertig — warte auf die anderen…'
               : 'Route verloren — warte auf die anderen…';
+          if (next.status === 'won') {
+            const key = `${versusState.roundIndex}:${myPlayerId}:self`;
+            if (key !== lastAnnouncedWinKey) {
+              lastAnnouncedWinKey = key;
+              showWinToast({
+                name: prefillName || 'Du',
+                perfect: !!next.perfect,
+                self: true,
+              });
+              playVictoryFanfare();
+            }
+          }
         }
       } else {
         showEnd(next);
       }
     }
+  }
+
+  function playVictoryFanfare() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      const now = ctx.currentTime;
+      const notes = [392, 523.25, 659.25, 783.99];
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.11, now + 0.025 + i * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38 + i * 0.1);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.1);
+        osc.stop(now + 0.5 + i * 0.1);
+      });
+      setTimeout(() => {
+        try {
+          ctx.close();
+        } catch { /* ignore */ }
+      }, 1100);
+    } catch { /* autoplay */ }
+  }
+
+  function stopConfetti() {
+    if (confettiRaf) {
+      cancelAnimationFrame(confettiRaf);
+      confettiRaf = null;
+    }
+    const canvas = $('endConfetti');
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+
+  function burstConfetti() {
+    const canvas = $('endConfetti');
+    if (!canvas) return;
+    stopConfetti();
+    const parent = canvas.parentElement;
+    const w = Math.max(320, parent?.clientWidth || window.innerWidth);
+    const h = Math.max(360, parent?.clientHeight || 480);
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const colors = ['#7d9a7c', '#c5c9ce', '#c4a574', '#e8eaed', '#9bb59a'];
+    const parts = Array.from({ length: 64 }, () => ({
+      x: Math.random() * w,
+      y: -16 - Math.random() * h * 0.3,
+      r: 3 + Math.random() * 5,
+      vy: 1.5 + Math.random() * 3,
+      vx: -1.4 + Math.random() * 2.8,
+      rot: Math.random() * Math.PI,
+      vr: -0.12 + Math.random() * 0.24,
+      color: colors[(Math.random() * colors.length) | 0],
+    }));
+    const start = performance.now();
+    const tick = (t) => {
+      const elapsed = t - start;
+      ctx.clearRect(0, 0, w, h);
+      for (const p of parts) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.vr;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.max(0, 1 - elapsed / 3000);
+        ctx.fillRect(-p.r, -p.r * 0.4, p.r * 2, p.r * 0.8);
+        ctx.restore();
+      }
+      if (elapsed < 3000) confettiRaf = requestAnimationFrame(tick);
+      else stopConfetti();
+    };
+    confettiRaf = requestAnimationFrame(tick);
+  }
+
+  function showWinToast(payload) {
+    const toast = $('winToast');
+    const nameEl = $('winToastName');
+    if (!toast || !nameEl) return;
+    nameEl.textContent = String(payload.name || 'Spieler').toUpperCase();
+    const label = toast.querySelector('.win-toast-label');
+    if (label) {
+      label.textContent = payload.perfect
+        ? 'Perfect Path'
+        : payload.self
+          ? 'Du hast den Pfad geschlossen'
+          : 'Pfad geschlossen';
+    }
+    toast.hidden = false;
+    clearTimeout(winToastTimer);
+    winToastTimer = setTimeout(() => {
+      toast.hidden = true;
+    }, 3200);
   }
 
   function renderVersusPlayers(listEl, players, opts = {}) {
@@ -478,9 +598,8 @@
     }
     if (btnSolo) btnSolo.hidden = true;
     if (btnVs) {
-      btnVs.hidden = !(isVersusHost && (versus.status === 'lobby' || versus.status === 'finished'));
-      btnVs.textContent =
-        versus.status === 'finished' ? 'Nochmal Versus' : 'Versus starten';
+      btnVs.hidden = !(isVersusHost && versus.status === 'lobby');
+      btnVs.textContent = 'Versus starten';
     }
     if ($('homeHint')) {
       $('homeHint').textContent =
@@ -520,6 +639,8 @@
       if (versus.you?.state) paintState(versus.you.state);
       showVersusEnd(versus);
     } else {
+      stopConfetti();
+      endFanfareKey = null;
       show('home');
       if (hud) hud.hidden = true;
     }
@@ -527,8 +648,12 @@
 
   function showVersusBetween(versus) {
     show('end');
+    const endView = $('view-end');
+    if (endView) endView.classList.remove('is-win');
+    if ($('endWinLabel')) $('endWinLabel').hidden = true;
     const ri = versus.roundIndex || 1;
     const tr = versus.totalRounds || 3;
+    $('endTitle').classList.remove('winner-name');
     $('endTitle').textContent = `Runde ${ri}/${tr}`;
     const me = versus.you;
     $('endText').textContent = `Zwischenstand: ${me?.totalScore ?? 0} Pkt · Hints übrig: ${
@@ -547,19 +672,28 @@
       ol.appendChild(li);
     }
     if ($('btnAgain')) $('btnAgain').hidden = true;
+    if ($('btnHome')) $('btnHome').hidden = true;
+    if ($('endHostHint')) $('endHostHint').hidden = true;
   }
 
   function showVersusEnd(versus) {
     show('end');
     const ranking = versus.ranking || [];
-    const winner = ranking[0];
-    $('endTitle').textContent = 'Versus-Match';
+    const winner = versus.winner || ranking[0];
+    const endView = $('view-end');
+    if (endView) endView.classList.toggle('is-win', !!winner);
+    if ($('endWinLabel')) {
+      $('endWinLabel').hidden = !winner;
+      $('endWinLabel').textContent = 'SIEGER';
+    }
+    $('endTitle').classList.add('winner-name');
+    $('endTitle').textContent = winner
+      ? String(winner.name || '—').toUpperCase()
+      : 'Versus-Match';
     $('endText').textContent = winner
-      ? `${winner.name} gewinnt mit ${winner.score} Punkten über ${
-          versus.totalRounds || 3
-        } Runden${
-          winner.finishTimeMs != null ? ` (${(winner.finishTimeMs / 1000).toFixed(1)}s gesamt)` : ''
-        }.`
+      ? `${winner.score} Punkte über ${versus.totalRounds || 3} Runden${
+          winner.finishTimeMs != null ? ` · ${(winner.finishTimeMs / 1000).toFixed(1)}s gesamt` : ''
+        } — Zeit zum Feiern`
       : 'Match beendet.';
     const rankEl = $('versusRank');
     if (rankEl) {
@@ -582,26 +716,58 @@
         el.classList.add('is-green');
       }
     }
-    if ($('btnAgain')) $('btnAgain').hidden = !isVersusHost;
+    if ($('btnAgain')) {
+      $('btnAgain').hidden = !isVersusHost;
+      $('btnAgain').textContent = 'Noch eine Runde';
+    }
+    if ($('btnHome')) $('btnHome').hidden = true;
+    if ($('endHostHint')) {
+      $('endHostHint').hidden = isVersusHost;
+      $('endHostHint').textContent = 'Warte auf den Host — noch eine Runde…';
+    }
+
+    const fanfareKey = `vs:${versus.partyId}:${(ranking || [])
+      .map((p) => `${p.playerId}:${p.score}`)
+      .join('|')}`;
+    if (winner && fanfareKey !== endFanfareKey) {
+      endFanfareKey = fanfareKey;
+      burstConfetti();
+      playVictoryFanfare();
+    }
   }
 
   function showEnd(next) {
     show('end');
     const won = next.status === 'won';
-    $('endTitle').textContent = won
-      ? next.perfect
-        ? 'Perfect Path'
-        : 'Pfad geschlossen'
-      : 'Route verloren';
+    const endView = $('view-end');
+    if (endView) endView.classList.toggle('is-win', won);
+    if ($('endWinLabel')) {
+      $('endWinLabel').hidden = !won;
+      $('endWinLabel').textContent = won ? 'SIEG' : '';
+    }
+    $('endTitle').classList.toggle('winner-name', won);
+    const displayName = (
+      prefillName ||
+      localStorage.getItem('border-path-name') ||
+      'Du'
+    ).toUpperCase();
+    $('endTitle').textContent = won ? displayName : 'Route verloren';
     $('endText').textContent = won
-      ? `Mit ${next.guessesUsed} Tipps · Budget übrig: ${next.guessesLeft} · Optimal: ${next.hops}`
+      ? next.perfect
+        ? `Perfect Path · ${next.guessesUsed} Tipps · Budget übrig: ${next.guessesLeft}`
+        : `Pfad geschlossen · ${next.guessesUsed} Tipps · Optimal: ${next.hops}`
       : `Optimal wären ${next.hops} Zwischenländer.`;
     const rankEl = $('versusRank');
     if (rankEl) {
       rankEl.hidden = true;
       rankEl.innerHTML = '';
     }
-    if ($('btnAgain')) $('btnAgain').hidden = false;
+    if ($('btnAgain')) {
+      $('btnAgain').hidden = false;
+      $('btnAgain').textContent = 'Nochmal';
+    }
+    if ($('btnHome')) $('btnHome').hidden = false;
+    if ($('endHostHint')) $('endHostHint').hidden = true;
     const ol = $('pathList');
     ol.innerHTML = '';
     for (const c of next.optimalPath || []) {
@@ -610,6 +776,16 @@
       ol.appendChild(li);
       const el = countryEls.get(c.id);
       if (el && c.id !== next.start.id && c.id !== next.goal.id) el.classList.add('is-green');
+    }
+    if (won) {
+      const fanfareKey = `solo:${sessionId}:${next.guessesUsed}:${next.perfect ? 1 : 0}`;
+      if (fanfareKey !== endFanfareKey) {
+        endFanfareKey = fanfareKey;
+        burstConfetti();
+        playVictoryFanfare();
+      }
+    } else {
+      stopConfetti();
     }
   }
 
@@ -759,6 +935,21 @@
     }
   }
 
+  function requestVersusRematch() {
+    if (!socket || !isVersusHost) {
+      $('statusLine').textContent = 'Nur der Host startet eine neue Runde.';
+      return;
+    }
+    socket.emit('versus:rematch', {}, (res) => {
+      if (res?.error) {
+        $('statusLine').textContent = res.error;
+        return;
+      }
+      if (res?.versus) applyVersusState(res.versus);
+      else show('home');
+    });
+  }
+
   function connectParty() {
     if (!partyId || typeof io === 'undefined') return;
     $('btnReturnParty').hidden = false;
@@ -774,6 +965,25 @@
       loadWorld()
         .then(() => applyVersusState(versus))
         .catch(() => applyVersusState(versus));
+    });
+    socket.on('party:win-announce', (payload = {}) => {
+      if (!payload.name) return;
+      if (payload.playerId && payload.playerId === myPlayerId) return;
+      const key = `${payload.roundIndex || ''}:${payload.playerId}:${payload.name}`;
+      if (key === lastAnnouncedWinKey) return;
+      lastAnnouncedWinKey = key;
+      showWinToast({
+        name: payload.name,
+        perfect: !!payload.perfect,
+        self: false,
+      });
+      playVictoryFanfare();
+    });
+    socket.on('party:rematch', () => {
+      endFanfareKey = null;
+      stopConfetti();
+      lastAnnouncedWinKey = null;
+      show('home');
     });
     socket.emit(
       'session:join-party',
@@ -809,8 +1019,18 @@
 
   $('btnStart').addEventListener('click', () => startRound().catch((e) => alert(e.message)));
   $('btnVersusStart')?.addEventListener('click', () => startVersusRound());
-  $('btnAgain').addEventListener('click', () => startRound().catch((e) => alert(e.message)));
-  $('btnHome').addEventListener('click', () => show('home'));
+  $('btnAgain').addEventListener('click', () => {
+    if (versusMode && versusState?.status === 'finished') {
+      requestVersusRematch();
+      return;
+    }
+    startRound().catch((e) => alert(e.message));
+  });
+  $('btnHome').addEventListener('click', () => {
+    stopConfetti();
+    endFanfareKey = null;
+    show('home');
+  });
   $('btnHint').addEventListener('click', () => useHint());
 
   $('guessForm').addEventListener('submit', (e) => {

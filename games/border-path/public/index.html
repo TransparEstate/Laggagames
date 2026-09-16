@@ -94,16 +94,24 @@
       </section>
 
       <section id="view-end" class="view end" hidden>
-        <h2 id="endTitle">Ende</h2>
+        <canvas class="confetti-canvas" id="endConfetti" aria-hidden="true"></canvas>
+        <p class="win-label" id="endWinLabel" hidden>SIEGER</p>
+        <h2 class="winner-name" id="endTitle">Ende</h2>
         <p id="endText"></p>
         <ol class="versus-rank" id="versusRank" hidden></ol>
         <ol class="path-list" id="pathList"></ol>
+        <p class="hint-home" id="endHostHint" hidden>Warte auf den Host — noch eine Runde…</p>
         <div class="end-actions">
           <button type="button" class="cta" id="btnAgain">Nochmal</button>
           <button type="button" class="ghost" id="btnHome">Start</button>
         </div>
       </section>
     </main>
+
+    <div class="win-toast" id="winToast" hidden>
+      <p class="win-toast-label">Pfad geschlossen</p>
+      <p class="win-toast-name" id="winToastName">—</p>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="js/app.js"></script>
