@@ -23,3 +23,7 @@ games/*/data/**
 !games/*/data/packs/.gitkeep
 !games/*/data/pack-meta/
 !games/*/data/pack-meta/.gitkeep
+
+# Border Path Natural Earth download cache
+games/border-path/assets/geo/ne_raw.geojson
+games/border-path/assets/geo/ne_raw.source

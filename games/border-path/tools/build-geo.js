@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Builds Border Path geo data from Natural Earth 110m Admin 0.
+ * Builds Border Path geo data from Natural Earth 50m Admin 0.
  * Downloads ne_raw.geojson if missing, then writes world/adjacency/aliases.
  */
 const fs = require('fs');
@@ -10,8 +10,10 @@ const https = require('https');
 const ROOT = path.join(__dirname, '..');
 const DATA = path.join(ROOT, 'assets', 'geo');
 const INPUT = path.join(DATA, 'ne_raw.geojson');
+const SOURCE_META = path.join(DATA, 'ne_raw.source');
 const SOURCE_URL =
-  'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson';
+  'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson';
+const SIMPLIFY_MIN_DIST = 0.12;
 
 const SKIP_ADMIN = new Set(['Antarctica']);
 
@@ -99,7 +101,7 @@ function download(url, dest) {
   });
 }
 
-function simplifyRing(ring, minDist = 0.35) {
+function simplifyRing(ring, minDist = SIMPLIFY_MIN_DIST) {
   if (!ring || ring.length < 4) return ring;
   const out = [ring[0]];
   for (let i = 1; i < ring.length - 1; i++) {
@@ -194,9 +196,21 @@ function normalizeAlias(s) {
 }
 
 async function ensureInput() {
-  if (fs.existsSync(INPUT) && fs.statSync(INPUT).size > 1000) return;
-  console.log('Downloading Natural Earth…');
+  const cachedSource =
+    fs.existsSync(SOURCE_META) && fs.readFileSync(SOURCE_META, 'utf8').trim();
+  const usable =
+    cachedSource === SOURCE_URL &&
+    fs.existsSync(INPUT) &&
+    fs.statSync(INPUT).size > 1000;
+  if (usable) return;
+  try {
+    if (fs.existsSync(INPUT)) fs.unlinkSync(INPUT);
+  } catch (_) {
+    /* ignore */
+  }
+  console.log('Downloading Natural Earth 50m…');
   await download(SOURCE_URL, INPUT);
+  fs.writeFileSync(SOURCE_META, `${SOURCE_URL}\n`);
 }
 
 async function main() {
@@ -340,6 +354,11 @@ async function main() {
     fs.unlinkSync(INPUT);
   } catch (_) {
     /* keep if locked */
+  }
+  try {
+    fs.unlinkSync(SOURCE_META);
+  } catch (_) {
+    /* optional cache marker */
   }
 
   console.log('Built:', meta);
