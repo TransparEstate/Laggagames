@@ -2,7 +2,7 @@
   "id": "border-path",
   "name": "Border Path",
   "tagline": "Finde den Grenzpfad von Land zu Land",
-  "description": "Travle-ähnlich: Vektor-Weltkarte, Start/Ziel nur als Umrandung, Länder tippen bis der Landgrenz-Pfad schließt. Pan/Zoom, DE/EN-Namen, drei Schwierigkeiten, Hinweise.",
+  "description": "Travle-ähnlich: Vektor-Weltkarte, Start/Ziel nur als Umrandung, Länder tippen bis der Landgrenz-Pfad schließt. Pan/Zoom, DE/EN, 3 Hinweisstufen, Party-Versus (3 Runden, 4 Match-Hints, Punkte + Zeit-Tiebreaker).",
   "status": "playable",
   "entry": "server/index.js",
   "partySupport": true,

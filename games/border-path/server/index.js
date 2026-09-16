@@ -108,7 +108,256 @@ app.post('/api/hint', (req, res) => {
   res.json(result);
 });
 
+/** socketId → { partyId, name, memberId } */
 const partyPlayers = new Map();
+/** partyId → versus room */
+const versusRooms = new Map();
+
+const BETWEEN_MS = 2800;
+
+function getVersusRoom(partyId) {
+  return versusRooms.get(partyId) || null;
+}
+
+function createPlayerState(name, memberId) {
+  return {
+    name,
+    memberId,
+    round: null,
+    matchHintsLeft: game.VERSUS_MATCH.matchHints,
+    matchHintsUsed: 0,
+    totalScore: 0,
+    totalFinishTimeMs: 0,
+    roundsWon: 0,
+    roundResults: [],
+  };
+}
+
+function getOrCreateVersusRoom(partyId) {
+  let room = versusRooms.get(partyId);
+  if (!room) {
+    room = {
+      partyId,
+      status: 'lobby',
+      difficulty: 'medium',
+      hostSocketId: null,
+      puzzle: null,
+      players: new Map(),
+      startedAt: null,
+      roundIndex: 0,
+      totalRounds: game.VERSUS_MATCH.rounds,
+      matchHints: game.VERSUS_MATCH.matchHints,
+      _nextTimer: null,
+    };
+    versusRooms.set(partyId, room);
+  }
+  return room;
+}
+
+function clearBetweenTimer(room) {
+  if (room._nextTimer) {
+    clearTimeout(room._nextTimer);
+    room._nextTimer = null;
+  }
+}
+
+function publicPlayerSummary(socketId, player, selfId) {
+  const round = player.round;
+  const summary = {
+    playerId: socketId,
+    name: player.name,
+    memberId: player.memberId || null,
+    isHost: false,
+    status: round ? round.status : 'idle',
+    remaining: round
+      ? round.status === 'playing'
+        ? game.remainingCost(
+            round.start,
+            round.goal,
+            new Set(round.guesses.map((g) => g.id))
+          )
+        : 0
+      : null,
+    guessesLeft: round ? round.guessesLeft : null,
+    guessesUsed: round ? round.guesses.length : 0,
+    matchHintsLeft: player.matchHintsLeft,
+    matchHintsUsed: player.matchHintsUsed || 0,
+    hintsLeft: player.matchHintsLeft,
+    hintsUsed: player.matchHintsUsed || 0,
+    score: player.totalScore || 0,
+    finishTimeMs: player.totalFinishTimeMs > 0 ? player.totalFinishTimeMs : null,
+    roundsWon: player.roundsWon || 0,
+    perfect: round ? !!round.perfect : false,
+  };
+  if (socketId === selfId && round) {
+    summary.state = game.serializeRoundState(round, null);
+    if (summary.state) {
+      summary.state.hintsLeft = player.matchHintsLeft;
+      summary.state.matchHintsLeft = player.matchHintsLeft;
+      summary.state.matchHintsTotal = game.VERSUS_MATCH.matchHints;
+    }
+  }
+  return summary;
+}
+
+function serializeVersusRoom(room, selfId = null) {
+  const players = [];
+  for (const [sid, player] of room.players) {
+    const summary = publicPlayerSummary(sid, player, selfId);
+    summary.isHost = sid === room.hostSocketId;
+    players.push(summary);
+  }
+
+  let ranking = null;
+  if (room.status === 'finished' || room.status === 'between') {
+    ranking = game.rankVersusPlayers(
+      players.map((p) => ({
+        playerId: p.playerId,
+        name: p.name,
+        score: p.score,
+        finishTimeMs: p.finishTimeMs,
+        status: p.status,
+        perfect: p.perfect,
+        roundsWon: p.roundsWon,
+      }))
+    );
+  }
+
+  const self = selfId ? room.players.get(selfId) : null;
+  return {
+    partyId: room.partyId,
+    status: room.status,
+    difficulty: room.difficulty,
+    startedAt: room.startedAt,
+    hostSocketId: room.hostSocketId,
+    roundIndex: room.roundIndex,
+    totalRounds: room.totalRounds,
+    matchHints: room.matchHints,
+    puzzle:
+      room.puzzle && room.status !== 'lobby'
+        ? {
+            start: {
+              id: room.puzzle.start,
+              nameDe: game.countryLabel(room.puzzle.start, 'de'),
+              nameEn: game.countryLabel(room.puzzle.start, 'en'),
+            },
+            goal: {
+              id: room.puzzle.goal,
+              nameDe: game.countryLabel(room.puzzle.goal, 'de'),
+              nameEn: game.countryLabel(room.puzzle.goal, 'en'),
+            },
+            hops: room.puzzle.hops,
+          }
+        : null,
+    players,
+    ranking,
+    you: selfId
+      ? {
+          playerId: selfId,
+          isHost: selfId === room.hostSocketId,
+          matchHintsLeft: self?.matchHintsLeft ?? room.matchHints,
+          matchHintsUsed: self?.matchHintsUsed || 0,
+          totalScore: self?.totalScore || 0,
+          totalFinishTimeMs: self?.totalFinishTimeMs || 0,
+          state: (() => {
+            if (!self?.round) return null;
+            const s = game.serializeRoundState(self.round, null);
+            if (s) {
+              s.hintsLeft = self.matchHintsLeft;
+              s.matchHintsLeft = self.matchHintsLeft;
+              s.matchHintsTotal = room.matchHints;
+            }
+            return s;
+          })(),
+        }
+      : null,
+  };
+}
+
+function emitVersusState(partyId) {
+  const room = getVersusRoom(partyId);
+  if (!room) return;
+  for (const sid of room.players.keys()) {
+    const sock = io.sockets.sockets.get(sid);
+    if (sock) sock.emit('versus:state', serializeVersusRoom(room, sid));
+  }
+}
+
+function settleCurrentRound(room) {
+  for (const player of room.players.values()) {
+    if (!player.round) continue;
+    const scored = game.scoreVersusPlayer(player.round);
+    player.totalScore += scored.score;
+    if (scored.finishTimeMs != null) player.totalFinishTimeMs += scored.finishTimeMs;
+    if (player.round.status === 'won') player.roundsWon += 1;
+    player.roundResults.push({
+      roundIndex: room.roundIndex,
+      score: scored.score,
+      finishTimeMs: scored.finishTimeMs,
+      status: player.round.status,
+      perfect: !!player.round.perfect,
+      hintsUsed: player.round.hintsUsed || 0,
+    });
+  }
+}
+
+function beginRound(room) {
+  const puzzle = game.createSharedPuzzle(room.difficulty);
+  room.puzzle = puzzle;
+  room.status = 'playing';
+  for (const player of room.players.values()) {
+    player.round = game.createRoundFromPuzzle(puzzle, room.difficulty, {
+      hintsLeft: player.matchHintsLeft,
+    });
+  }
+}
+
+function advanceMatch(room) {
+  if (room.status !== 'playing') return;
+  const players = [...room.players.values()];
+  if (!players.length) return;
+  const allDone = players.every((p) => p.round && p.round.status !== 'playing');
+  if (!allDone) return;
+
+  settleCurrentRound(room);
+
+  if (room.roundIndex >= room.totalRounds) {
+    clearBetweenTimer(room);
+    room.status = 'finished';
+    emitVersusState(room.partyId);
+    return;
+  }
+
+  room.status = 'between';
+  emitVersusState(room.partyId);
+  clearBetweenTimer(room);
+  room._nextTimer = setTimeout(() => {
+    room._nextTimer = null;
+    if (!versusRooms.has(room.partyId)) return;
+    if (room.status !== 'between') return;
+    room.roundIndex += 1;
+    beginRound(room);
+    emitVersusState(room.partyId);
+  }, BETWEEN_MS);
+}
+
+function ensureHost(room) {
+  if (room.hostSocketId && room.players.has(room.hostSocketId)) return;
+  const first = room.players.keys().next().value || null;
+  room.hostSocketId = first;
+}
+
+function resetMatchPlayers(room) {
+  for (const player of room.players.values()) {
+    player.round = null;
+    player.matchHintsLeft = room.matchHints;
+    player.matchHintsUsed = 0;
+    player.totalScore = 0;
+    player.totalFinishTimeMs = 0;
+    player.roundsWon = 0;
+    player.roundResults = [];
+  }
+}
 
 io.on('connection', (socket) => {
   socket.on('session:join-party', async (payload = {}, ack) => {
@@ -120,24 +369,178 @@ io.on('connection', (socket) => {
         if (typeof ack === 'function') ack({ error: 'partyId nötig.' });
         return;
       }
-      const hub = await fetchHubParty(partyId);
+      const hub =
+        partyId === 'LOCALVS' || process.env.ALLOW_LOCAL_VERSUS === '1'
+          ? { ok: true, party: { id: partyId, local: true } }
+          : await fetchHubParty(partyId);
       if (hub.error) {
         if (typeof ack === 'function') ack({ error: hub.error });
         return;
       }
+
       partyPlayers.set(socket.id, { partyId, name, memberId });
       socket.join(`party:${partyId}`);
+
+      const room = getOrCreateVersusRoom(partyId);
+      const existing = room.players.get(socket.id);
+      if (existing) {
+        existing.name = name;
+        existing.memberId = memberId;
+      } else {
+        const player = createPlayerState(name, memberId);
+        if (room.status === 'playing' && room.puzzle) {
+          // Late join: get remaining match hints and current puzzle
+          player.matchHintsLeft = room.matchHints;
+          player.round = game.createRoundFromPuzzle(room.puzzle, room.difficulty, {
+            hintsLeft: player.matchHintsLeft,
+          });
+        }
+        room.players.set(socket.id, player);
+      }
+      ensureHost(room);
+      if (room.status === 'playing') advanceMatch(room);
+
+      const versus = serializeVersusRoom(room, socket.id);
       if (typeof ack === 'function') {
         ack({
           ok: true,
           partyId,
           playerId: socket.id,
           party: hub.party,
-          mode: 'solo-in-party',
+          mode: 'versus',
+          versus,
+        });
+      }
+      emitVersusState(partyId);
+    } catch (err) {
+      if (typeof ack === 'function') ack({ error: err.message || 'Join fehlgeschlagen.' });
+    }
+  });
+
+  socket.on('versus:start', (payload = {}, ack) => {
+    try {
+      const info = partyPlayers.get(socket.id);
+      if (!info?.partyId) {
+        if (typeof ack === 'function') ack({ error: 'Keine Party-Session.' });
+        return;
+      }
+      const room = getVersusRoom(info.partyId);
+      if (!room) {
+        if (typeof ack === 'function') ack({ error: 'Versus-Raum fehlt.' });
+        return;
+      }
+      if (socket.id !== room.hostSocketId) {
+        if (typeof ack === 'function') ack({ error: 'Nur der Host startet.' });
+        return;
+      }
+      if (room.players.size < 1) {
+        if (typeof ack === 'function') ack({ error: 'Keine Spieler.' });
+        return;
+      }
+
+      const difficulty = String(payload.difficulty || room.difficulty || 'medium');
+      clearBetweenTimer(room);
+      room.difficulty = (game.DIFFICULTY[difficulty] || game.DIFFICULTY.medium).id;
+      room.totalRounds = game.VERSUS_MATCH.rounds;
+      room.matchHints = game.VERSUS_MATCH.matchHints;
+      room.roundIndex = 1;
+      room.startedAt = Date.now();
+      resetMatchPlayers(room);
+      beginRound(room);
+
+      emitVersusState(info.partyId);
+      if (typeof ack === 'function') ack({ ok: true, versus: serializeVersusRoom(room, socket.id) });
+    } catch (err) {
+      if (typeof ack === 'function') ack({ error: err.message || 'Start fehlgeschlagen.' });
+    }
+  });
+
+  socket.on('versus:guess', (payload = {}, ack) => {
+    try {
+      const info = partyPlayers.get(socket.id);
+      if (!info?.partyId) {
+        if (typeof ack === 'function') ack({ error: 'Keine Party-Session.' });
+        return;
+      }
+      const room = getVersusRoom(info.partyId);
+      const player = room?.players.get(socket.id);
+      if (!room || room.status !== 'playing' || !player?.round) {
+        if (typeof ack === 'function') ack({ error: 'Keine laufende Versus-Runde.' });
+        return;
+      }
+      const result = game.applyGuessToRound(player.round, payload.name);
+      if (result.error) {
+        if (typeof ack === 'function') {
+          ack({
+            error: result.error,
+            code: result.code,
+            versus: serializeVersusRoom(room, socket.id),
+          });
+        }
+        return;
+      }
+      advanceMatch(room);
+      emitVersusState(info.partyId);
+      if (typeof ack === 'function') {
+        ack({
+          ok: true,
+          guess: result.guess,
+          versus: serializeVersusRoom(room, socket.id),
         });
       }
     } catch (err) {
-      if (typeof ack === 'function') ack({ error: err.message || 'Join fehlgeschlagen.' });
+      if (typeof ack === 'function') ack({ error: err.message || 'Tipp fehlgeschlagen.' });
+    }
+  });
+
+  socket.on('versus:hint', (_payload = {}, ack) => {
+    try {
+      const info = partyPlayers.get(socket.id);
+      if (!info?.partyId) {
+        if (typeof ack === 'function') ack({ error: 'Keine Party-Session.' });
+        return;
+      }
+      const room = getVersusRoom(info.partyId);
+      const player = room?.players.get(socket.id);
+      if (!room || room.status !== 'playing' || !player?.round) {
+        if (typeof ack === 'function') ack({ error: 'Keine laufende Versus-Runde.' });
+        return;
+      }
+      if (player.matchHintsLeft <= 0) {
+        if (typeof ack === 'function') {
+          ack({
+            error: 'Keine Match-Hinweise mehr — sparsam einsetzen.',
+            code: 'no_hints',
+            versus: serializeVersusRoom(room, socket.id),
+          });
+        }
+        return;
+      }
+      // Sync pool into round before progressive hint consumes one
+      player.round.hintsLeft = player.matchHintsLeft;
+      const result = game.applyHintToRound(player.round);
+      if (result.error) {
+        if (typeof ack === 'function') {
+          ack({
+            error: result.error,
+            code: result.code,
+            versus: serializeVersusRoom(room, socket.id),
+          });
+        }
+        return;
+      }
+      player.matchHintsLeft = player.round.hintsLeft;
+      player.matchHintsUsed = (player.matchHintsUsed || 0) + 1;
+      emitVersusState(info.partyId);
+      if (typeof ack === 'function') {
+        ack({
+          ok: true,
+          hint: result.hint,
+          versus: serializeVersusRoom(room, socket.id),
+        });
+      }
+    } catch (err) {
+      if (typeof ack === 'function') ack({ error: err.message || 'Hinweis fehlgeschlagen.' });
     }
   });
 
@@ -149,7 +552,20 @@ io.on('connection', (socket) => {
         return;
       }
       const { partyId } = info;
-      await postHubPartyReturn(partyId);
+      const room = getVersusRoom(partyId);
+      if (room) {
+        clearBetweenTimer(room);
+        room.players.delete(socket.id);
+        ensureHost(room);
+        if (!room.players.size) versusRooms.delete(partyId);
+        else {
+          advanceMatch(room);
+          emitVersusState(partyId);
+        }
+      }
+      if (partyId !== 'LOCALVS' && process.env.ALLOW_LOCAL_VERSUS !== '1') {
+        await postHubPartyReturn(partyId);
+      }
       partyPlayers.delete(socket.id);
       socket.emit('session:returned', { partyId });
       if (typeof ack === 'function') ack({ ok: true, partyId });
@@ -159,6 +575,20 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    const info = partyPlayers.get(socket.id);
+    if (info?.partyId) {
+      const room = getVersusRoom(info.partyId);
+      if (room) {
+        clearBetweenTimer(room);
+        room.players.delete(socket.id);
+        ensureHost(room);
+        if (!room.players.size) versusRooms.delete(info.partyId);
+        else {
+          advanceMatch(room);
+          emitVersusState(info.partyId);
+        }
+      }
+    }
     partyPlayers.delete(socket.id);
   });
 });
@@ -166,3 +596,5 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
   console.log(`Border Path on :${PORT}`);
 });
+
+module.exports = { versusRooms, serializeVersusRoom };

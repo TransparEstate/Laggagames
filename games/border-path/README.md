@@ -7,7 +7,8 @@ Travle-ähnliches Geografie-Rätsel: Von einem Startland zum Zielland über **La
 - Hub: `/g/border-path/`
 - Solo: Schwierigkeit wählen → raten
 - Namen auf **Deutsch oder Englisch**
-- **Leicht / Mittel / Schwer** steuern Weglänge, Guess-Budget und Hinweise
+- **Leicht / Mittel / Schwer** steuern Weglänge und Guess-Budget
+- **3 Hinweise** (aufsteigend): Initiale → Namenslänge → gestrichelte Umrandung
 
 ## Regeln
 
@@ -15,14 +16,19 @@ Travle-ähnliches Geografie-Rätsel: Von einem Startland zum Zielland über **La
 - Guess-Budget = kürzester Pfad + Extra je Stufe
 - Grün verkürzt die Reststrecke, Orange ist nah, Rot ist Umweg
 - Perfect: kürzester Pfad in Reihenfolge vom Start
+- Hinweis-Länder werden nach korrektm Tipp normal (grün/orange/rot) eingefärbt — keine gestrichelte Hint-Darstellung mehr
 
-## Party
+## Party / Versus
 
 `"partySupport": true` — Launch aus der Hub-Lobby:
 
 `/g/border-path/?party=<partyId>&name=<displayName>&member=<memberId>`
 
-v1: Solo-Spiel nach Launch; Return zur Hub-Party. Kein Sync-Rennen.
+Versus-Hybrid über **3 Runden** mit gemeinsamem Puzzle je Runde:
+
+- **4 Hinweise** fürs ganze Match (Pool) — aufsparen oder in einer Runde mehrere Stufen nehmen
+- Ranking nach **Punkten** (Summe über Runden); bei Gleichstand **Gesamtzeit**
+- Host startet; nach jeder Runde kurzer Zwischenstand, dann nächste Route
 
 ## Daten
 
