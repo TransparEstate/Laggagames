@@ -29,7 +29,15 @@
         </p>
         <div class="diff-row" id="diffRow"></div>
         <button type="button" class="cta" id="btnStart">Neue Route</button>
-        <p class="hint-home">Grün verkürzt den Restweg · Orange ist nah · Rot ist Umweg</p>
+        <button type="button" class="cta" id="btnVersusStart" hidden>Versus starten</button>
+        <p class="hint-home" id="homeHint">
+          Grün verkürzt den Restweg · Orange ist nah · Rot ist Umweg · 3 Hinweise (Initiale → Länge → Umriss)
+        </p>
+        <div class="versus-lobby" id="versusLobby" hidden>
+          <p class="versus-title">Versus-Lobby</p>
+          <ul class="versus-list" id="versusLobbyList"></ul>
+          <p class="hint-home">Punkte für direkten Weg; bei Gleichstand gewinnt die Zeit.</p>
+        </div>
       </section>
 
       <section id="view-play" class="view play" hidden>
@@ -45,6 +53,10 @@
             <span id="meterHints">Hinweise: —</span>
           </div>
         </div>
+        <aside class="versus-hud" id="versusHud" hidden>
+          <p class="versus-title">Gegner</p>
+          <ul class="versus-list" id="versusPlayerList"></ul>
+        </aside>
 
         <div class="map-shell" id="mapShell">
           <svg id="worldMap" viewBox="0 0 960 480" role="img" aria-label="Weltkarte">
@@ -81,6 +93,7 @@
       <section id="view-end" class="view end" hidden>
         <h2 id="endTitle">Ende</h2>
         <p id="endText"></p>
+        <ol class="versus-rank" id="versusRank" hidden></ol>
         <ol class="path-list" id="pathList"></ol>
         <div class="end-actions">
           <button type="button" class="cta" id="btnAgain">Nochmal</button>

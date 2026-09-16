@@ -9,10 +9,12 @@ const nameIndex = JSON.parse(fs.readFileSync(path.join(DATA, 'nameIndex.json'), 
 const meta = JSON.parse(fs.readFileSync(path.join(DATA, 'meta.json'), 'utf8'));
 
 const DIFFICULTY = {
-  easy: { id: 'easy', label: 'Leicht', minHops: 2, maxHops: 3, extraGuesses: 5, hints: 2 },
-  medium: { id: 'medium', label: 'Mittel', minHops: 4, maxHops: 6, extraGuesses: 4, hints: 1 },
-  hard: { id: 'hard', label: 'Schwer', minHops: 7, maxHops: 14, extraGuesses: 3, hints: 0 },
+  easy: { id: 'easy', label: 'Leicht', minHops: 2, maxHops: 3, extraGuesses: 5, hints: 3 },
+  medium: { id: 'medium', label: 'Mittel', minHops: 4, maxHops: 6, extraGuesses: 4, hints: 3 },
+  hard: { id: 'hard', label: 'Schwer', minHops: 7, maxHops: 14, extraGuesses: 3, hints: 3 },
 };
+
+const HINT_STAGES = 3;
 
 const sessions = new Map();
 
@@ -107,7 +109,6 @@ function costThrough(start, goal, guessedSet, via) {
   const withVia = new Set(guessedSet);
   withVia.add(via);
   const payVia = guessedSet.has(via) ? 0 : 1;
-  // remainingCost treats endpoints as free, so charge via separately
   const toVia = remainingCost(start, via, guessedSet);
   const fromVia = remainingCost(via, goal, withVia);
   if (!Number.isFinite(toVia) || !Number.isFinite(fromVia)) return Infinity;
@@ -142,8 +143,7 @@ function generatePair(difficultyId) {
   const cfg = DIFFICULTY[difficultyId] || DIFFICULTY.medium;
   const ids = playableIds();
   const candidates = [];
-  const maxAttempts = 8000;
-  for (let i = 0; i < maxAttempts && candidates.length < 80; i++) {
+  for (let i = 0; i < 1200 && candidates.length < 60; i++) {
     const a = pickRandom(ids);
     const b = pickRandom(ids);
     if (a === b) continue;
@@ -154,11 +154,54 @@ function generatePair(difficultyId) {
     candidates.push({ start: a, goal: b, path, hops });
   }
   if (!candidates.length) {
-    throw new Error(
-      `Kein Puzzle für ${cfg.label} (${cfg.minHops}–${cfg.maxHops} Zwischenländer) gefunden.`
-    );
+    for (let i = 0; i < 4000 && candidates.length < 25; i++) {
+      const a = pickRandom(ids);
+      const b = pickRandom(ids);
+      if (a === b) continue;
+      const path = shortestPath(a, b);
+      if (!path) continue;
+      const hops = path.length - 2;
+      if (hops >= 2 && hops <= 14) candidates.push({ start: a, goal: b, path, hops });
+    }
   }
+  if (!candidates.length) throw new Error('Kein Puzzle gefunden.');
   return pickRandom(candidates);
+}
+
+function createSharedPuzzle(difficultyId) {
+  const pair = generatePair(difficultyId);
+  return {
+    difficulty: (DIFFICULTY[difficultyId] || DIFFICULTY.medium).id,
+    start: pair.start,
+    goal: pair.goal,
+    path: [...pair.path],
+    hops: pair.hops,
+  };
+}
+
+function createRoundFromPuzzle(puzzle, difficultyId) {
+  const cfg = DIFFICULTY[difficultyId || puzzle.difficulty] || DIFFICULTY.medium;
+  return {
+    difficulty: cfg.id,
+    start: puzzle.start,
+    goal: puzzle.goal,
+    path: [...puzzle.path],
+    hops: puzzle.hops,
+    guessesLeft: puzzle.hops + cfg.extraGuesses,
+    hintsLeft: cfg.hints,
+    hintsUsed: 0,
+    hintTargetId: null,
+    hintStage: 0,
+    guesses: [],
+    revealedHintIds: [],
+    hintDisplay: null,
+    status: 'playing',
+    perfect: false,
+    orderedOptimal: true,
+    nextOptimalIndex: 1,
+    startedAt: Date.now(),
+    finishedAt: null,
+  };
 }
 
 function createSessionId() {
@@ -173,12 +216,36 @@ function getOrCreateSession(sessionId) {
   return session;
 }
 
-function serializeRound(session) {
-  const r = session.round;
-  if (!r) return { sessionId: session.id, round: null };
+function hintPatternFor(id, stage) {
+  const name = countryLabel(id, 'de');
+  const initial = name.charAt(0).toUpperCase();
+  const length = name.length;
+  if (stage <= 1) {
+    return { initial, length, pattern: `${initial}…`, stage: 1 };
+  }
+  const dots = '·'.repeat(Math.max(0, length - 1));
+  return { initial, length, pattern: `${initial}${dots}`, stage: Math.min(stage, HINT_STAGES) };
+}
+
+function pickHintTarget(r) {
+  const guessedSet = new Set(r.guesses.map((g) => g.id));
+  const component = startComponent(r.start, guessedSet);
+  const path = shortestPath(r.start, r.goal) || r.path;
+  const remainers = path.filter(
+    (id) => id !== r.start && id !== r.goal && !guessedSet.has(id)
+  );
+
+  for (const id of remainers) {
+    if (neighbors(id).some((n) => component.has(n))) return id;
+  }
+  return remainers[0] || null;
+}
+
+function serializeRoundState(r, sessionId = null) {
+  if (!r) return sessionId ? { sessionId, round: null } : null;
   const guessedIds = r.guesses.map((g) => g.id);
   return {
-    sessionId: session.id,
+    sessionId: sessionId || null,
     difficulty: r.difficulty,
     start: publicCountry(r.start),
     goal: publicCountry(r.goal),
@@ -187,6 +254,10 @@ function serializeRound(session) {
     guessesLeft: r.guessesLeft,
     guessesUsed: r.guesses.length,
     hintsLeft: r.hintsLeft,
+    hintsUsed: r.hintsUsed || 0,
+    hintStage: r.hintStage || 0,
+    hintTargetId: r.hintTargetId || null,
+    hintDisplay: r.hintDisplay || null,
     status: r.status,
     perfect: !!r.perfect,
     remaining:
@@ -199,36 +270,30 @@ function serializeRound(session) {
       frontier: !!g.frontier,
     })),
     revealedHintIds: [...(r.revealedHintIds || [])],
-    hintInitials: r.hintInitials || null,
+    startedAt: r.startedAt || null,
+    finishedAt: r.finishedAt || null,
   };
+}
+
+function serializeRound(session) {
+  const r = session.round;
+  if (!r) return { sessionId: session.id, round: null };
+  return serializeRoundState(r, session.id);
 }
 
 function newRound(session, difficulty = 'medium') {
-  const cfg = DIFFICULTY[difficulty] || DIFFICULTY.medium;
-  const pair = generatePair(cfg.id);
-  session.round = {
-    difficulty: cfg.id,
-    start: pair.start,
-    goal: pair.goal,
-    path: pair.path,
-    hops: pair.hops,
-    guessesLeft: pair.hops + cfg.extraGuesses,
-    hintsLeft: cfg.hints,
-    guesses: [],
-    revealedHintIds: [],
-    hintInitials: null,
-    status: 'playing',
-    perfect: false,
-    orderedOptimal: true,
-    nextOptimalIndex: 1,
-  };
+  const puzzle = createSharedPuzzle(difficulty);
+  session.round = createRoundFromPuzzle(puzzle, puzzle.difficulty);
   return serializeRound(session);
 }
 
-function applyGuess(session, rawName) {
-  const r = session.round;
+function markFinished(r) {
+  if (!r.finishedAt) r.finishedAt = Date.now();
+}
+
+function applyGuessToRound(r, rawName) {
   if (!r) return { error: 'Keine Runde. Starte zuerst.' };
-  if (r.status !== 'playing') return { error: 'Runde ist beendet.', state: serializeRound(session) };
+  if (r.status !== 'playing') return { error: 'Runde ist beendet.' };
 
   const id = resolveName(rawName);
   if (!id) return { error: 'Land nicht erkannt.', code: 'unknown' };
@@ -265,12 +330,21 @@ function applyGuess(session, rawName) {
   r.guesses.push({ id, quality, frontier });
   r.guessesLeft -= 1;
 
+  if (r.hintTargetId === id) {
+    r.hintTargetId = null;
+    r.hintStage = 0;
+    r.hintDisplay = null;
+  }
+  r.revealedHintIds = (r.revealedHintIds || []).filter((hid) => hid !== id);
+
   const nowRemain = remainingCost(r.start, r.goal, new Set(r.guesses.map((g) => g.id)));
   if (nowRemain === 0) {
     r.status = 'won';
     r.perfect = r.orderedOptimal && r.guesses.length === r.hops;
+    markFinished(r);
   } else if (r.guessesLeft <= 0) {
     r.status = 'lost';
+    markFinished(r);
   }
 
   return {
@@ -282,48 +356,103 @@ function applyGuess(session, rawName) {
       quality,
       frontier,
     },
-    state: serializeRound(session),
+  };
+}
+
+function applyGuess(session, rawName) {
+  const r = session.round;
+  if (!r) return { error: 'Keine Runde. Starte zuerst.' };
+  const result = applyGuessToRound(r, rawName);
+  if (result.error) {
+    return { ...result, state: serializeRound(session) };
+  }
+  return { ok: true, guess: result.guess, state: serializeRound(session) };
+}
+
+function applyHintToRound(r) {
+  if (!r) return { error: 'Keine Runde.' };
+  if (r.status !== 'playing') return { error: 'Runde beendet.' };
+  if (r.hintsLeft <= 0) return { error: 'Keine Hinweise mehr.', code: 'no_hints' };
+
+  const pick = pickHintTarget(r);
+  if (!pick) return { error: 'Kein Hinweis möglich.', code: 'no_target' };
+
+  if (r.hintTargetId !== pick) {
+    r.hintTargetId = pick;
+    r.hintStage = 0;
+  }
+  if (r.hintStage >= HINT_STAGES) {
+    return { error: 'Maximale Hinweisstufe erreicht.', code: 'max_stage' };
+  }
+
+  r.hintsLeft -= 1;
+  r.hintsUsed = (r.hintsUsed || 0) + 1;
+  r.hintStage += 1;
+
+  const display = hintPatternFor(pick, r.hintStage);
+  r.hintDisplay = {
+    stage: r.hintStage,
+    targetId: pick,
+    initial: display.initial,
+    length: display.length,
+    pattern: display.pattern,
+  };
+
+  if (r.hintStage >= 3) {
+    if (!r.revealedHintIds.includes(pick)) r.revealedHintIds.push(pick);
+  } else {
+    r.revealedHintIds = (r.revealedHintIds || []).filter((id) => id !== pick);
+  }
+
+  return {
+    ok: true,
+    hint: {
+      stage: r.hintStage,
+      targetId: pick,
+      revealId: r.hintStage >= 3 ? pick : null,
+      initial: display.initial,
+      length: display.length,
+      pattern: display.pattern,
+    },
   };
 }
 
 function applyHint(session) {
   const r = session.round;
   if (!r) return { error: 'Keine Runde.' };
-  if (r.status !== 'playing') return { error: 'Runde beendet.', state: serializeRound(session) };
-  if (r.hintsLeft <= 0) return { error: 'Keine Hinweise mehr.', code: 'no_hints' };
-
-  const guessedSet = new Set(r.guesses.map((g) => g.id));
-  const component = startComponent(r.start, guessedSet);
-  const path = shortestPath(r.start, r.goal) || r.path;
-  const remainers = path.filter(
-    (id) => id !== r.start && id !== r.goal && !guessedSet.has(id)
-  );
-
-  let pick = null;
-  for (const id of remainers) {
-    if (neighbors(id).some((n) => component.has(n))) {
-      pick = id;
-      break;
-    }
+  const result = applyHintToRound(r);
+  if (result.error) {
+    return { ...result, state: serializeRound(session) };
   }
-  if (!pick && remainers.length) pick = remainers[0];
+  return { ok: true, hint: result.hint, state: serializeRound(session) };
+}
 
-  r.hintsLeft -= 1;
-  if (pick && !r.revealedHintIds.includes(pick)) r.revealedHintIds.push(pick);
-  r.hintInitials = remainers.map((id) => {
-    const name = countryLabel(id, 'de');
-    return { id, initial: name.charAt(0).toUpperCase(), length: name.length };
+function scoreVersusPlayer(round) {
+  if (!round) return { score: 0, finishTimeMs: null };
+  let score = 0;
+  if (round.status === 'won') {
+    score += 100;
+    if (round.perfect) score += 25;
+    score += Math.max(0, round.guessesLeft) * 10;
+  }
+  for (const g of round.guesses || []) {
+    if (g.quality === 'green') score += 5;
+    else if (g.quality === 'red') score -= 5;
+  }
+  score -= (round.hintsUsed || 0) * 8;
+  score = Math.max(0, score);
+  const finishTimeMs =
+    round.finishedAt && round.startedAt ? round.finishedAt - round.startedAt : null;
+  return { score, finishTimeMs };
+}
+
+function rankVersusPlayers(entries) {
+  return [...entries].sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const ta = a.finishTimeMs == null ? Number.POSITIVE_INFINITY : a.finishTimeMs;
+    const tb = b.finishTimeMs == null ? Number.POSITIVE_INFINITY : b.finishTimeMs;
+    return ta - tb;
   });
-
-  return {
-    ok: true,
-    hint: {
-      revealId: pick,
-      country: pick ? publicCountry(pick) : null,
-      initials: r.hintInitials,
-    },
-    state: serializeRound(session),
-  };
 }
 
 function suggestNames(query, limit = 8) {
@@ -362,6 +491,7 @@ function difficulties() {
 
 module.exports = {
   DIFFICULTY,
+  HINT_STAGES,
   meta,
   adjacency,
   aliases,
@@ -375,7 +505,14 @@ module.exports = {
   newRound,
   applyGuess,
   applyHint,
+  applyGuessToRound,
+  applyHintToRound,
   serializeRound,
+  serializeRoundState,
+  createSharedPuzzle,
+  createRoundFromPuzzle,
+  scoreVersusPlayer,
+  rankVersusPlayers,
   suggestNames,
   difficulties,
   countryLabel,

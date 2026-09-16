@@ -20,12 +20,18 @@ assert.ok(deFr && deFr.length === 2, 'DE borders FR');
 ok('DE–FR adjacency');
 
 const deIt = game.shortestPath('DE', 'IT');
-assert.ok(deIt && deIt.includes('AT') || deIt.includes('CH') || deIt.includes('FR'));
+assert.ok((deIt && deIt.includes('AT')) || deIt.includes('CH') || deIt.includes('FR'));
 ok('DE–IT path exists');
 
 assert.ok(!(game.adjacency.PL || []).includes('RU'), 'PL–RU removed');
 assert.ok((game.adjacency.FR || []).includes('GB'), 'FR–GB bridge');
 ok('edge exceptions');
+
+// --- Difficulites always have 3 hints ---
+for (const d of game.difficulties()) {
+  assert.strictEqual(d.hints, 3, `${d.id} should have 3 hints`);
+}
+ok('all difficulties have 3 hints');
 
 // --- Round + scoring ---
 const session = game.getOrCreateSession();
@@ -33,7 +39,7 @@ const round = game.newRound(session, 'easy');
 assert.strictEqual(round.status, 'playing');
 assert.ok(round.hops >= 2 && round.hops <= 3);
 assert.ok(round.guessesLeft >= round.hops);
-assert.ok(round.hintsLeft >= 0);
+assert.strictEqual(round.hintsLeft, 3);
 ok(`easy round ${round.start.nameDe} → ${round.goal.nameDe} (hops ${round.hops})`);
 
 const path = game.shortestPath(round.start.id, round.goal.id);
@@ -51,7 +57,6 @@ if (!bad.error) {
   assert.ok(['red', 'orange'].includes(bad.guess.quality));
   ok(`far guess quality=${bad.guess.quality}`);
 } else {
-  // already guessed somehow
   ok('japan skipped');
 }
 
@@ -60,12 +65,7 @@ let guard = 0;
 while (session.round.status === 'playing' && guard++ < 30) {
   const remPath = game.shortestPath(session.round.start, session.round.goal);
   const guessed = new Set(session.round.guesses.map((g) => g.id));
-  // pick any neighbor of start-component that reduces cost
-  const before = game.remainingCost(
-    session.round.start,
-    session.round.goal,
-    guessed
-  );
+  const before = game.remainingCost(session.round.start, session.round.goal, guessed);
   let picked = null;
   for (const id of remPath.slice(1, -1)) {
     if (guessed.has(id)) continue;
@@ -93,6 +93,71 @@ while (session.round.status === 'playing' && guard++ < 30) {
 assert.strictEqual(session.round.status, 'won');
 ok('round can be won via path guesses');
 
+// --- Progressive hints ---
+const hintSession = game.getOrCreateSession();
+const hintRound = game.newRound(hintSession, 'medium');
+assert.strictEqual(hintRound.hintsLeft, 3);
+
+const h1 = game.applyHint(hintSession);
+assert.ok(h1.ok);
+assert.strictEqual(h1.hint.stage, 1);
+assert.ok(h1.hint.pattern);
+assert.ok(!h1.hint.revealId);
+assert.ok(!h1.hint.country);
+assert.ok(!h1.hint.nameDe);
+assert.notStrictEqual(h1.hint.pattern, game.countryLabel(h1.hint.targetId, 'de'));
+assert.deepStrictEqual(h1.state.revealedHintIds, []);
+ok(`hint stage 1: ${h1.hint.pattern}`);
+
+const h2 = game.applyHint(hintSession);
+assert.ok(h2.ok);
+assert.strictEqual(h2.hint.stage, 2);
+assert.ok(h2.hint.pattern.startsWith(h2.hint.initial));
+assert.ok(h2.hint.pattern.includes('·'));
+assert.ok(!h2.hint.revealId);
+assert.deepStrictEqual(h2.state.revealedHintIds, []);
+ok(`hint stage 2: ${h2.hint.pattern}`);
+
+const h3 = game.applyHint(hintSession);
+assert.ok(h3.ok);
+assert.strictEqual(h3.hint.stage, 3);
+assert.strictEqual(h3.hint.revealId, h3.hint.targetId);
+assert.ok(h3.state.revealedHintIds.includes(h3.hint.targetId));
+assert.ok(!h3.hint.nameDe);
+ok(`hint stage 3 outlines ${h3.hint.targetId}`);
+
+const hintedName = game.countryLabel(h3.hint.targetId, 'de');
+const afterHintGuess = game.applyGuess(hintSession, hintedName);
+assert.ok(afterHintGuess.ok);
+assert.ok(['green', 'orange', 'red'].includes(afterHintGuess.guess.quality));
+assert.ok(!afterHintGuess.state.revealedHintIds.includes(h3.hint.targetId));
+ok(`guess after hint clears outline (${afterHintGuess.guess.quality})`);
+
+// --- Versus scoring ---
+const puzzle = game.createSharedPuzzle('easy');
+const pA = game.createRoundFromPuzzle(puzzle, 'easy');
+const pB = game.createRoundFromPuzzle(puzzle, 'easy');
+for (const id of puzzle.path.slice(1, -1)) {
+  game.applyGuessToRound(pA, game.countryLabel(id, 'de'));
+  if (pA.status !== 'playing') break;
+}
+assert.strictEqual(pA.status, 'won');
+game.applyGuessToRound(pB, 'Japan');
+while (pB.status === 'playing' && pB.guessesLeft > 0) {
+  game.applyGuessToRound(pB, 'Australia');
+  if (pB.status !== 'playing') break;
+  // burn budget with duplicates avoided — use random far countries
+  break;
+}
+const scoreA = game.scoreVersusPlayer(pA);
+assert.ok(scoreA.score >= 100);
+const ranked = game.rankVersusPlayers([
+  { name: 'A', score: scoreA.score, finishTimeMs: 5000 },
+  { name: 'B', score: scoreA.score, finishTimeMs: 3000 },
+]);
+assert.strictEqual(ranked[0].name, 'B');
+ok(`versus score ${scoreA.score}; time tiebreak prefers faster`);
+
 // --- HTTP smoke ---
 const { spawn } = require('child_process');
 const pathMod = require('path');
@@ -100,6 +165,7 @@ const port = 3027;
 const child = spawn(process.execPath, [pathMod.join(__dirname, '..', 'server', 'index.js')], {
   env: { ...process.env, PORT: String(port) },
   stdio: ['ignore', 'pipe', 'pipe'],
+  cwd: pathMod.join(__dirname, '..', '..', '..'),
 });
 
 function get(urlPath) {
@@ -138,9 +204,21 @@ function post(urlPath, payload) {
 }
 
 (async () => {
-  await new Promise((r) => setTimeout(r, 400));
+  let boot = '';
+  child.stdout.on('data', (c) => {
+    boot += c.toString();
+  });
+  child.stderr.on('data', (c) => {
+    boot += c.toString();
+  });
+  await new Promise((r) => setTimeout(r, 800));
+  if (boot && /Error|Cannot find/.test(boot)) {
+    throw new Error(`server failed to start:\n${boot}`);
+  }
   const health = await get('/health');
   assert.strictEqual(health.status, 200);
+  const healthJson = JSON.parse(health.body);
+  assert.ok(healthJson.difficulties.every((d) => d.hints === 3));
   ok('GET /health');
 
   const world = await get('/api/world');
@@ -152,13 +230,26 @@ function post(urlPath, payload) {
   assert.strictEqual(roundRes.status, 200);
   const roundJson = JSON.parse(roundRes.body);
   assert.ok(roundJson.state.sessionId);
+  assert.strictEqual(roundJson.state.hintsLeft, 3);
   ok('POST /api/round');
+
+  const sid = roundJson.state.sessionId;
+  const hintRes = await post('/api/hint', { sessionId: sid });
+  assert.strictEqual(hintRes.status, 200);
+  const hintJson = JSON.parse(hintRes.body);
+  assert.strictEqual(hintJson.hint.stage, 1);
+  assert.ok(!hintJson.hint.country);
+  assert.ok(!(hintJson.state.revealedHintIds || []).length);
+  ok('POST /api/hint stage 1 (no outline, no full name)');
 
   const suggest = await get('/api/suggest?q=deut');
   assert.strictEqual(suggest.status, 200);
   const sug = JSON.parse(suggest.body);
   assert.ok((sug.suggestions || []).some((s) => s.id === 'DE'));
   ok('GET /api/suggest');
+
+  // Versus socket smoke without Hub: join will fail Hub fetch — unit scoring already covered.
+  // Direct room helpers via applyGuessToRound covered above.
 
   child.kill('SIGTERM');
   console.log('\nAll Border Path checks passed.');

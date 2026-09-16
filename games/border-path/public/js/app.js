@@ -23,6 +23,10 @@
   let countryEls = new Map();
   let socket = null;
   let suggestTimer = null;
+  let versusMode = !!partyId;
+  let versusState = null;
+  let myPlayerId = null;
+  let isVersusHost = false;
 
   const MAP_W = 960;
   const MAP_H = 480;
@@ -308,7 +312,7 @@
   }
 
   function resetMap() {
-    for (const el of countryEls.values()) el.className = 'country';
+    for (const el of countryEls.values()) el.setAttribute('class', 'country');
   }
 
   function focusKeyFor(next) {
@@ -346,10 +350,20 @@
     });
   }
 
+  function formatHintStatus(hintOrDisplay) {
+    if (!hintOrDisplay) return '';
+    const stage = hintOrDisplay.stage || 0;
+    const pattern = hintOrDisplay.pattern || '';
+    if (!pattern) return 'Hinweis genutzt.';
+    if (stage >= 3) return `Hinweis ${stage}/3: ${pattern} · Umriss auf der Karte`;
+    if (stage === 2) return `Hinweis ${stage}/3: ${pattern} (${hintOrDisplay.length || '?'} Buchstaben)`;
+    return `Hinweis ${stage}/3: ${pattern}`;
+  }
+
   function paintState(next) {
     if (!next) return;
     state = next;
-    sessionId = next.sessionId;
+    if (next.sessionId) sessionId = next.sessionId;
     resetMap();
 
     countryEls.get(next.start?.id)?.classList.add('is-start');
@@ -370,7 +384,11 @@
     $('chipGoal').textContent = next.goal?.nameDe || '—';
     $('meterGuesses').textContent = `Versuche: ${next.guessesLeft}`;
     $('meterRemain').textContent = `Rest: ${next.remaining}`;
-    $('meterHints').textContent = `Hinweise: ${next.hintsLeft}`;
+    const stage = next.hintStage || 0;
+    $('meterHints').textContent =
+      next.hintsLeft != null
+        ? `Hinweise: ${next.hintsLeft}${stage ? ` · Stufe ${stage}/3` : ''}`
+        : 'Hinweise: —';
 
     const list = $('guessList');
     list.innerHTML = '';
@@ -382,7 +400,125 @@
     }
 
     focusRoute(next);
-    if (next.status === 'won' || next.status === 'lost') showEnd(next);
+    if (next.status === 'won' || next.status === 'lost') {
+      if (versusMode) {
+        if (versusState?.status === 'playing') {
+          $('statusLine').textContent =
+            next.status === 'won'
+              ? 'Fertig — warte auf die anderen…'
+              : 'Route verloren — warte auf die anderen…';
+        }
+      } else {
+        showEnd(next);
+      }
+    }
+  }
+
+  function renderVersusPlayers(listEl, players, opts = {}) {
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    for (const p of players || []) {
+      const li = document.createElement('li');
+      if (p.playerId === myPlayerId) li.classList.add('is-you');
+      const left = document.createElement('strong');
+      left.textContent = `${p.name}${p.isHost ? ' (Host)' : ''}${
+        p.playerId === myPlayerId ? ' · du' : ''
+      }`;
+      const right = document.createElement('span');
+      if (opts.ranking) {
+        const secs =
+          p.finishTimeMs != null ? `${(p.finishTimeMs / 1000).toFixed(1)}s` : '—';
+        right.textContent = `${p.score} Pkt · ${secs}`;
+      } else if (versusState?.status === 'lobby') {
+        right.textContent = 'bereit';
+      } else {
+        const st =
+          p.status === 'won' ? 'fertig' : p.status === 'lost' ? 'raus' : `Rest ${p.remaining ?? '—'}`;
+        right.textContent = `${st} · ${p.guessesLeft ?? '—'} Tipps`;
+      }
+      li.appendChild(left);
+      li.appendChild(right);
+      listEl.appendChild(li);
+    }
+  }
+
+  function applyVersusState(versus) {
+    if (!versus) return;
+    versusState = versus;
+    myPlayerId = versus.you?.playerId || myPlayerId;
+    isVersusHost = !!versus.you?.isHost;
+
+    const lobby = $('versusLobby');
+    const hud = $('versusHud');
+    const btnSolo = $('btnStart');
+    const btnVs = $('btnVersusStart');
+
+    if (lobby) {
+      lobby.hidden = false;
+      renderVersusPlayers($('versusLobbyList'), versus.players);
+    }
+    if (btnSolo) btnSolo.hidden = true;
+    if (btnVs) {
+      btnVs.hidden = !(isVersusHost && versus.status !== 'playing');
+      btnVs.textContent =
+        versus.status === 'finished' ? 'Nochmal Versus' : 'Versus starten';
+    }
+    if ($('homeHint')) {
+      $('homeHint').textContent =
+        'Versus: gleiches Puzzle · Punkte für direkten Weg · Zeit nur als Tiebreaker';
+    }
+
+    if (versus.status === 'playing' && versus.you?.state) {
+      show('play');
+      if (hud) {
+        hud.hidden = false;
+        renderVersusPlayers(
+          $('versusPlayerList'),
+          versus.players.filter((p) => p.playerId !== myPlayerId)
+        );
+      }
+      paintState(versus.you.state);
+    } else if (versus.status === 'finished') {
+      if (versus.you?.state) paintState(versus.you.state);
+      showVersusEnd(versus);
+    } else {
+      show('home');
+      if (hud) hud.hidden = true;
+    }
+  }
+
+  function showVersusEnd(versus) {
+    show('end');
+    const ranking = versus.ranking || [];
+    const winner = ranking[0];
+    $('endTitle').textContent = 'Versus-Ergebnis';
+    $('endText').textContent = winner
+      ? `${winner.name} gewinnt mit ${winner.score} Punkten${
+          winner.finishTimeMs != null ? ` (${(winner.finishTimeMs / 1000).toFixed(1)}s)` : ''
+        }.`
+      : 'Runde beendet.';
+    const rankEl = $('versusRank');
+    if (rankEl) {
+      rankEl.hidden = false;
+      renderVersusPlayers(rankEl, ranking, { ranking: true });
+    }
+    const ol = $('pathList');
+    ol.innerHTML = '';
+    const path = versus.you?.state?.optimalPath || [];
+    for (const c of path) {
+      const li = document.createElement('li');
+      li.textContent = `${c.nameDe} / ${c.nameEn}`;
+      ol.appendChild(li);
+      const el = countryEls.get(c.id);
+      if (
+        el &&
+        c.id !== versus.you?.state?.start?.id &&
+        c.id !== versus.you?.state?.goal?.id
+      ) {
+        el.classList.add('is-green');
+      }
+    }
+    if ($('btnAgain')) $('btnAgain').hidden = !isVersusHost;
   }
 
   function showEnd(next) {
@@ -396,6 +532,12 @@
     $('endText').textContent = won
       ? `Mit ${next.guessesUsed} Tipps · Budget übrig: ${next.guessesLeft} · Optimal: ${next.hops}`
       : `Optimal wären ${next.hops} Zwischenländer.`;
+    const rankEl = $('versusRank');
+    if (rankEl) {
+      rankEl.hidden = true;
+      rankEl.innerHTML = '';
+    }
+    if ($('btnAgain')) $('btnAgain').hidden = false;
     const ol = $('pathList');
     ol.innerHTML = '';
     for (const c of next.optimalPath || []) {
@@ -425,6 +567,10 @@
   }
 
   async function startRound() {
+    if (versusMode) {
+      startVersusRound();
+      return;
+    }
     $('statusLine').textContent = '';
     lastFocusKey = '';
     await loadWorld();
@@ -438,8 +584,67 @@
     $('guessInput').focus();
   }
 
+  function startVersusRound() {
+    if (!socket || !isVersusHost) {
+      $('statusLine').textContent = 'Nur der Host startet Versus.';
+      return;
+    }
+    $('statusLine').textContent = '';
+    lastFocusKey = '';
+    loadWorld()
+      .then(
+        () =>
+          new Promise((resolve) => {
+            socket.emit('versus:start', { difficulty }, (res) => {
+              if (res?.error) {
+                $('statusLine').textContent = res.error;
+                resolve();
+                return;
+              }
+              if (res?.versus) applyVersusState(res.versus);
+              $('guessInput').value = '';
+              $('guessInput').focus();
+              resolve();
+            });
+          })
+      )
+      .catch((e) => {
+        $('statusLine').textContent = e.message || 'Versus-Start fehlgeschlagen.';
+      });
+  }
+
   async function submitGuess(name) {
-    if (!sessionId || !name) return;
+    if (!name) return;
+    if (versusMode) {
+      if (!socket || versusState?.status !== 'playing') return;
+      socket.emit('versus:guess', { name }, (res) => {
+        if (res?.error) {
+          $('statusLine').textContent = res.error;
+          return;
+        }
+        if (res?.versus) applyVersusState(res.versus);
+        if (res?.guess?.quality === 'red') {
+          const flash = $('mapFlash');
+          flash.hidden = false;
+          flash.classList.remove('map-flash');
+          void flash.offsetWidth;
+          flash.classList.add('map-flash');
+          setTimeout(() => {
+            flash.hidden = true;
+          }, 400);
+        }
+        if (res?.versus?.you?.state?.hintDisplay) {
+          /* keep previous hint line only if still playing and no clear */
+        }
+        if (res?.versus?.status !== 'finished' && res?.versus?.you?.state?.status === 'playing') {
+          $('statusLine').textContent = '';
+        }
+        $('guessInput').value = '';
+        $('suggestList').hidden = true;
+      });
+      return;
+    }
+    if (!sessionId) return;
     try {
       const data = await api('/api/guess', {
         method: 'POST',
@@ -465,6 +670,18 @@
   }
 
   async function useHint() {
+    if (versusMode) {
+      if (!socket || versusState?.status !== 'playing') return;
+      socket.emit('versus:hint', {}, (res) => {
+        if (res?.error) {
+          $('statusLine').textContent = res.error;
+          return;
+        }
+        if (res?.versus) applyVersusState(res.versus);
+        $('statusLine').textContent = formatHintStatus(res?.hint || res?.versus?.you?.state?.hintDisplay);
+      });
+      return;
+    }
     if (!sessionId) return;
     try {
       const data = await api('/api/hint', {
@@ -472,10 +689,7 @@
         body: JSON.stringify({ sessionId }),
       });
       paintState(data.state);
-      const initials = (data.hint?.initials || []).map((x) => `${x.initial}…`).join(' · ');
-      $('statusLine').textContent = initials
-        ? `Hinweis: ${data.hint?.country?.nameDe || 'Umriss'} · ${initials}`
-        : 'Hinweis genutzt.';
+      $('statusLine').textContent = formatHintStatus(data.hint || data.state?.hintDisplay);
     } catch (err) {
       $('statusLine').textContent = err.message || 'Kein Hinweis.';
     }
@@ -492,11 +706,28 @@
     socket.on('session:returned', () => {
       location.href = '/';
     });
+    socket.on('versus:state', (versus) => {
+      loadWorld()
+        .then(() => applyVersusState(versus))
+        .catch(() => applyVersusState(versus));
+    });
     socket.emit(
       'session:join-party',
       { partyId, name: prefillName || 'Spieler', memberId },
       (res) => {
-        if (res?.error) $('statusLine').textContent = res.error;
+        if (res?.error) {
+          $('statusLine').textContent = res.error;
+          return;
+        }
+        myPlayerId = res.playerId || null;
+        versusMode = true;
+        loadWorld()
+          .then(() => {
+            if (res.versus) applyVersusState(res.versus);
+          })
+          .catch(() => {
+            if (res.versus) applyVersusState(res.versus);
+          });
       }
     );
   }
@@ -513,6 +744,7 @@
   });
 
   $('btnStart').addEventListener('click', () => startRound().catch((e) => alert(e.message)));
+  $('btnVersusStart')?.addEventListener('click', () => startVersusRound());
   $('btnAgain').addEventListener('click', () => startRound().catch((e) => alert(e.message)));
   $('btnHome').addEventListener('click', () => show('home'));
   $('btnHint').addEventListener('click', () => useHint());
