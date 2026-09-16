@@ -172,6 +172,71 @@ section('setSyncReveal host-only / lobby-only');
   console.log('ok: guarded');
 }
 
+section('race points decay + first bonus + window continues');
+{
+  const room = roomWithTwo();
+  assert.ok(game.setMode(room, 'host', 'race').ok);
+  assert.strictEqual(room.settings.mode, 'race');
+  assert.strictEqual(game.syncOn(room), true);
+  game.setRounds(room, 'host', 1);
+  game.startMatch(room, songs);
+  assert.ok(room.current);
+  const go = game.applyRaceGo(room, {
+    playAt: Date.now() - 1000,
+    endsAt: Date.now() + 25000,
+  });
+  assert.ok(go.ok, go.error);
+  const title = room.current.title;
+  const first = game.submitGuess(room, 'host', title);
+  assert.ok(first.correct, first.error);
+  assert.ok(first.firstBonus);
+  assert.ok(first.points >= game.RACE_MIN_POINTS + game.RACE_FIRST_BONUS);
+  assert.strictEqual(room.phase, 'playing', 'timer continues after first correct');
+  const guestWrong = game.submitGuess(room, 'guest', 'Nope Not A Song');
+  assert.ok(guestWrong.ok && guestWrong.correct === false);
+  assert.strictEqual(room.current.guesses.guest.done, false);
+  const second = game.submitGuess(room, 'guest', title);
+  assert.ok(second.correct);
+  assert.strictEqual(second.firstBonus, false);
+  assert.ok(second.points < first.points);
+  assert.strictEqual(room.phase, 'reveal');
+  console.log('ok: race scoring + continue after first');
+}
+
+section('race endRaceWindow marks unfinished as giveUp');
+{
+  const room = roomWithTwo();
+  game.setMode(room, 'host', 'race');
+  game.setRounds(room, 'host', 1);
+  game.startMatch(room, songs);
+  game.applyRaceGo(room, { playAt: Date.now() - 500, endsAt: Date.now() - 1 });
+  const ended = game.endRaceWindow(room);
+  assert.ok(ended.ok);
+  assert.strictEqual(room.phase, 'reveal');
+  assert.strictEqual(room.current.guesses.host.giveUp, true);
+  assert.strictEqual(room.current.guesses.guest.giveUp, true);
+  console.log('ok: race window end');
+}
+
+section('setMode host-only / race blocks syncReveal off');
+{
+  const room = roomWithTwo();
+  assert.ok(game.setMode(room, 'guest', 'race').error);
+  assert.ok(game.setMode(room, 'host', 'race').ok);
+  assert.ok(game.setSyncReveal(room, 'host', false).error);
+  assert.ok(game.setMode(room, 'host', 'classic').ok);
+  assert.ok(game.setSyncReveal(room, 'host', false).ok);
+  console.log('ok: mode guards');
+}
+
+section('racePointsForElapsed formula');
+{
+  assert.strictEqual(game.racePointsForElapsed(0), game.RACE_MAX_POINTS);
+  assert.strictEqual(game.racePointsForElapsed(game.RACE_WINDOW_MS), game.RACE_MIN_POINTS);
+  assert.ok(game.racePointsForElapsed(15000) < game.RACE_MAX_POINTS);
+  console.log('ok: decay formula');
+}
+
 section('leave empties room');
 {
   const rooms = new RoomManager();
@@ -193,6 +258,8 @@ section('static UI markers');
   const css = fs.readFileSync(path.join(root, 'public', 'css', 'style.css'), 'utf8');
   assert.ok(!html.includes('id="btnReady"'), 'btnReady removed');
   assert.ok(html.includes('id="syncRevealToggle"'));
+  assert.ok(html.includes('id="modeRaceToggle"'));
+  assert.ok(html.includes('id="raceHud"'));
   assert.ok(html.includes('Skippen'));
   assert.ok(html.includes('id="btnRevealPlay"'));
   assert.ok(html.includes('id="leaveModal"'));
@@ -201,11 +268,15 @@ section('static UI markers');
   assert.ok(js.includes('session:return-to-lobby'));
   assert.ok(js.includes('waitingForOthers'));
   assert.ok(js.includes('roundRecap'));
+  assert.ok(js.includes('lobby:set-mode'));
+  assert.ok(js.includes('race:armed'));
+  assert.ok(js.includes('handleRaceGo'));
   assert.ok(css.includes('line-height: 1.05') || css.includes('line-height:1.05'));
   assert.ok(css.includes('.modal'));
   assert.ok(css.includes('.btn-danger') || css.includes('btn-danger'));
   assert.ok(css.includes('min-height: 100vh'), 'viewport fill');
   assert.ok(css.includes('background-attachment: fixed'), 'fixed atmosphere');
+  assert.ok(css.includes('.race-hud'));
   assert.ok(!js.includes("guessInput').focus()"), 'no auto-focus guess input');
   assert.ok(js.includes('function clearGuessInput'), 'clearGuessInput helper');
   assert.ok(js.includes('el.currentTime = 0'), 'reveal plays from start');
@@ -297,14 +368,21 @@ section('live catalog + socket syncReveal');
     const solo = await emit(a, 'room:create-solo', { name: 'A', rounds: 3 });
     assert.ok(solo.ok, solo.error);
     assert.strictEqual(solo.state.settings.syncReveal, true);
+    assert.strictEqual(solo.state.settings.mode, 'classic');
     const toggled = await emit(a, 'lobby:set-sync-reveal', { syncReveal: false });
     assert.ok(toggled.ok, toggled.error);
     assert.strictEqual(toggled.syncReveal, false);
     assert.strictEqual(toggled.state.settings.syncReveal, false);
 
+    const raceMode = await emit(a, 'lobby:set-mode', { mode: 'race' });
+    assert.ok(raceMode.ok, raceMode.error);
+    assert.strictEqual(raceMode.mode, 'race');
+    assert.strictEqual(raceMode.state.settings.mode, 'race');
+    assert.strictEqual(raceMode.state.settings.syncReveal, true);
+
     const left = await emit(a, 'session:return-to-lobby', {});
     assert.ok(left.ok, left.error);
-    console.log('ok: socket syncReveal + leave');
+    console.log('ok: socket syncReveal + race mode + leave');
     a.close();
 
     console.log('\nALL CHECKS PASSED');

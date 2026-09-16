@@ -69,6 +69,88 @@ function broadcastRoom(room) {
   }
 }
 
+function clearRaceTimers(room) {
+  if (!room) return;
+  if (room._raceArmTimer) {
+    clearTimeout(room._raceArmTimer);
+    room._raceArmTimer = null;
+  }
+  if (room._raceEndTimer) {
+    clearTimeout(room._raceEndTimer);
+    room._raceEndTimer = null;
+  }
+}
+
+function scheduleRaceEnd(room) {
+  if (!room?.current?.endsAt) return;
+  if (room._raceEndTimer) {
+    clearTimeout(room._raceEndTimer);
+    room._raceEndTimer = null;
+  }
+  const delay = Math.max(0, room.current.endsAt - Date.now() + 40);
+  room._raceEndTimer = setTimeout(() => {
+    room._raceEndTimer = null;
+    const result = game.endRaceWindow(room);
+    if (result.ok) broadcastRoom(room);
+  }, delay);
+}
+
+function fireRaceGo(room) {
+  if (!game.raceOn(room) || !room.current || room.current.goFired) return;
+  if (room._raceArmTimer) {
+    clearTimeout(room._raceArmTimer);
+    room._raceArmTimer = null;
+  }
+  const result = game.applyRaceGo(room);
+  if (result.error) return;
+  io.to(room.code).emit('race:go', {
+    songId: room.current.songId,
+    playAt: result.playAt,
+    endsAt: result.endsAt,
+    serverNow: result.serverNow,
+    windowMs: game.RACE_WINDOW_MS,
+    clipSec: game.RACE_CLIP_SEC,
+    leadMs: game.RACE_GO_LEAD_MS,
+  });
+  broadcastRoom(room);
+  scheduleRaceEnd(room);
+}
+
+function armRaceRound(room) {
+  if (!game.raceOn(room) || !room.current) return;
+  clearRaceTimers(room);
+  room.current.armed = new Set();
+  room.current.goFired = false;
+  room.current.playAt = null;
+  room.current.endsAt = null;
+  const serverNow = Date.now();
+  io.to(room.code).emit('race:arm', {
+    songId: room.current.songId,
+    clipSec: game.RACE_CLIP_SEC,
+    serverNow,
+    cueStartSec: room.current.cueStartSec,
+  });
+  room._raceArmTimer = setTimeout(() => {
+    room._raceArmTimer = null;
+    fireRaceGo(room);
+  }, game.RACE_ARM_TIMEOUT_MS);
+  broadcastRoom(room);
+}
+
+async function warmClipsForSong(song, { race = false } = {}) {
+  if (!song) return;
+  const durs = race ? [game.RACE_CLIP_SEC] : game.CLIP_STAGES || [];
+  await Promise.all(
+    durs.map(async (dur) => {
+      try {
+        await catalog.resolveClip(song, dur);
+      } catch (err) {
+        console.warn('[mj-headle] clip warm failed', song.id, dur, err.message || err);
+      }
+    })
+  );
+}
+
 app.get('/health', async (_req, res) => {
   const ping = await r2.ping();
   res.json({
@@ -77,6 +159,13 @@ app.get('/health', async (_req, res) => {
     r2: { ...r2.status(), ping },
     stages: game.CLIP_STAGES,
     points: game.STAGE_POINTS,
+    race: {
+      windowMs: game.RACE_WINDOW_MS,
+      clipSec: game.RACE_CLIP_SEC,
+      maxPoints: game.RACE_MAX_POINTS,
+      minPoints: game.RACE_MIN_POINTS,
+      firstBonus: game.RACE_FIRST_BONUS,
+    },
   });
 });
 
@@ -90,6 +179,13 @@ app.get('/api/songs', async (_req, res) => {
       playableCount: songs.filter((s) => s.playable).length,
       stages: game.CLIP_STAGES,
       points: game.STAGE_POINTS,
+      race: {
+        windowMs: game.RACE_WINDOW_MS,
+        clipSec: game.RACE_CLIP_SEC,
+        maxPoints: game.RACE_MAX_POINTS,
+        minPoints: game.RACE_MIN_POINTS,
+        firstBonus: game.RACE_FIRST_BONUS,
+      },
       r2: { ...r2.status(), ping },
       catalog: meta,
     });
@@ -126,7 +222,7 @@ app.get('/api/clip/:id', async (req, res) => {
   try {
     const song = await catalog.getSong(req.params.id);
     if (!song) return res.status(404).json({ error: 'Song nicht gefunden.' });
-    const dur = Math.min(15, Math.max(0.05, Number(req.query.dur) || 0.1));
+    const dur = Math.min(35, Math.max(0.05, Number(req.query.dur) || 0.1));
     const clip = await catalog.resolveClip(song, dur);
     if (!clip) return res.status(404).json({ error: 'Clip fehlt (Audio/R2).' });
     res.setHeader('Content-Type', clip.contentType || 'audio/mpeg');
@@ -210,17 +306,15 @@ app.post('/api/songs/:id/analyze-cue', async (req, res) => {
 });
 
 
-async function warmClipsForSong(song) {
-  if (!song) return;
-  await Promise.all(
-    (game.CLIP_STAGES || []).map(async (dur) => {
-      try {
-        await catalog.resolveClip(song, dur);
-      } catch (err) {
-        console.warn('[mj-headle] clip warm failed', song.id, dur, err.message || err);
-      }
-    })
-  );
+async function postStartWarm(room, songs) {
+  if (room.current?.songId) {
+    const warmSong =
+      songs.find((s) => s.id === room.current.songId) ||
+      (room.songMeta?.[room.current.songId]
+        ? { id: room.current.songId, ...room.songMeta[room.current.songId] }
+        : { id: room.current.songId });
+    void warmClipsForSong(warmSong, { race: game.raceOn(room) });
+  }
 }
 
 io.on('connection', (socket) => {
@@ -351,6 +445,39 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('lobby:set-mode', (payload = {}, ack) => {
+    const room = rooms.getRoomForSocket(socket.id);
+    if (!room) return typeof ack === 'function' && ack({ error: 'Keine Session.' });
+    const result = game.setMode(room, socket.id, payload.mode);
+    if (result.error) return typeof ack === 'function' && ack(result);
+    broadcastRoom(room);
+    if (typeof ack === 'function') {
+      ack({ ok: true, mode: result.mode, state: rooms.getPublicState(room, socket.id) });
+    }
+  });
+
+  socket.on('clock:ping', (_payload, ack) => {
+    if (typeof ack === 'function') ack({ serverNow: Date.now() });
+  });
+
+  socket.on('race:armed', (payload = {}, ack) => {
+    const room = rooms.getRoomForSocket(socket.id);
+    if (!room) return typeof ack === 'function' && ack({ error: 'Keine Session.' });
+    if (!game.raceOn(room) || !room.current) {
+      return typeof ack === 'function' && ack({ error: 'Kein Race.' });
+    }
+    if (payload.songId && payload.songId !== room.current.songId) {
+      return typeof ack === 'function' && ack({ error: 'Falscher Song.' });
+    }
+    const result = game.markRaceArmed(room, socket.id);
+    if (result.error) return typeof ack === 'function' && ack(result);
+    if (result.allArmed) fireRaceGo(room);
+    else broadcastRoom(room);
+    if (typeof ack === 'function') {
+      ack({ ok: true, ...result, state: rooms.getPublicState(room, socket.id) });
+    }
+  });
+
   // Kept for older clients; Ready is no longer required to start.
   socket.on('lobby:ready', (payload = {}, ack) => {
     const room = rooms.getRoomForSocket(socket.id);
@@ -368,6 +495,7 @@ io.on('connection', (socket) => {
       if (room.hostId !== socket.id) {
         return typeof ack === 'function' && ack({ error: 'Nur der Host startet.' });
       }
+      clearRaceTimers(room);
       const songs = await catalog.listPlayableSongs();
       const result = game.startMatch(room, songs);
       if (result.error) return typeof ack === 'function' && ack(result);
@@ -383,15 +511,12 @@ io.on('connection', (socket) => {
         if (room.songMeta?.[songId]) room.songMeta[songId].cueStartSec = cue;
         if (room.current?.songId === songId) room.current.cueStartSec = cue;
       }
-      if (room.current?.songId) {
-        const warmSong =
-          songs.find((s) => s.id === room.current.songId) ||
-          (room.songMeta?.[room.current.songId]
-            ? { id: room.current.songId, ...room.songMeta[room.current.songId] }
-            : { id: room.current.songId });
-        void warmClipsForSong(warmSong);
+      await postStartWarm(room, songs);
+      if (game.raceOn(room) && room.current) {
+        armRaceRound(room);
+      } else {
+        broadcastRoom(room);
       }
-      broadcastRoom(room);
       if (typeof ack === 'function') ack({ ok: true, state: rooms.getPublicState(room, socket.id) });
     } catch (err) {
       if (typeof ack === 'function') ack({ error: err.message || 'Start fehlgeschlagen.' });
@@ -403,6 +528,9 @@ io.on('connection', (socket) => {
     if (!room) return typeof ack === 'function' && ack({ error: 'Keine Session.' });
     const result = game.submitGuess(room, socket.id, payload.text || '');
     if (result.error) return typeof ack === 'function' && ack(result);
+    if (result.correct && game.raceOn(room) && room.phase === 'reveal') {
+      clearRaceTimers(room);
+    }
     broadcastRoom(room);
     if (typeof ack === 'function') {
       ack({ ok: true, ...result, state: rooms.getPublicState(room, socket.id) });
@@ -414,6 +542,7 @@ io.on('connection', (socket) => {
     if (!room) return typeof ack === 'function' && ack({ error: 'Keine Session.' });
     const result = game.skipStage(room, socket.id);
     if (result.error) return typeof ack === 'function' && ack(result);
+    if (game.raceOn(room) && room.phase === 'reveal') clearRaceTimers(room);
     broadcastRoom(room);
     if (typeof ack === 'function') {
       ack({ ok: true, ...result, state: rooms.getPublicState(room, socket.id) });
@@ -427,6 +556,7 @@ io.on('connection', (socket) => {
       if (room.hostId !== socket.id) {
         return typeof ack === 'function' && ack({ error: 'Nur der Host.' });
       }
+      clearRaceTimers(room);
       const songs = await catalog.listPlayableSongs();
       const result = game.nextRound(room, songs);
       if (result.error) return typeof ack === 'function' && ack(result);
@@ -435,10 +565,16 @@ io.on('connection', (socket) => {
         if (base) {
           const refined = await catalog.ensureAudibleCue(base);
           room.current.cueStartSec = Number(refined.cueStartSec) || 0;
-          void warmClipsForSong(refined);
+          void warmClipsForSong(refined, { race: game.raceOn(room) });
         }
       }
-      broadcastRoom(room);
+      if (result.finished) {
+        broadcastRoom(room);
+      } else if (game.raceOn(room) && room.current) {
+        armRaceRound(room);
+      } else {
+        broadcastRoom(room);
+      }
       if (typeof ack === 'function') {
         ack({ ok: true, ...result, state: rooms.getPublicState(room, socket.id) });
       }
@@ -449,7 +585,14 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     const result = rooms.leaveSocket(socket.id, { hard: false });
-    if (result?.room && !result.empty) broadcastRoom(result.room);
+    if (result?.room && !result.empty) {
+      if (game.raceOn(result.room) && result.room.phase === 'playing') {
+        game.maybeReveal(result.room);
+      }
+      broadcastRoom(result.room);
+    } else if (result?.room && result.empty) {
+      clearRaceTimers(result.room);
+    }
   });
 });
 

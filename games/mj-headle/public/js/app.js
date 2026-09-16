@@ -23,6 +23,7 @@
   let playerId = null;
   let catalog = [];
   let stages = [0.1, 0.5, 1, 5, 13];
+  let raceMeta = { windowMs: 30000, clipSec: 30, maxPoints: 100, minPoints: 10, firstBonus: 25 };
   let audio = null;
   let audioToken = 0;
   let stopTimer = null;
@@ -33,6 +34,11 @@
   let revealPlaying = false;
   let lastRevealAutoKey = null;
   let leaving = false;
+  let clockOffsetMs = 0;
+  let raceCountdownTimer = null;
+  let lastRaceArmKey = null;
+  let lastRaceGoKey = null;
+  let racePlayScheduled = false;
 
   function show(name) {
     Object.entries(views).forEach(([key, el]) => {
@@ -66,6 +72,40 @@
     return state?.settings?.syncReveal !== false;
   }
 
+  function raceModeOn() {
+    return state?.settings?.mode === 'race' || state?.current?.mode === 'race';
+  }
+
+  function serverNowApprox() {
+    return Date.now() + clockOffsetMs;
+  }
+
+  function clearRaceCountdown() {
+    if (raceCountdownTimer) {
+      clearInterval(raceCountdownTimer);
+      raceCountdownTimer = null;
+    }
+  }
+
+  async function syncClock() {
+    const t0 = Date.now();
+    const res = await emit('clock:ping');
+    const t1 = Date.now();
+    if (res?.serverNow) {
+      const rtt = t1 - t0;
+      clockOffsetMs = res.serverNow - (t0 + rtt / 2);
+    }
+    return clockOffsetMs;
+  }
+
+  function racePointsPreview(elapsedMs) {
+    const windowMs = state?.current?.raceWindowMs || raceMeta.windowMs || 30000;
+    const max = raceMeta.maxPoints || 100;
+    const min = raceMeta.minPoints || 10;
+    const t = Math.min(1, Math.max(0, elapsedMs) / windowMs);
+    return Math.max(min, Math.round(max * (1 - t)));
+  }
+
   function seesSharedReveal() {
     const cur = state?.current;
     if (!cur) return false;
@@ -86,6 +126,14 @@
     socket.on('session:returned', () => {
       location.href = '/';
     });
+    socket.on('race:arm', (msg) => {
+      if (leaving) return;
+      void handleRaceArm(msg);
+    });
+    socket.on('race:go', (msg) => {
+      if (leaving) return;
+      void handleRaceGo(msg);
+    });
     return socket;
   }
 
@@ -100,6 +148,7 @@
     const data = await res.json();
     catalog = data.songs || [];
     stages = data.stages || stages;
+    if (data.race) raceMeta = { ...raceMeta, ...data.race };
     const ping = data.r2 && data.r2.ping;
     const r2on = ping ? !!ping.ok : !!(data.r2 && data.r2.enabled);
     let meta = `${catalog.length} Titel · ${data.playableCount || 0} spielbar`;
@@ -298,43 +347,60 @@
     return msg.includes('interrupted') || msg.includes('aborted') || msg.includes('the play() request was interrupted');
   }
 
-  function playClip({ auto = false } = {}) {
+  function playClip({ auto = false, atServerMs = null, durOverride = null } = {}) {
     const cur = state?.current;
     if (!cur?.songId || seesSharedReveal()) return;
     if (cur.matchDone || cur.waitingForOthers) return;
     stopAudio({ expected: true });
     const token = audioToken;
-    const dur = Number(cur.stageSeconds) || 0.1;
+    const dur = durOverride != null ? Number(durOverride) : Number(cur.stageSeconds) || 0.1;
     const src = resolveClipSrc(cur.songId, dur);
     const el = new Audio(src);
     audio = el;
     el.preload = 'auto';
     setPlayUi({
       playing: false,
-      caption: auto ? 'Lädt Clip…' : 'Lädt Clip…',
+      caption: atServerMs != null ? 'Startet gleich…' : 'Lädt Clip…',
       disabled: true,
     });
 
     const start = () => {
       if (token !== audioToken || audio !== el) return;
-      const p = el.play();
-      if (p && p.catch) {
-        p.catch((err) => {
+      const begin = () => {
+        if (token !== audioToken || audio !== el) return;
+        const p = el.play();
+        if (p && p.catch) {
+          p.catch((err) => {
+            if (token !== audioToken) return;
+            if (isBenignPlayError(err)) return;
+            setPlayUi({
+              playing: false,
+              caption: auto ? 'Tippe ▶ zum Start' : `Audio-Fehler: ${err?.message || 'play blocked'}`,
+              disabled: false,
+            });
+          });
+        }
+        setPlayUi({ playing: true, caption: `Spielt ${fmtSec(dur)}…`, disabled: false });
+        stopTimer = setTimeout(() => {
           if (token !== audioToken) return;
-          if (isBenignPlayError(err)) return;
+          try { el.pause(); } catch { /* ignore */ }
           setPlayUi({
             playing: false,
-            caption: auto ? 'Tippe ▶ zum Start' : `Audio-Fehler: ${err?.message || 'play blocked'}`,
+            caption: raceModeOn() ? 'Weiter tippen oder warten' : 'Ab Cue hören',
             disabled: false,
           });
-        });
+        }, Math.max(80, dur * 1000 + 40));
+      };
+
+      if (atServerMs != null && Number.isFinite(atServerMs)) {
+        const wait = Math.max(0, atServerMs - clockOffsetMs - Date.now());
+        if (wait > 5) {
+          setPlayUi({ playing: false, caption: `Start in ${(wait / 1000).toFixed(1).replace('.', ',')}s…`, disabled: true });
+          stopTimer = setTimeout(begin, wait);
+          return;
+        }
       }
-      setPlayUi({ playing: true, caption: `Spielt ${fmtSec(dur)}…`, disabled: false });
-      stopTimer = setTimeout(() => {
-        if (token !== audioToken) return;
-        try { el.pause(); } catch { /* ignore */ }
-        setPlayUi({ playing: false, caption: 'Ab Cue hören', disabled: false });
-      }, Math.max(80, dur * 1000 + 40));
+      begin();
     };
 
     el.addEventListener('error', async () => {
@@ -350,7 +416,7 @@
             const fresh = URL.createObjectURL(blob);
             clipCache.set(clipKey(cur.songId, dur), fresh);
             if (token !== audioToken) return;
-            playClip({ auto });
+            playClip({ auto, atServerMs, durOverride });
             return;
           }
           const j = await res.json().catch(() => ({}));
@@ -372,6 +438,103 @@
 
     if (el.readyState >= 2) start();
     else el.addEventListener('canplay', start, { once: true });
+  }
+
+  async function handleRaceArm(msg) {
+    const songId = msg?.songId || state?.current?.songId;
+    if (!songId) return;
+    const key = `${songId}:${msg?.serverNow || 0}`;
+    if (key === lastRaceArmKey) return;
+    lastRaceArmKey = key;
+    lastRaceGoKey = null;
+    racePlayScheduled = false;
+    await syncClock();
+    const clipSec = Number(msg?.clipSec) || raceMeta.clipSec || 30;
+    setPlayUi({ playing: false, caption: 'Lädt Race-Clip…', disabled: true });
+    await preloadRoundClips(songId, [clipSec]);
+    const res = await emit('race:armed', { songId });
+    if (res.error) {
+      setPlayUi({ playing: false, caption: res.error, disabled: false });
+      return;
+    }
+    setPlayUi({ playing: false, caption: 'Bereit — warte auf Start…', disabled: true });
+  }
+
+  async function handleRaceGo(msg) {
+    const songId = msg?.songId || state?.current?.songId;
+    if (!songId || !msg?.playAt) return;
+    const key = `${songId}:${msg.playAt}`;
+    if (key === lastRaceGoKey) return;
+    lastRaceGoKey = key;
+    if (Number.isFinite(msg.serverNow)) {
+      clockOffsetMs = msg.serverNow - Date.now();
+    } else {
+      await syncClock();
+    }
+    if (state?.current) {
+      state.current.playAt = msg.playAt;
+      state.current.endsAt = msg.endsAt;
+      state.current.raceGoFired = true;
+    }
+    racePlayScheduled = true;
+    const clipSec = Number(msg?.clipSec) || raceMeta.clipSec || 30;
+    await preloadRoundClips(songId, [clipSec]);
+    playClip({ auto: true, atServerMs: msg.playAt, durOverride: clipSec });
+    startRaceCountdown();
+    render();
+  }
+
+  function startRaceCountdown() {
+    clearRaceCountdown();
+    const tick = () => {
+      const cur = state?.current;
+      const hud = $('raceHud');
+      if (!raceModeOn() || !cur || seesSharedReveal()) {
+        clearRaceCountdown();
+        return;
+      }
+      if (hud) hud.hidden = false;
+      const playAt = cur.playAt;
+      const endsAt = cur.endsAt;
+      const now = serverNowApprox();
+      const timerEl = $('raceTimer');
+      const ptsEl = $('racePointsPreview');
+      if (playAt == null) {
+        if (timerEl) timerEl.textContent = '…';
+        if (ptsEl) ptsEl.textContent = 'Warte auf Start';
+        return;
+      }
+      if (now < playAt) {
+        const left = ((playAt - now) / 1000).toFixed(1).replace('.', ',');
+        if (timerEl) timerEl.textContent = `in ${left}s`;
+        if (ptsEl) ptsEl.textContent = `Start · max ${raceMeta.maxPoints || 100} P`;
+        return;
+      }
+      const remainMs = Math.max(0, (endsAt || playAt + (cur.raceWindowMs || raceMeta.windowMs)) - now);
+      const remain = (remainMs / 1000).toFixed(1).replace('.', ',');
+      if (timerEl) timerEl.textContent = `${remain}s`;
+      const preview = cur.myGuess?.done
+        ? cur.myGuess.points
+        : racePointsPreview(now - playAt);
+      if (ptsEl) {
+        ptsEl.textContent = cur.myGuess?.done
+          ? `Dein Ergebnis: +${preview} P`
+          : `jetzt ~${preview} P` + (cur.firstBonusAwarded ? '' : ` (+${raceMeta.firstBonus || 25} Ersttipp)`);
+      }
+      const list = $('raceStandings');
+      if (list) {
+        const rows = cur.standings || [];
+        list.innerHTML = rows
+          .map((r) => {
+            const ms = r.reactionMs != null ? `${(r.reactionMs / 1000).toFixed(1).replace('.', ',')}s` : '—';
+            const bonus = r.firstBonus ? '<span class="bonus">Ersttipp</span>' : '';
+            return `<li><span>${escapeHtml(r.name)}${bonus}</span><span>${ms} · +${r.points}</span></li>`;
+          })
+          .join('');
+      }
+    };
+    tick();
+    raceCountdownTimer = setInterval(tick, 100);
   }
 
   function playRevealTrack({ auto = false } = {}) {
@@ -431,6 +594,10 @@
     if (roundKey === lastRoundKey) return;
     lastRoundKey = roundKey;
     lastStageAutoKey = null;
+    lastRaceArmKey = null;
+    lastRaceGoKey = null;
+    racePlayScheduled = false;
+    clearRaceCountdown();
     const input = $('guessInput');
     const feedback = $('feedback');
     if (input) {
@@ -443,8 +610,11 @@
     }
     renderGuessResults('', { open: false });
     stopAudio({ expected: true });
-    // Warm all Heardle stage clips (0.1 → 13s) so skips/play don't wait on ffmpeg.
-    void preloadRoundClips(cur.songId, cur.stages || stages);
+    if (raceModeOn()) {
+      void preloadRoundClips(cur.songId, [cur.raceClipSec || raceMeta.clipSec || 30]);
+    } else {
+      void preloadRoundClips(cur.songId, cur.stages || stages);
+    }
   }
 
   function updateLeaveButton() {
@@ -487,21 +657,37 @@
     $('btnStart').hidden = !isHost();
     $('roundsField').hidden = !isHost();
     $('roundsInput').value = state.settings?.rounds || 5;
+    const race = raceModeOn();
+    const modeField = $('modeField');
+    const modeToggle = $('modeRaceToggle');
+    if (modeField && modeToggle) {
+      modeField.hidden = false;
+      modeToggle.checked = race;
+      modeToggle.disabled = !isHost() || state.phase !== 'lobby';
+    }
     const syncField = $('syncRevealField');
     const syncToggle = $('syncRevealToggle');
     if (syncField && syncToggle) {
-      syncField.hidden = !!state.solo;
+      syncField.hidden = !!state.solo || race;
       syncToggle.checked = syncRevealOn();
-      syncToggle.disabled = !isHost() || state.phase !== 'lobby';
+      syncToggle.disabled = !isHost() || state.phase !== 'lobby' || race;
     }
     if (state.solo) {
-      $('lobbyHint').textContent = 'Solo — starte direkt, wenn du bereit bist.';
+      $('lobbyHint').textContent = race
+        ? 'Solo Race — 30s Fenster, Punkte fallen mit der Zeit.'
+        : 'Solo — starte direkt, wenn du bereit bist.';
     } else if (isHost()) {
-      $('lobbyHint').textContent = syncRevealOn()
-        ? 'Party-Host — starte direkt. Gemeinsames Aufdecken: an.'
-        : 'Party-Host — starte direkt. Ohne Zwischenstand: unabhängig spielen, Scoreboard erst am Ende.';
+      if (race) {
+        $('lobbyHint').textContent = 'Party-Host — Race: synchroner Start, 30s Fenster, Ersttipp-Bonus.';
+      } else {
+        $('lobbyHint').textContent = syncRevealOn()
+          ? 'Party-Host — starte direkt. Gemeinsames Aufdecken: an.'
+          : 'Party-Host — starte direkt. Ohne Zwischenstand: unabhängig spielen, Scoreboard erst am Ende.';
+      }
     } else {
-      $('lobbyHint').textContent = 'Party — warte, bis der Host startet.';
+      $('lobbyHint').textContent = race
+        ? 'Party — Race-Modus. Warte, bis der Host startet.'
+        : 'Party — warte, bis der Host startet.';
     }
   }
 
@@ -509,31 +695,74 @@
     show('play');
     maybeResetRoundUi();
     const cur = state.current;
+    const race = raceModeOn();
     $('roundLabel').textContent = `Runde ${cur?.round || 1}/${cur?.totalRounds || state.totalRounds}`;
-    renderStageTrack();
+    const stageTrack = $('stageTrack');
+    const raceHud = $('raceHud');
+    if (race) {
+      if (stageTrack) stageTrack.hidden = true;
+      if (raceHud) raceHud.hidden = false;
+      $('stageLabel').textContent = 'Race';
+      startRaceCountdown();
+    } else {
+      if (stageTrack) stageTrack.hidden = false;
+      if (raceHud) raceHud.hidden = true;
+      clearRaceCountdown();
+      renderStageTrack();
+    }
     const done = !!cur?.myGuess?.done;
-    $('guessInput').disabled = done;
-    $('btnSkip').disabled = done;
+    $('guessInput').disabled = done || (race && !cur?.raceGoFired);
+    const skipBtn = $('btnSkip');
+    if (skipBtn) {
+      skipBtn.textContent = race ? 'Aufgeben' : 'Skippen';
+      skipBtn.disabled = done || (race && !cur?.raceGoFired);
+    }
     const submit = $('guessForm').querySelector('button[type="submit"]');
-    if (submit) submit.disabled = done;
+    if (submit) submit.disabled = done || (race && !cur?.raceGoFired);
     setPlayUi({
       playing: $('btnPlay')?.classList.contains('playing'),
-      caption: done ? (syncRevealOn() ? 'Runde für dich beendet' : 'Nächste Runde…') : 'Ab Cue hören',
-      disabled: done,
+      caption: done
+        ? race || syncRevealOn()
+          ? 'Runde für dich beendet'
+          : 'Nächste Runde…'
+        : race
+          ? cur?.raceGoFired
+            ? 'Race läuft'
+            : 'Bereit machen…'
+          : 'Ab Cue hören',
+      disabled: done || (race && !cur?.raceGoFired),
     });
-    if (done && syncRevealOn()) {
+    if (done && (race || syncRevealOn())) {
+      const bonus = cur.myGuess.firstBonus ? ' (Ersttipp-Bonus)' : '';
       $('feedback').textContent = cur.myGuess.correct
-        ? `Richtig! +${cur.myGuess.points} Punkte — warte auf die anderen…`
+        ? `Richtig! +${cur.myGuess.points} Punkte${bonus} — warte auf die anderen…`
         : 'Runde beendet — warte auf die anderen…';
       $('feedback').className = `feedback ${cur.myGuess.correct ? 'ok' : ''}`;
     }
-    // Autoplay current stage once per stage (round start + after skip/wrong).
+    if (race) {
+      // Lockstep playback comes from race:go — only arm if we missed the event.
+      if (!cur?.raceGoFired && cur?.songId && !racePlayScheduled) {
+        const armKey = `missed:${cur.round}:${cur.songId}`;
+        if (armKey !== lastRaceArmKey) {
+          void handleRaceArm({ songId: cur.songId, clipSec: cur.raceClipSec || raceMeta.clipSec, serverNow: cur.serverNow });
+        }
+      } else if (cur?.raceGoFired && cur?.playAt && !racePlayScheduled && !done) {
+        void handleRaceGo({
+          songId: cur.songId,
+          playAt: cur.playAt,
+          endsAt: cur.endsAt,
+          clipSec: cur.raceClipSec || raceMeta.clipSec,
+          serverNow: cur.serverNow,
+        });
+      }
+      return;
+    }
+    // Classic: Autoplay current stage once per stage (round start + after skip/wrong).
     if (!done && cur?.songId) {
       const stageKey = `${cur.round}:${cur.songId}:${cur.stageIndex ?? 0}`;
       if (stageKey !== lastStageAutoKey) {
         lastStageAutoKey = stageKey;
         const run = () => playClip({ auto: true });
-        // Prefer playing from warm cache; still attempt immediately.
         void preloadRoundClips(cur.songId, cur.stages || stages).then(run);
       }
     }
@@ -611,27 +840,35 @@
 
     if (state.phase === 'lobby') {
       stopAudio({ expected: true });
+      clearRaceCountdown();
       lastRoundKey = null;
       lastRevealAutoKey = null;
+      lastRaceArmKey = null;
+      lastRaceGoKey = null;
+      racePlayScheduled = false;
       renderLobby();
       return;
     }
 
     if (state.phase === 'finished') {
+      clearRaceCountdown();
       renderFinished();
       return;
     }
 
     if (
       !syncRevealOn() &&
+      !raceModeOn() &&
       state.phase === 'playing' &&
       (state.current?.matchDone || state.current?.waitingForOthers)
     ) {
+      clearRaceCountdown();
       renderWait();
       return;
     }
 
-    if (syncRevealOn() && (state.phase === 'reveal' || seesSharedReveal())) {
+    if ((raceModeOn() || syncRevealOn()) && (state.phase === 'reveal' || seesSharedReveal())) {
+      clearRaceCountdown();
       renderRevealView();
       return;
     }
@@ -701,6 +938,21 @@
     }
   });
 
+  $('modeRaceToggle')?.addEventListener('change', async () => {
+    if (!isHost()) return;
+    const race = !!$('modeRaceToggle').checked;
+    const res = await emit('lobby:set-mode', { mode: race ? 'race' : 'classic' });
+    if (res.error) {
+      $('lobbyHint').textContent = res.error;
+      $('modeRaceToggle').checked = raceModeOn();
+      return;
+    }
+    if (res.state) {
+      state = res.state;
+      render();
+    }
+  });
+
   $('btnStart').addEventListener('click', async () => {
     const res = await emit('game:start');
     if (res.error) {
@@ -712,7 +964,19 @@
     }
   });
 
-  $('btnPlay').addEventListener('click', () => playClip());
+  $('btnPlay').addEventListener('click', () => {
+    if (raceModeOn()) {
+      const cur = state?.current;
+      if (!cur?.raceGoFired || !cur?.playAt) return;
+      playClip({
+        auto: false,
+        atServerMs: null,
+        durOverride: cur.raceClipSec || raceMeta.clipSec || 30,
+      });
+      return;
+    }
+    playClip();
+  });
   $('btnRevealPlay')?.addEventListener('click', () => playRevealTrack({ auto: false }));
 
   function applyAckState(res) {
@@ -749,16 +1013,20 @@
     }
     applyAckState(res);
     if (res.correct) {
-      $('feedback').textContent = `Richtig! +${res.points}`;
+      const bonus = res.firstBonus ? ' (Ersttipp!)' : '';
+      $('feedback').textContent = `Richtig! +${res.points}${bonus}`;
       $('feedback').className = 'feedback ok';
       clearGuessInput();
       // Reveal autoplay owns audio — do not stopAudio here (race with playRevealTrack).
-      if (!isRevealState(state)) stopAudio({ expected: true });
+      if (!isRevealState(state)) {
+        if (!raceModeOn()) stopAudio({ expected: true });
+      }
     } else {
-      $('feedback').textContent = 'Nicht getroffen — nächste Stufe';
+      $('feedback').textContent = raceModeOn()
+        ? 'Nicht getroffen — weiter tippen'
+        : 'Nicht getroffen — nächste Stufe';
       $('feedback').className = 'feedback bad';
       clearGuessInput();
-      // Mid-stage: renderPlay already started next clip. Final: reveal owns full song.
     }
   });
 
@@ -771,13 +1039,15 @@
     }
     applyAckState(res);
     clearGuessInput();
-    // Mid-stage: renderPlay owns next clip. Final skip → reveal owns full song.
-    // Never stopAudio here — it races with autoplay started in applyAckState/render.
   });
 
   $('btnNext').addEventListener('click', async () => {
     stopAudio({ expected: true });
+    clearRaceCountdown();
     lastRevealAutoKey = null;
+    lastRaceArmKey = null;
+    lastRaceGoKey = null;
+    racePlayScheduled = false;
     await emit('round:next');
   });
 
@@ -786,11 +1056,14 @@
     playerId = null;
     lastRoundKey = null;
     lastRevealAutoKey = null;
+    lastRaceArmKey = null;
+    lastRaceGoKey = null;
+    racePlayScheduled = false;
+    clearRaceCountdown();
     leaving = false;
     show('home');
     startSolo();
   });
-
   $('btnLeave')?.addEventListener('click', () => openLeaveModal());
   $('btnFinishedLeave')?.addEventListener('click', () => openLeaveModal());
   $('btnLeaveCancel')?.addEventListener('click', () => closeLeaveModal());

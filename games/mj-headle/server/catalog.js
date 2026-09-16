@@ -295,7 +295,7 @@ async function resolveClip(song, durationSec) {
   if (!song) return null;
   const withCue = await ensureAudibleCue(song);
   const startSec = Number(withCue.cueStartSec) || 0;
-  const dur = Math.min(15, Math.max(0.05, Number(durationSec) || 0.1));
+  const dur = Math.min(35, Math.max(0.05, Number(durationSec) || 0.1));
   const cacheKey = `${withCue.id}:${startSec.toFixed(3)}:${dur.toFixed(3)}`;
   if (clipCache.has(cacheKey)) return { ...clipCache.get(cacheKey), song: withCue };
 
