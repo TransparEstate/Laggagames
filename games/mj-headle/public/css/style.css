@@ -14,32 +14,39 @@
 * { box-sizing: border-box; }
 html, body {
   margin: 0;
-  min-height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   color: var(--ink);
   font-family: var(--body);
-  background: var(--bg);
+  /* Full-viewport atmosphere on the root — avoids body-height cutoff. */
+  background:
+    radial-gradient(ellipse 80% 55% at 50% -10%, rgba(212, 168, 75, 0.22), transparent 55%),
+    linear-gradient(165deg, #0a0a0f 0%, #121018 55%, #0b0b10 100%);
+  background-color: var(--bg);
+  background-attachment: fixed;
 }
 body { position: relative; overflow-x: hidden; }
 
 /* Author display rules (e.g. .view-play { display:grid }) must not override [hidden]. */
 [hidden] { display: none !important; }
 
+/* Decorative only — root already paints the atmosphere fill. */
 .atmosphere {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  background:
-    radial-gradient(ellipse 80% 55% at 50% -10%, rgba(212, 168, 75, 0.22), transparent 55%),
-    linear-gradient(165deg, #0a0a0f 0%, #16121c 45%, #0b0b10 100%);
+  display: none;
 }
 .groove {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   opacity: 0.12;
   pointer-events: none;
   background: repeating-radial-gradient(circle at 50% 50%, transparent 0 6px, rgba(255,255,255,0.03) 6px 7px);
   animation: spin 90s linear infinite;
+}
+.topbar,
+main {
+  position: relative;
+  z-index: 1;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 

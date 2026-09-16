@@ -204,6 +204,13 @@ section('static UI markers');
   assert.ok(css.includes('line-height: 1.05') || css.includes('line-height:1.05'));
   assert.ok(css.includes('.modal'));
   assert.ok(css.includes('.btn-danger') || css.includes('btn-danger'));
+  assert.ok(css.includes('min-height: 100vh'), 'viewport fill');
+  assert.ok(css.includes('background-attachment: fixed'), 'fixed atmosphere');
+  assert.ok(!js.includes("guessInput').focus()"), 'no auto-focus guess input');
+  assert.ok(js.includes('function clearGuessInput'), 'clearGuessInput helper');
+  assert.ok(js.includes('el.currentTime = 0'), 'reveal plays from start');
+  const revealFn = js.slice(js.indexOf('function playRevealTrack'), js.indexOf('function maybeResetRoundUi'));
+  assert.ok(!revealFn.includes('cueStartSec'), 'reveal does not seek to cue');
   console.log('ok: html/js/css markers');
 }
 
