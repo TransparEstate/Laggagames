@@ -142,7 +142,8 @@ function generatePair(difficultyId) {
   const cfg = DIFFICULTY[difficultyId] || DIFFICULTY.medium;
   const ids = playableIds();
   const candidates = [];
-  for (let i = 0; i < 1200 && candidates.length < 60; i++) {
+  const maxAttempts = 8000;
+  for (let i = 0; i < maxAttempts && candidates.length < 80; i++) {
     const a = pickRandom(ids);
     const b = pickRandom(ids);
     if (a === b) continue;
@@ -153,17 +154,10 @@ function generatePair(difficultyId) {
     candidates.push({ start: a, goal: b, path, hops });
   }
   if (!candidates.length) {
-    for (let i = 0; i < 4000 && candidates.length < 25; i++) {
-      const a = pickRandom(ids);
-      const b = pickRandom(ids);
-      if (a === b) continue;
-      const path = shortestPath(a, b);
-      if (!path) continue;
-      const hops = path.length - 2;
-      if (hops >= 2 && hops <= 14) candidates.push({ start: a, goal: b, path, hops });
-    }
+    throw new Error(
+      `Kein Puzzle für ${cfg.label} (${cfg.minHops}–${cfg.maxHops} Zwischenländer) gefunden.`
+    );
   }
-  if (!candidates.length) throw new Error('Kein Puzzle gefunden.');
   return pickRandom(candidates);
 }
 

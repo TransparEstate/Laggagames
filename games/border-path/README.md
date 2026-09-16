@@ -1,6 +1,6 @@
 # Border Path
 
-Travle-ähnliches Geografie-Rätsel: Von einem Startland zum Zielland über **Landgrenzen** tippen. Start und Ziel sind hervorgehoben; alle Ländergrenzen bleiben als Vektor-Umrisse sichtbar; geratene Länder erscheinen gefüllt (falsch = rot). Die Karte lässt sich per Drag, Mausrad und Pinch zoomen/verschieben.
+Travle-ähnliches Geografie-Rätsel: Von einem Startland zum Zielland über **Landgrenzen** tippen. Start und Ziel nur als Umrandung; andere Länder bleiben verborgen, bis sie geraten oder als Hinweis erscheinen (falsch = rot). Vektor-Weltkarte mit Pan/Zoom (Drag, Mausrad, Pinch).
 
 ## Spielen
 

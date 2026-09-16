@@ -178,7 +178,7 @@ main {
 }
 .country {
   fill: transparent;
-  stroke: rgba(168, 178, 192, 0.55);
+  stroke: transparent;
   stroke-width: 0.85;
   stroke-linejoin: round;
   stroke-linecap: round;
@@ -187,14 +187,14 @@ main {
   transition: fill 0.35s ease, stroke 0.35s ease, stroke-width 0.35s ease, fill-opacity 0.35s ease;
 }
 .country.is-start {
-  fill: rgba(215, 219, 224, 0.22);
+  fill: transparent;
   stroke: var(--start);
   stroke-width: 1.55;
   filter: url(#softGlow);
   animation: pulseStroke 2.4s ease-in-out infinite;
 }
 .country.is-goal {
-  fill: rgba(184, 192, 200, 0.2);
+  fill: transparent;
   stroke: var(--goal);
   stroke-width: 1.55;
   filter: url(#softGlow);
@@ -223,7 +223,7 @@ main {
   animation: wrongShake 0.45s ease both;
 }
 .country.is-hint {
-  fill: rgba(174, 182, 191, 0.12);
+  fill: transparent;
   stroke: #aeb6bf;
   stroke-width: 1.35;
   stroke-dasharray: 4 3;
