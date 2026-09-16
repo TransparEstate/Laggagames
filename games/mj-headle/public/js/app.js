@@ -187,7 +187,6 @@
       e.preventDefault();
       input.value = li.dataset.title || li.textContent;
       renderGuessResults('', { open: false });
-      input.focus();
     });
     document.addEventListener('click', (e) => {
       if (e.target === input || box.contains(e.target)) return;
@@ -384,7 +383,7 @@
     }
     stopAudio({ expected: true });
     const token = audioToken;
-    const cue = Number(cur.cueStartSec) || 0;
+    // Full song from the start (not from cue) on reveal.
     const url = `${GB}/api/audio/${encodeURIComponent(cur.songId)}?t=${Date.now()}`;
     const el = new Audio(url);
     audio = el;
@@ -395,7 +394,7 @@
     const start = () => {
       if (token !== audioToken || audio !== el) return;
       try {
-        if (cue > 0 && Number.isFinite(el.duration) && cue < el.duration) el.currentTime = cue;
+        el.currentTime = 0;
       } catch { /* seek best-effort */ }
       const p = el.play();
       if (p && p.catch) {
@@ -716,6 +715,28 @@
   $('btnPlay').addEventListener('click', () => playClip());
   $('btnRevealPlay')?.addEventListener('click', () => playRevealTrack({ auto: false }));
 
+  function applyAckState(res) {
+    if (res?.state) {
+      state = res.state;
+      render();
+    }
+  }
+
+  function isRevealState(s) {
+    const cur = s?.current;
+    if (!cur) return false;
+    return !!(cur.revealed || s.phase === 'reveal');
+  }
+
+  function clearGuessInput({ keepFocus = false } = {}) {
+    const input = $('guessInput');
+    if (input) {
+      input.value = '';
+      if (!keepFocus) input.blur();
+    }
+    renderGuessResults('', { open: false });
+  }
+
   $('guessForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const text = $('guessInput').value.trim();
@@ -726,15 +747,18 @@
       $('feedback').className = 'feedback bad';
       return;
     }
+    applyAckState(res);
     if (res.correct) {
       $('feedback').textContent = `Richtig! +${res.points}`;
       $('feedback').className = 'feedback ok';
-      stopAudio({ expected: true });
+      clearGuessInput();
+      // Reveal autoplay owns audio — do not stopAudio here (race with playRevealTrack).
+      if (!isRevealState(state)) stopAudio({ expected: true });
     } else {
       $('feedback').textContent = 'Nicht getroffen — nächste Stufe';
       $('feedback').className = 'feedback bad';
-      $('guessInput').value = '';
-      $('guessInput').focus();
+      clearGuessInput();
+      // Mid-stage: renderPlay already started next clip. Final: reveal owns full song.
     }
   });
 
@@ -745,8 +769,10 @@
       $('feedback').className = 'feedback bad';
       return;
     }
-    stopAudio({ expected: true });
-    $('guessInput').focus();
+    applyAckState(res);
+    clearGuessInput();
+    // Mid-stage: renderPlay owns next clip. Final skip → reveal owns full song.
+    // Never stopAudio here — it races with autoplay started in applyAckState/render.
   });
 
   $('btnNext').addEventListener('click', async () => {
