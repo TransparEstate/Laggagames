@@ -23,7 +23,9 @@ const io = new Server(server, {
 const parties = new PartyManager();
 
 const hubPublic = path.join(__dirname, '..', 'hub', 'public');
-app.use(express.json({ limit: '32kb' }));
+// Only parse JSON for hub /api routes. Game proxy under /g/* must keep the raw
+// body stream so POST bodies (guess/hint/round) reach the game process.
+app.use('/api', express.json({ limit: '32kb' }));
 app.use(express.static(hubPublic));
 
 // Railway / Render healthcheck — must exist on the hub, not only on games
