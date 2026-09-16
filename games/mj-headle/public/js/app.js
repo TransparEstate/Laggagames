@@ -39,6 +39,8 @@
   let lastRaceArmKey = null;
   let lastRaceGoKey = null;
   let racePlayScheduled = false;
+  let finishedFanfareKey = null;
+  let confettiRaf = null;
 
   function show(name) {
     Object.entries(views).forEach(([key, el]) => {
@@ -820,13 +822,150 @@
       .join('');
   }
 
+  function playVictoryFanfare() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      const now = ctx.currentTime;
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = i === notes.length - 1 ? 'triangle' : 'square';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 0.03 + i * 0.09);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35 + i * 0.09);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.09);
+        osc.stop(now + 0.45 + i * 0.09);
+      });
+      const noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 0.25, ctx.sampleRate);
+      const data = noiseBuf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      const noise = ctx.createBufferSource();
+      const nGain = ctx.createGain();
+      noise.buffer = noiseBuf;
+      nGain.gain.setValueAtTime(0.08, now + 0.15);
+      nGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+      noise.connect(nGain);
+      nGain.connect(ctx.destination);
+      noise.start(now + 0.15);
+      setTimeout(() => {
+        try {
+          ctx.close();
+        } catch { /* ignore */ }
+      }, 1200);
+    } catch { /* autoplay / unsupported */ }
+  }
+
+  function stopConfetti() {
+    if (confettiRaf) {
+      cancelAnimationFrame(confettiRaf);
+      confettiRaf = null;
+    }
+    const canvas = $('finishedConfetti');
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+
+  function burstConfetti() {
+    const canvas = $('finishedConfetti');
+    if (!canvas) return;
+    stopConfetti();
+    const parent = canvas.parentElement;
+    const w = Math.max(320, parent?.clientWidth || window.innerWidth);
+    const h = Math.max(400, parent?.clientHeight || 520);
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const colors = ['#f0c96a', '#d4a84b', '#f3eee4', '#6fbf8a', '#e8b84a'];
+    const parts = Array.from({ length: 72 }, () => ({
+      x: Math.random() * w,
+      y: -20 - Math.random() * h * 0.35,
+      r: 3 + Math.random() * 5,
+      vy: 1.6 + Math.random() * 3.2,
+      vx: -1.5 + Math.random() * 3,
+      rot: Math.random() * Math.PI,
+      vr: -0.12 + Math.random() * 0.24,
+      color: colors[(Math.random() * colors.length) | 0],
+    }));
+    const start = performance.now();
+    const tick = (t) => {
+      const elapsed = t - start;
+      ctx.clearRect(0, 0, w, h);
+      for (const p of parts) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.vr;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.max(0, 1 - elapsed / 3200);
+        ctx.fillRect(-p.r, -p.r * 0.4, p.r * 2, p.r * 0.8);
+        ctx.restore();
+      }
+      if (elapsed < 3200) confettiRaf = requestAnimationFrame(tick);
+      else stopConfetti();
+    };
+    confettiRaf = requestAnimationFrame(tick);
+  }
+
   function renderFinished() {
     show('finished');
     stopAudio({ expected: true });
+    const winner = state.winner || (state.leaderboard && state.leaderboard[0]) || null;
+    const nameEl = $('winnerName');
+    const scoreEl = $('winnerScore');
+    const labelEl = $('finishedWinLabel');
+    const eyebrow = $('finishedEyebrow');
+    if (eyebrow) eyebrow.textContent = state.solo ? 'Solo-Finale' : 'Party-Finale';
+    if (labelEl) labelEl.textContent = winner ? 'SIEGER' : 'ENDE';
+    if (nameEl) nameEl.textContent = winner ? String(winner.name || '—').toUpperCase() : 'NIEMAND';
+    if (scoreEl) {
+      scoreEl.textContent = winner
+        ? `${winner.score || 0} Punkte — Zeit zum Feiern`
+        : 'Kein Scoreboard';
+    }
     $('leaderboard').innerHTML = (state.leaderboard || [])
       .map((p) => `<li><span>${escapeHtml(p.name)}</span><strong>${p.score || 0}</strong></li>`)
       .join('');
     renderRoundRecap();
+
+    const btn = $('btnAgain');
+    const hint = $('finishedHostHint');
+    const party = !!(state.partyId || partyId) && !state.solo;
+    if (party) {
+      if (btn) {
+        btn.hidden = !isHost();
+        btn.textContent = 'Noch eine Runde';
+      }
+      if (hint) {
+        hint.hidden = isHost();
+        hint.textContent = 'Warte auf den Host — noch eine Runde…';
+      }
+    } else {
+      if (btn) {
+        btn.hidden = false;
+        btn.textContent = 'Nochmal';
+      }
+      if (hint) hint.hidden = true;
+    }
+
+    const fanfareKey = `${state.code || 'solo'}:${(state.leaderboard || [])
+      .map((p) => `${p.id}:${p.score}`)
+      .join('|')}`;
+    if (fanfareKey !== finishedFanfareKey) {
+      finishedFanfareKey = fanfareKey;
+      burstConfetti();
+      playVictoryFanfare();
+    }
   }
 
   function render() {
@@ -841,6 +980,8 @@
     if (state.phase === 'lobby') {
       stopAudio({ expected: true });
       clearRaceCountdown();
+      stopConfetti();
+      finishedFanfareKey = null;
       lastRoundKey = null;
       lastRevealAutoKey = null;
       lastRaceArmKey = null;
@@ -1051,7 +1192,18 @@
     await emit('round:next');
   });
 
-  $('btnAgain').addEventListener('click', () => {
+  $('btnAgain').addEventListener('click', async () => {
+    const party = !!(state?.partyId || partyId) && !state?.solo;
+    if (party || (state && !state.solo && state.phase === 'finished')) {
+      if (!isHost()) return;
+      try {
+        await emit('game:restart');
+      } catch (err) {
+        const feedback = $('feedback');
+        if (feedback) feedback.textContent = err?.message || 'Restart fehlgeschlagen.';
+      }
+      return;
+    }
     state = null;
     playerId = null;
     lastRoundKey = null;
@@ -1059,6 +1211,8 @@
     lastRaceArmKey = null;
     lastRaceGoKey = null;
     racePlayScheduled = false;
+    finishedFanfareKey = null;
+    stopConfetti();
     clearRaceCountdown();
     leaving = false;
     show('home');

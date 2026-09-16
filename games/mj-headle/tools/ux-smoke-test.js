@@ -67,6 +67,31 @@ section('async skip: stages independent (syncReveal on)');
   console.log('ok: host stage 1, guest stage 0');
 }
 
+section('winner + restartSession → lobby');
+{
+  const room = roomWithTwo();
+  room.settings.syncReveal = true;
+  game.startMatch(room, songs);
+  room.phase = 'finished';
+  room.players[0].score = 20;
+  room.players[1].score = 80;
+  room.scores = { host: 20, guest: 80 };
+  const finished = game.publicState(room, 'host');
+  assert.ok(finished.winner);
+  assert.strictEqual(finished.winner.name, 'Guest');
+  assert.strictEqual(finished.winner.score, 80);
+  const restart = game.restartSession(room);
+  assert.ok(restart.ok);
+  assert.strictEqual(room.phase, 'lobby');
+  assert.strictEqual(room.players[0].score, 0);
+  assert.strictEqual(room.players[1].score, 0);
+  assert.deepStrictEqual(room.roundRecap, []);
+  const lobby = game.publicState(room, 'host');
+  assert.strictEqual(lobby.phase, 'lobby');
+  assert.strictEqual(lobby.winner, null);
+  console.log('ok: winner Guest, restart → lobby');
+}
+
 section('wrong guess only advances own stage');
 {
   const room = roomWithTwo();

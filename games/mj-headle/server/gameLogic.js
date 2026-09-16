@@ -304,6 +304,15 @@ function publicState(room, forSocketId) {
     };
   }
 
+  const leaderboard = room.players
+    .map((p) => ({ id: p.id, name: p.name, score: p.score || 0 }))
+    .slice()
+    .sort((a, b) => b.score - a.score);
+  const winner =
+    room.phase === 'finished' && leaderboard.length
+      ? { id: leaderboard[0].id, name: leaderboard[0].name, score: leaderboard[0].score || 0 }
+      : null;
+
   return {
     code: room.code,
     partyId: room.partyId,
@@ -319,10 +328,8 @@ function publicState(room, forSocketId) {
     roundIndex: room.roundIndex,
     totalRounds: room.totalRounds,
     current: currentPublic,
-    leaderboard: room.players
-      .map((p) => ({ id: p.id, name: p.name, score: p.score || 0 }))
-      .slice()
-      .sort((a, b) => b.score - a.score),
+    leaderboard,
+    winner,
     roundRecap: room.phase === 'finished' ? room.roundRecap : [],
   };
 }
@@ -817,6 +824,24 @@ function setMode(room, socketId, mode) {
   return { ok: true, mode: next };
 }
 
+/** Reset match → in-game lobby (keeps party / Hub in_game). */
+function restartSession(room) {
+  room.phase = 'lobby';
+  room.roundIndex = 0;
+  room.trackIds = [];
+  room.current = null;
+  room.scores = {};
+  room.playerRuns = {};
+  room.roundRecap = [];
+  room.songMeta = {};
+  for (const p of room.players) {
+    p.score = 0;
+    p.ready = false;
+  }
+  room.lastActivity = Date.now();
+  return { ok: true };
+}
+
 module.exports = {
   CLIP_STAGES,
   STAGE_POINTS,
@@ -847,6 +872,7 @@ module.exports = {
   setRounds,
   setSyncReveal,
   setMode,
+  restartSession,
   markRaceArmed,
   applyRaceGo,
   endRaceWindow,

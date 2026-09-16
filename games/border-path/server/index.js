@@ -209,6 +209,7 @@ function serializeVersusRoom(room, selfId = null) {
   }
 
   let ranking = null;
+  let winner = null;
   if (room.status === 'finished' || room.status === 'between') {
     ranking = game.rankVersusPlayers(
       players.map((p) => ({
@@ -221,6 +222,14 @@ function serializeVersusRoom(room, selfId = null) {
         roundsWon: p.roundsWon,
       }))
     );
+    if (room.status === 'finished' && ranking[0]) {
+      winner = {
+        id: ranking[0].playerId,
+        name: ranking[0].name,
+        score: ranking[0].score,
+        finishTimeMs: ranking[0].finishTimeMs,
+      };
+    }
   }
 
   const self = selfId ? room.players.get(selfId) : null;
@@ -251,6 +260,7 @@ function serializeVersusRoom(room, selfId = null) {
         : null,
     players,
     ranking,
+    winner,
     you: selfId
       ? {
           playerId: selfId,
@@ -359,6 +369,18 @@ function resetMatchPlayers(room) {
   }
 }
 
+/** Back to Versus lobby — Party stays in_game on Hub. */
+function rematchToLobby(room) {
+  clearBetweenTimer(room);
+  room.status = 'lobby';
+  room.puzzle = null;
+  room.roundIndex = 0;
+  room.startedAt = null;
+  room.totalRounds = game.VERSUS_MATCH.rounds;
+  room.matchHints = game.VERSUS_MATCH.matchHints;
+  resetMatchPlayers(room);
+}
+
 io.on('connection', (socket) => {
   socket.on('session:join-party', async (payload = {}, ack) => {
     try {
@@ -455,6 +477,58 @@ io.on('connection', (socket) => {
     }
   });
 
+  /** Host: finished → Versus-Lobby (kein Hub-Return). */
+  socket.on('versus:rematch', (_payload = {}, ack) => {
+    try {
+      const info = partyPlayers.get(socket.id);
+      if (!info?.partyId) {
+        if (typeof ack === 'function') ack({ error: 'Keine Party-Session.' });
+        return;
+      }
+      const room = getVersusRoom(info.partyId);
+      if (!room) {
+        if (typeof ack === 'function') ack({ error: 'Versus-Raum fehlt.' });
+        return;
+      }
+      if (socket.id !== room.hostSocketId) {
+        if (typeof ack === 'function') ack({ error: 'Nur der Host startet eine neue Runde.' });
+        return;
+      }
+      rematchToLobby(room);
+      emitVersusState(info.partyId);
+      io.to(`party:${info.partyId}`).emit('party:rematch', {
+        partyId: info.partyId,
+      });
+      if (typeof ack === 'function') ack({ ok: true, versus: serializeVersusRoom(room, socket.id) });
+    } catch (err) {
+      if (typeof ack === 'function') ack({ error: err.message || 'Rematch fehlgeschlagen.' });
+    }
+  });
+
+  socket.on('party:win-announce', (payload = {}, ack) => {
+    try {
+      const info = partyPlayers.get(socket.id);
+      if (!info?.partyId) {
+        if (typeof ack === 'function') ack({ error: 'Keine Party-Session.' });
+        return;
+      }
+      const room = getVersusRoom(info.partyId);
+      const player = room?.players.get(socket.id);
+      const name = String(payload.name || player?.name || info.name || 'Spieler').slice(0, 32);
+      const msg = {
+        name,
+        perfect: !!payload.perfect,
+        guessesUsed: Number(payload.guessesUsed) || 0,
+        playerId: socket.id,
+        roundIndex: room?.roundIndex || null,
+      };
+      io.to(`party:${info.partyId}`).emit('party:win-announce', msg);
+      if (typeof ack === 'function') ack({ ok: true });
+    } catch (err) {
+      if (typeof ack === 'function') ack({ error: err.message || 'Announce fehlgeschlagen.' });
+    }
+  });
+
   socket.on('versus:guess', (payload = {}, ack) => {
     try {
       const info = partyPlayers.get(socket.id);
@@ -478,6 +552,15 @@ io.on('connection', (socket) => {
           });
         }
         return;
+      }
+      if (player.round.status === 'won') {
+        io.to(`party:${info.partyId}`).emit('party:win-announce', {
+          name: player.name,
+          perfect: !!player.round.perfect,
+          guessesUsed: player.round.guesses.length,
+          playerId: socket.id,
+          roundIndex: room.roundIndex,
+        });
       }
       advanceMatch(room);
       emitVersusState(info.partyId);
