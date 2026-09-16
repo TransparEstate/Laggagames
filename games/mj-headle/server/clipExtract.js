@@ -9,7 +9,7 @@ const os = require('os');
 
 function extractClip(inputBuffer, { startSec = 0, durationSec = 0.1, ext = '.mp3' } = {}) {
   const start = Math.max(0, Number(startSec) || 0);
-  const dur = Math.min(15, Math.max(0.05, Number(durationSec) || 0.1));
+  const dur = Math.min(35, Math.max(0.05, Number(durationSec) || 0.1));
   const inFile = path.join(os.tmpdir(), `mj-clip-in-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
   const outFile = path.join(os.tmpdir(), `mj-clip-out-${Date.now()}-${Math.random().toString(36).slice(2)}.mp3`);
   fs.writeFileSync(inFile, inputBuffer);

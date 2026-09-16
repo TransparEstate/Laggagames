@@ -69,6 +69,16 @@ Im Spiel gibt es eine **Suchleiste** über den kompletten Katalog (alle MJ-Titel
 | 5 | 13s | 20 |
 | Reveal | — | 0 |
 
+## Race-Modus (Party/Solo)
+
+Zusätzlich zum klassischen Heardle: Host schaltet **Race** in der Lobby.
+
+- Alle hören denselben Clip (~30s ab Cue), Start per Server-`playAt` (lockstep)
+- 30s Tippfenster; Punkte fallen linear von 100 auf 10
+- Erster richtiger Tipp: +25 Bonus
+- Timer läuft nach dem Ersttipp weiter — andere können noch Punkte holen
+- Runde endet, wenn alle fertig sind oder das Fenster abläuft
+
 Alle Stufen starten am **Cue-Point** (`cueStartSec`) — nicht blind am Dateianfang. Ohne gültigen Cue (`ok` oder `manual`) ist ein Song nicht spielbar.
 
 ## Party

@@ -1,8 +1,8 @@
 {
   "id": "mj-headle",
   "name": "MJ Headle",
-  "tagline": "Michael Jackson Songs am Intro erraten",
-  "description": "Heardle-Style: kurze Clips ab markantem Cue, mehr Punkte je früher. Solo oder Hub-Party.",
+  "tagline": "Michael Jackson Songs am Intro erraten — Classic oder Race",
+  "description": "Heardle-Style und synchroner Race-Modus: kurze Clips ab Cue bzw. wer am schnellsten tippt. Solo oder Hub-Party.",
   "status": "playable",
   "entry": "server/index.js",
   "partySupport": true,
