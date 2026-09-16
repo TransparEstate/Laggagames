@@ -24,6 +24,17 @@
   let socket = null;
   let suggestTimer = null;
 
+  const MAP_W = 960;
+  const MAP_H = 480;
+  const MIN_ZOOM = 1;
+  const MAX_ZOOM = 12;
+  const cam = { x: 0, y: 0, w: MAP_W, h: MAP_H };
+  let drag = null;
+  let pointers = new Map();
+  let pinch = null;
+  let focusToken = 0;
+  let lastFocusKey = '';
+
   function api(path, opts = {}) {
     return fetch(`${GB}${path}`, {
       headers: { 'content-type': 'application/json', ...(opts.headers || {}) },
@@ -42,7 +53,7 @@
   }
 
   function project([lon, lat]) {
-    return [((lon + 180) / 360) * 960, ((90 - lat) / 180) * 480];
+    return [((lon + 180) / 360) * MAP_W, ((90 - lat) / 180) * MAP_H];
   }
 
   function ringToPath(ring) {
@@ -91,6 +102,190 @@
     return { minX, minY, maxX, maxY };
   }
 
+  function clampCam() {
+    const minW = MAP_W / MAX_ZOOM;
+    const maxW = MAP_W / MIN_ZOOM;
+    cam.w = Math.min(maxW, Math.max(minW, cam.w));
+    cam.h = cam.w * (MAP_H / MAP_W);
+    cam.x = Math.min(MAP_W - cam.w, Math.max(0, cam.x));
+    cam.y = Math.min(MAP_H - cam.h, Math.max(0, cam.y));
+  }
+
+  function applyViewBox() {
+    clampCam();
+    const svg = $('worldMap');
+    if (!svg) return;
+    svg.setAttribute(
+      'viewBox',
+      `${cam.x.toFixed(2)} ${cam.y.toFixed(2)} ${cam.w.toFixed(2)} ${cam.h.toFixed(2)}`
+    );
+  }
+
+  function resetCamera() {
+    cam.x = 0;
+    cam.y = 0;
+    cam.w = MAP_W;
+    cam.h = MAP_H;
+    applyViewBox();
+  }
+
+  function setCameraToBBox(bbox, padRatio = 0.28) {
+    if (!bbox) {
+      resetCamera();
+      return;
+    }
+    const bw = Math.max(40, bbox.maxX - bbox.minX);
+    const bh = Math.max(30, bbox.maxY - bbox.minY);
+    const padX = bw * padRatio;
+    const padY = bh * padRatio;
+    let w = bw + padX * 2;
+    let h = bh + padY * 2;
+    const aspect = MAP_W / MAP_H;
+    if (w / h > aspect) h = w / aspect;
+    else w = h * aspect;
+    cam.w = w;
+    cam.h = h;
+    cam.x = (bbox.minX + bbox.maxX) / 2 - w / 2;
+    cam.y = (bbox.minY + bbox.maxY) / 2 - h / 2;
+    applyViewBox();
+  }
+
+  function clientToSvg(clientX, clientY) {
+    const svg = $('worldMap');
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width || !rect.height) return { x: cam.x + cam.w / 2, y: cam.y + cam.h / 2 };
+    return {
+      x: cam.x + ((clientX - rect.left) / rect.width) * cam.w,
+      y: cam.y + ((clientY - rect.top) / rect.height) * cam.h,
+    };
+  }
+
+  function zoomAt(clientX, clientY, factor) {
+    const before = clientToSvg(clientX, clientY);
+    cam.w /= factor;
+    cam.h /= factor;
+    clampCam();
+    const after = clientToSvg(clientX, clientY);
+    cam.x += before.x - after.x;
+    cam.y += before.y - after.y;
+    applyViewBox();
+  }
+
+  function zoomByButton(factor) {
+    const shell = $('mapShell');
+    const rect = shell.getBoundingClientRect();
+    zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, factor);
+  }
+
+  function bindMapControls() {
+    const shell = $('mapShell');
+    const svg = $('worldMap');
+    if (!shell || !svg || shell.dataset.mapBound) return;
+    shell.dataset.mapBound = '1';
+    applyViewBox();
+
+    shell.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        const factor = Math.exp(-e.deltaY * 0.0015);
+        zoomAt(e.clientX, e.clientY, factor);
+      },
+      { passive: false }
+    );
+
+    shell.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.map-btn')) return;
+      shell.setPointerCapture(e.pointerId);
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size === 1) {
+        drag = {
+          pointerId: e.pointerId,
+          startX: e.clientX,
+          startY: e.clientY,
+          originX: cam.x,
+          originY: cam.y,
+        };
+        shell.classList.add('is-dragging');
+      } else if (pointers.size === 2) {
+        drag = null;
+        const pts = [...pointers.values()];
+        const dx = pts[1].x - pts[0].x;
+        const dy = pts[1].y - pts[0].y;
+        pinch = {
+          dist: Math.hypot(dx, dy) || 1,
+          midX: (pts[0].x + pts[1].x) / 2,
+          midY: (pts[0].y + pts[1].y) / 2,
+          w: cam.w,
+        };
+      }
+    });
+
+    shell.addEventListener('pointermove', (e) => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointers.size >= 2 && pinch) {
+        const pts = [...pointers.values()];
+        const dx = pts[1].x - pts[0].x;
+        const dy = pts[1].y - pts[0].y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const midX = (pts[0].x + pts[1].x) / 2;
+        const midY = (pts[0].y + pts[1].y) / 2;
+        const factor = dist / pinch.dist;
+        const before = clientToSvg(midX, midY);
+        cam.w = pinch.w / factor;
+        cam.h = cam.w * (MAP_H / MAP_W);
+        clampCam();
+        const after = clientToSvg(midX, midY);
+        cam.x += before.x - after.x;
+        cam.y += before.y - after.y;
+        applyViewBox();
+        return;
+      }
+
+      if (!drag || e.pointerId !== drag.pointerId) return;
+      const rect = svg.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const dx = ((e.clientX - drag.startX) / rect.width) * cam.w;
+      const dy = ((e.clientY - drag.startY) / rect.height) * cam.h;
+      cam.x = drag.originX - dx;
+      cam.y = drag.originY - dy;
+      applyViewBox();
+    });
+
+    const endPointer = (e) => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.delete(e.pointerId);
+      if (drag && e.pointerId === drag.pointerId) drag = null;
+      if (pointers.size < 2) pinch = null;
+      if (pointers.size === 1) {
+        const [id, pt] = [...pointers.entries()][0];
+        drag = {
+          pointerId: id,
+          startX: pt.x,
+          startY: pt.y,
+          originX: cam.x,
+          originY: cam.y,
+        };
+      }
+      if (pointers.size === 0) shell.classList.remove('is-dragging');
+    };
+    shell.addEventListener('pointerup', endPointer);
+    shell.addEventListener('pointercancel', endPointer);
+    shell.addEventListener('pointerleave', (e) => {
+      if (pointers.has(e.pointerId)) endPointer(e);
+    });
+
+    $('btnZoomIn')?.addEventListener('click', () => zoomByButton(1.35));
+    $('btnZoomOut')?.addEventListener('click', () => zoomByButton(1 / 1.35));
+    $('btnZoomReset')?.addEventListener('click', () => {
+      lastFocusKey = '';
+      if (state) focusRoute(state, true);
+      else resetCamera();
+    });
+  }
+
   async function loadWorld() {
     if (world) return world;
     const res = await fetch(`${GB}/api/world`);
@@ -108,6 +303,7 @@
       g.appendChild(el);
       countryEls.set(id, el);
     }
+    bindMapControls();
     return world;
   }
 
@@ -115,10 +311,16 @@
     for (const el of countryEls.values()) el.className = 'country';
   }
 
-  function focusRoute(next) {
+  function focusKeyFor(next) {
+    return `${next.start?.id || ''}->${next.goal?.id || ''}|${next.sessionId || ''}`;
+  }
+
+  function focusRoute(next, force = false) {
+    const key = focusKeyFor(next);
+    if (!force && key === lastFocusKey) return;
+    lastFocusKey = key;
+
     const ids = new Set([next.start?.id, next.goal?.id]);
-    for (const g of next.guesses || []) ids.add(g.id);
-    for (const id of next.revealedHintIds || []) ids.add(id);
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -132,19 +334,16 @@
       maxX = Math.max(maxX, b.maxX);
       maxY = Math.max(maxY, b.maxY);
     }
-    const svg = $('worldMap');
     if (!Number.isFinite(minX)) {
-      svg.style.transform = 'scale(1)';
+      resetCamera();
       return;
     }
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
-    const w = Math.max(80, maxX - minX);
-    const h = Math.max(60, maxY - minY);
-    const scale = Math.max(1, Math.min(3.2, 0.72 / Math.max(w / 960, h / 480)));
-    const tx = (480 - cx) * (scale - 1) * 0.02;
-    const ty = (240 - cy) * (scale - 1) * 0.02;
-    svg.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    const token = ++focusToken;
+    const target = { minX, minY, maxX, maxY };
+    requestAnimationFrame(() => {
+      if (token !== focusToken) return;
+      setCameraToBBox(target);
+    });
   }
 
   function paintState(next) {
@@ -227,6 +426,7 @@
 
   async function startRound() {
     $('statusLine').textContent = '';
+    lastFocusKey = '';
     await loadWorld();
     const data = await api('/api/round', {
       method: 'POST',

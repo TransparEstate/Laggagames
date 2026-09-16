@@ -25,7 +25,7 @@
         <p class="eyebrow">Lagga Club</p>
         <h1 class="hero-brand">Border Path</h1>
         <p class="lede">
-          Nur Umrandungen. Finde den Landgrenz-Pfad vom Start zum Ziel — auf Deutsch oder Englisch.
+          Alle Grenzen sichtbar — nur Start und Ziel leuchten. Finde den Landgrenz-Pfad auf Deutsch oder Englisch.
         </p>
         <div class="diff-row" id="diffRow"></div>
         <button type="button" class="cta" id="btnStart">Neue Route</button>
@@ -57,8 +57,14 @@
                 </feMerge>
               </filter>
             </defs>
+            <rect class="ocean" x="-40" y="-40" width="1040" height="560"></rect>
             <g id="countries"></g>
           </svg>
+          <div class="map-controls" aria-label="Kartensteuerung">
+            <button type="button" class="map-btn" id="btnZoomIn" title="Reinzoomen">+</button>
+            <button type="button" class="map-btn" id="btnZoomOut" title="Rauszoomen">−</button>
+            <button type="button" class="map-btn" id="btnZoomReset" title="Übersicht">⟲</button>
+          </div>
           <div class="map-flash" id="mapFlash" hidden></div>
         </div>
 

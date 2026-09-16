@@ -1,6 +1,6 @@
 # Border Path
 
-Travle-ähnliches Geografie-Rätsel: Von einem Startland zum Zielland über **Landgrenzen** tippen. Start und Ziel sind nur als Umrandung sichtbar; geratene Länder erscheinen auf der Karte (falsch = rot).
+Travle-ähnliches Geografie-Rätsel: Von einem Startland zum Zielland über **Landgrenzen** tippen. Start und Ziel sind hervorgehoben; alle Ländergrenzen bleiben als Vektor-Umrisse sichtbar; geratene Länder erscheinen gefüllt (falsch = rot). Die Karte lässt sich per Drag, Mausrad und Pinch zoomen/verschieben.
 
 ## Spielen
 
@@ -26,7 +26,7 @@ v1: Solo-Spiel nach Launch; Return zur Hub-Party. Kein Sync-Rennen.
 
 ## Daten
 
-- `assets/geo/world.geojson` — vereinfachte Länderpolygone
+- `assets/geo/world.geojson` — vereinfachte Länderpolygone (Natural Earth 50m)
 - `assets/geo/adjacency.json` — Nachbargraph (+ manuelle Brücken)
 - `assets/geo/aliases.json` — DE/EN-Aliase
 - Rebuild: `node tools/build-geo.js`
