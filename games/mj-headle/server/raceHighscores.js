@@ -5,11 +5,23 @@ const DEFAULT_DATA_FILE = path.join(__dirname, '..', 'data', 'race-highscores.js
 let DATA_FILE = process.env.MJ_RACE_HS_FILE
   ? path.resolve(process.env.MJ_RACE_HS_FILE)
   : DEFAULT_DATA_FILE;
+/** Durable store in the MJ R2 bucket — survives Railway redeploys. */
+const R2_KEY = (process.env.MJ_RACE_HS_R2_KEY || 'meta/race-highscores.json').trim();
 const TOP_N = 10;
 const MAX_NAME = 24;
 
+/** Serialize R2 uploads so rapid score writes do not race. */
+let r2PersistChain = Promise.resolve();
+let r2PersistDisabled = false;
+
+function getR2() {
+  // Lazy load so local highscore unit tests work without AWS SDK present.
+  return require('./r2');
+}
+
 function setDataFileForTests(filePath) {
   DATA_FILE = path.resolve(filePath);
+  r2PersistDisabled = true;
 }
 
 function emptyStore() {
@@ -20,21 +32,117 @@ function ensureDir() {
   fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
 }
 
+function normalizeStore(raw) {
+  if (!raw || typeof raw !== 'object') return emptyStore();
+  if (!raw.byRounds || typeof raw.byRounds !== 'object') return emptyStore();
+  return { byRounds: raw.byRounds };
+}
+
 function loadStore() {
   try {
     if (!fs.existsSync(DATA_FILE)) return emptyStore();
-    const raw = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-    if (!raw || typeof raw !== 'object') return emptyStore();
-    if (!raw.byRounds || typeof raw.byRounds !== 'object') return emptyStore();
-    return { byRounds: raw.byRounds };
+    return normalizeStore(JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')));
   } catch {
     return emptyStore();
   }
 }
 
-function saveStore(store) {
+function writeStoreLocal(store) {
   ensureDir();
   fs.writeFileSync(DATA_FILE, JSON.stringify(store, null, 2));
+}
+
+function isR2NotFound(err) {
+  const code = err?.name || err?.Code || err?.code || '';
+  const status = err?.$metadata?.httpStatusCode;
+  const msg = String(err?.message || err || '');
+  return (
+    status === 404 ||
+    /NoSuchKey|NotFound|NoSuchBucket|does not exist/i.test(code) ||
+    /NoSuchKey|Not Found|does not exist/i.test(msg)
+  );
+}
+
+function scheduleR2Persist(store) {
+  if (r2PersistDisabled) return;
+  let r2;
+  try {
+    r2 = getR2();
+  } catch {
+    return;
+  }
+  if (!r2.isEnabled()) return;
+  const snapshot = JSON.parse(JSON.stringify(store));
+  r2PersistChain = r2PersistChain
+    .then(async () => {
+      await r2.putJson(R2_KEY, snapshot);
+    })
+    .catch((err) => {
+      console.warn('[mj-headle] race highscore R2 persist failed:', err.message || err);
+    });
+}
+
+function saveStore(store) {
+  writeStoreLocal(store);
+  scheduleR2Persist(store);
+}
+
+/**
+ * Pull durable highscores from R2 into the local working file (before serving traffic).
+ * If R2 has nothing yet but local does, seed R2 once.
+ */
+async function hydrateFromR2() {
+  let r2;
+  try {
+    r2 = getR2();
+  } catch (err) {
+    return { ok: false, skipped: true, reason: 'r2-module-missing', key: R2_KEY, error: err.message };
+  }
+  if (!r2.isEnabled()) {
+    return { ok: false, skipped: true, reason: 'r2-disabled', key: R2_KEY };
+  }
+  try {
+    const obj = await r2.getObjectBuffer(R2_KEY);
+    if (!obj?.buffer?.length) {
+      const local = loadStore();
+      const keys = Object.keys(local.byRounds || {});
+      if (keys.length) {
+        await r2.putJson(R2_KEY, local);
+        return { ok: true, seeded: true, buckets: keys.length, key: R2_KEY };
+      }
+      return { ok: true, empty: true, key: R2_KEY };
+    }
+    const store = normalizeStore(JSON.parse(obj.buffer.toString('utf8')));
+    writeStoreLocal(store);
+    return {
+      ok: true,
+      loaded: true,
+      buckets: Object.keys(store.byRounds).length,
+      key: R2_KEY,
+    };
+  } catch (err) {
+    if (isR2NotFound(err)) {
+      const local = loadStore();
+      const keys = Object.keys(local.byRounds || {});
+      if (keys.length) {
+        try {
+          await r2.putJson(R2_KEY, local);
+          return { ok: true, seeded: true, buckets: keys.length, key: R2_KEY };
+        } catch (seedErr) {
+          console.warn('[mj-headle] race highscore R2 seed failed:', seedErr.message || seedErr);
+          return { ok: false, error: seedErr.message || String(seedErr), key: R2_KEY };
+        }
+      }
+      return { ok: true, empty: true, key: R2_KEY };
+    }
+    console.warn('[mj-headle] race highscore R2 hydrate failed:', err.message || err);
+    return { ok: false, error: err.message || String(err), key: R2_KEY };
+  }
+}
+
+/** Wait for pending R2 uploads (tests / graceful shutdown). */
+function flushR2Persist() {
+  return r2PersistChain;
 }
 
 function sanitizeName(name) {
@@ -149,11 +257,14 @@ function recordRaceFinish(room) {
 
 module.exports = {
   TOP_N,
+  R2_KEY,
   getBoard,
   listBuckets,
   submitScore,
   recordRaceFinish,
   loadStore,
+  hydrateFromR2,
+  flushR2Persist,
   get DATA_FILE() {
     return DATA_FILE;
   },

@@ -367,7 +367,12 @@ section('race highscores buckets by rounds');
     classic.players[0].score = 999;
     const skip = hs.recordRaceFinish(classic);
     assert.ok(skip.skipped);
-    console.log('ok: highscore buckets + finish record');
+    assert.ok(typeof hs.hydrateFromR2 === 'function', 'R2 hydrate for redeploy survival');
+    assert.ok(
+      hs.R2_KEY === 'meta/race-highscores.json' || String(hs.R2_KEY).includes('race-highscores'),
+      'durable R2 key'
+    );
+    console.log('ok: highscore buckets + finish record + R2 hydrate hook');
   } finally {
     try {
       if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
@@ -422,6 +427,11 @@ section('static UI markers');
   assert.ok(html.includes('class="brand home-enter"') || html.includes('home-enter'));
   assert.ok(js.includes("e.key === 'Tab'"));
   assert.ok(js.includes('requestSubmit'));
+  assert.ok(
+    js.includes('function moveActive') && js.includes('input.value = title') || js.includes('input.value = currentTitle'),
+    'Tab/arrow selection fills guessInput'
+  );
+  assert.ok(js.includes('setSelectionRange'), 'cursor at end after Tab fill');
   assert.ok(js.includes('buildRaceTitleHint') || js.includes('titleHint') || js.includes('updateRaceTitleHint'));
   assert.ok(js.includes('function focusGuessInput'), 'targeted focus helper');
   assert.ok(js.includes('function renderRaceStandingsList'), 'standings helper clears list');
@@ -450,6 +460,11 @@ section('static UI markers');
   assert.ok(html.includes('id="standingsTitle"') || html.includes('Gesamtwertung'), 'finished standings title');
   assert.ok(css.includes('.round-chip'), 'round chip style');
   assert.ok(css.includes('min(70vh, 640px)') || css.includes('min(70vh,640px)'), 'larger recap panel');
+  const hsServer = fs.readFileSync(path.join(root, 'server', 'raceHighscores.js'), 'utf8');
+  const indexJs = fs.readFileSync(path.join(root, 'server', 'index.js'), 'utf8');
+  assert.ok(hsServer.includes('hydrateFromR2'), 'highscores hydrate from R2');
+  assert.ok(hsServer.includes('meta/race-highscores.json'), 'durable R2 object key');
+  assert.ok(indexJs.includes('hydrateFromR2'), 'server hydrates highscores on start');
   console.log('ok: html/js/css markers');
 }
 
@@ -525,6 +540,10 @@ section('live catalog + socket syncReveal');
     });
     assert.strictEqual(hsBody.rounds, 5);
     assert.ok(Array.isArray(hsBody.entries));
+    assert.ok(
+      /highscores:/i.test(boot) || /highscores hydrate/i.test(boot) || /highscores: local only/i.test(boot),
+      'boot logs highscore hydrate status'
+    );
     console.log('ok: race-highscores API');
 
     let ioClient;
