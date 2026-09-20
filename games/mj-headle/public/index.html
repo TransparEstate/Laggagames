@@ -23,10 +23,10 @@
 
   <main>
     <section id="view-home" class="view view-home">
-      <p class="brand">MJ Headle</p>
-      <h1 class="tag">Errate den Song am ersten Beat</h1>
-      <p class="lede">Wähle deinen Modus — Solo startet direkt, Party über die Lagga-Lobby.</p>
-      <div class="home-layout">
+      <p class="brand home-enter" style="--d:0">MJ Headle</p>
+      <h1 class="tag home-enter" style="--d:1">Errate den Song am ersten Beat</h1>
+      <p class="lede home-enter" style="--d:2">Wähle Classic oder Race.</p>
+      <div class="home-layout home-enter" style="--d:3">
         <div class="mode-pick" role="group" aria-label="Spielmodus">
           <button type="button" class="mode-card" id="modeCardClassic" data-mode="classic">
             <span class="mode-card-kicker">Stufen</span>
@@ -49,8 +49,8 @@
           <p class="hint" id="homeHighscoreEmpty" hidden>Noch keine Rekorde für diese Rundenzahl.</p>
         </aside>
       </div>
-      <p class="hint" id="homeHint">Tippe Classic oder Race — ohne Party startest du Solo.</p>
-      <p class="meta" id="catalogMeta">Katalog wird geladen…</p>
+      <p class="hint home-enter" id="homeHint" style="--d:4">Ohne Party startest du Solo · Party über die Lagga-Lobby</p>
+      <p class="meta home-enter" id="catalogMeta" style="--d:5">Katalog wird geladen…</p>
     </section>
 
     <section id="view-lobby" class="view" hidden>
@@ -119,10 +119,6 @@
         <span class="play-orb-core">▶</span>
       </button>
       <p class="play-caption" id="playCaption">Ab Cue hören</p>
-      <label class="volume-field volume-field-play">
-        <span>Lautstärke</span>
-        <input type="range" id="audioVolumePlay" min="0" max="100" value="80" step="1" aria-label="Lautstärke" />
-      </label>
       <form id="guessForm" class="guess-form" autocomplete="off">
         <label class="sr-only" for="guessInput">Songtitel</label>
         <div class="search-wrap">
