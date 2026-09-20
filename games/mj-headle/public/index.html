@@ -105,7 +105,7 @@
 
     <section id="view-play" class="view view-play" hidden>
       <div class="round-meta">
-        <span id="roundLabel">Runde 1/5</span>
+        <span class="round-chip" id="roundLabel">Runde 1/5</span>
         <span id="stageLabel">0,1s</span>
       </div>
       <div class="stage-track" id="stageTrack" aria-label="Clip-Stufen"></div>
@@ -139,6 +139,7 @@
     </section>
 
     <section id="view-wait" class="view view-wait" hidden>
+      <p class="round-chip" id="waitRoundLabel">Runde —</p>
       <p class="brand brand-sm">Warten</p>
       <h2>Du bist durch</h2>
       <p class="lede" id="waitHint">Warte auf die anderen Spieler — ohne Zwischenergebnis.</p>
@@ -146,6 +147,7 @@
     </section>
 
     <section id="view-reveal" class="view" hidden>
+      <p class="round-chip" id="revealRoundLabel">Runde —</p>
       <p class="reveal-flash title-letters" id="revealTitle" aria-live="polite">—</p>
       <p class="lede" id="revealSub"></p>
       <div class="reveal-audio">
@@ -173,6 +175,7 @@
       <h2 class="winner-name" id="winnerName">—</h2>
       <p class="winner-score" id="winnerScore"></p>
       <p class="highscore-banner" id="finishedHighscoreBanner" hidden></p>
+      <h3 class="standings-title" id="standingsTitle">Gesamtwertung</h3>
       <ol class="leaderboard" id="leaderboard"></ol>
       <div class="highscore-panel" id="finishedHighscorePanel" hidden>
         <h3 class="highscore-title">Race Allzeit · <span id="finishedHighscoreRounds">5</span> Runden</h3>
