@@ -48,6 +48,88 @@
   let letterRevealTimer = null;
   let countUpRafs = [];
   let highscoreCache = { rounds: null, board: null };
+  const VOLUME_KEY = 'mj-headle-volume';
+  let seekDragging = false;
+
+  function getVolume() {
+    const raw = Number(localStorage.getItem(VOLUME_KEY));
+    if (!Number.isFinite(raw)) return 0.8;
+    return Math.max(0, Math.min(1, raw));
+  }
+
+  function setVolume(v) {
+    const next = Math.max(0, Math.min(1, Number(v)));
+    localStorage.setItem(VOLUME_KEY, String(next));
+    if (audio) {
+      try {
+        audio.volume = next;
+      } catch { /* ignore */ }
+    }
+    syncVolumeSliders(next);
+    return next;
+  }
+
+  function syncVolumeSliders(v) {
+    const pct = Math.round((v != null ? v : getVolume()) * 100);
+    const play = $('audioVolumePlay');
+    const reveal = $('audioVolumeReveal');
+    if (play && Number(play.value) !== pct) play.value = String(pct);
+    if (reveal && Number(reveal.value) !== pct) reveal.value = String(pct);
+  }
+
+  function applyVolume(el) {
+    if (!el) return;
+    try {
+      el.volume = getVolume();
+    } catch { /* ignore */ }
+  }
+
+  function fmtClock(sec) {
+    const s = Math.max(0, Math.floor(Number(sec) || 0));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m}:${String(r).padStart(2, '0')}`;
+  }
+
+  function resetRevealTransport() {
+    const transport = $('revealTransport');
+    const seek = $('revealSeek');
+    const time = $('revealTime');
+    if (transport) transport.hidden = true;
+    if (seek) {
+      seek.value = '0';
+      seek.max = '0';
+    }
+    if (time) time.textContent = '0:00 / 0:00';
+  }
+
+  function updateRevealTransport(el) {
+    const transport = $('revealTransport');
+    const seek = $('revealSeek');
+    const time = $('revealTime');
+    if (!el || !transport || !seek || !time) return;
+    const dur = Number.isFinite(el.duration) ? el.duration : 0;
+    if (dur > 0) {
+      transport.hidden = false;
+      seek.max = String(dur);
+      if (!seekDragging) seek.value = String(el.currentTime || 0);
+      time.textContent = `${fmtClock(el.currentTime)} / ${fmtClock(dur)}`;
+    }
+  }
+
+  function updateRaceTitleHint(cur) {
+    const el = $('raceTitleHint');
+    if (!el) return;
+    const done = !!cur?.myGuess?.done;
+    const hint = cur?.titleHint;
+    if (!raceModeOn() || done || !hint || seesSharedReveal()) {
+      el.hidden = true;
+      el.textContent = '';
+      return;
+    }
+    el.hidden = false;
+    el.textContent = hint;
+  }
 
   function show(name) {
     Object.entries(views).forEach(([key, el]) => {
@@ -444,33 +526,54 @@
   function bindGuessSearch() {
     const input = $('guessInput');
     const box = $('guessResults');
+    const form = $('guessForm');
     if (!input || !box) return;
+
+    function moveActive(delta) {
+      const items = [...box.querySelectorAll('li[data-title]')];
+      if (!items.length || box.hidden) return false;
+      const idx = items.findIndex((el) => el.classList.contains('active'));
+      const base = idx < 0 ? 0 : idx;
+      const next = items[(base + delta + items.length) % items.length];
+      items.forEach((el) => el.classList.remove('active'));
+      next.classList.add('active');
+      next.scrollIntoView({ block: 'nearest' });
+      return true;
+    }
+
     input.addEventListener('input', () => renderGuessResults(input.value, { open: true }));
     input.addEventListener('focus', () => renderGuessResults(input.value, { open: true }));
     input.addEventListener('keydown', (e) => {
       const items = [...box.querySelectorAll('li[data-title]')];
-      if (!items.length) return;
-      const idx = items.findIndex((el) => el.classList.contains('active'));
-      if (e.key === 'ArrowDown') {
+      const listOpen = !box.hidden && items.length > 0;
+
+      if (e.key === 'Tab' && listOpen) {
         e.preventDefault();
-        const next = items[(idx + 1) % items.length];
-        items.forEach((el) => el.classList.remove('active'));
-        next.classList.add('active');
-        next.scrollIntoView({ block: 'nearest' });
-      } else if (e.key === 'ArrowUp') {
+        moveActive(e.shiftKey ? -1 : 1);
+        return;
+      }
+      if (e.key === 'ArrowDown' && listOpen) {
         e.preventDefault();
-        const next = items[(idx - 1 + items.length) % items.length];
-        items.forEach((el) => el.classList.remove('active'));
-        next.classList.add('active');
-        next.scrollIntoView({ block: 'nearest' });
-      } else if (e.key === 'Enter') {
-        const active = items.find((el) => el.classList.contains('active'));
-        if (active && box.hidden === false) {
+        moveActive(1);
+        return;
+      }
+      if (e.key === 'ArrowUp' && listOpen) {
+        e.preventDefault();
+        moveActive(-1);
+        return;
+      }
+      if (e.key === 'Enter' && listOpen) {
+        const active = items.find((el) => el.classList.contains('active')) || items[0];
+        if (active) {
           e.preventDefault();
           input.value = active.dataset.title || active.textContent;
           renderGuessResults('', { open: false });
+          if (form && typeof form.requestSubmit === 'function') form.requestSubmit();
+          else form?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
         }
-      } else if (e.key === 'Escape') {
+        return;
+      }
+      if (e.key === 'Escape') {
         renderGuessResults('', { open: false });
       }
     });
@@ -583,6 +686,7 @@
     revealPlaying = false;
     const revealBtn = $('btnRevealPlay');
     if (revealBtn) revealBtn.textContent = '▶ Song anhören';
+    resetRevealTransport();
     setPlayUi({ playing: false, caption: expected ? 'Ab Cue hören' : undefined, disabled: false });
   }
 
@@ -602,6 +706,7 @@
     const el = new Audio(src);
     audio = el;
     el.preload = 'auto';
+    applyVolume(el);
     setPlayUi({
       playing: false,
       caption: atServerMs != null ? 'Startet gleich…' : 'Lädt Clip…',
@@ -741,6 +846,7 @@
       if (hud) hud.hidden = false;
       renderRaceStandingsList(cur.standings || []);
       maybeShowErsttipp(cur);
+      updateRaceTitleHint(cur);
       const playAt = cur.playAt;
       const endsAt = cur.endsAt;
       const now = serverNowApprox();
@@ -782,23 +888,32 @@
     if (!cur?.songId || !seesSharedReveal()) return;
     if (!auto && revealPlaying && audio) {
       stopAudio({ expected: true });
+      resetRevealTransport();
       return;
     }
     stopAudio({ expected: true });
+    resetRevealTransport();
     const token = audioToken;
     // Full song from the start (not from cue) on reveal.
     const url = `${GB}/api/audio/${encodeURIComponent(cur.songId)}?t=${Date.now()}`;
     const el = new Audio(url);
     audio = el;
     el.preload = 'auto';
+    applyVolume(el);
     const btn = $('btnRevealPlay');
     if (btn) btn.textContent = 'Lädt…';
+
+    const wireTransport = () => {
+      if (token !== audioToken || audio !== el) return;
+      updateRevealTransport(el);
+    };
 
     const start = () => {
       if (token !== audioToken || audio !== el) return;
       try {
         el.currentTime = 0;
       } catch { /* seek best-effort */ }
+      wireTransport();
       const p = el.play();
       if (p && p.catch) {
         p.catch((err) => {
@@ -812,15 +927,19 @@
       if (btn) btn.textContent = '❚❚ Pause';
     };
 
+    el.addEventListener('loadedmetadata', wireTransport);
+    el.addEventListener('timeupdate', wireTransport);
     el.addEventListener('ended', () => {
       if (token !== audioToken) return;
       revealPlaying = false;
       if (btn) btn.textContent = '▶ Song anhören';
+      updateRevealTransport(el);
     });
     el.addEventListener('error', () => {
       if (token !== audioToken) return;
       revealPlaying = false;
       if (btn) btn.textContent = '▶ Audio fehlt';
+      resetRevealTransport();
     });
 
     if (el.readyState >= 2) start();
@@ -843,6 +962,7 @@
     clearLetterReveal();
     clearCountUps();
     renderRaceStandingsList([]);
+    updateRaceTitleHint(null);
     if (state?.current) {
       state.current.standings = [];
       state.current.firstBonusAwarded = false;
@@ -1030,6 +1150,7 @@
         });
       }
       maybeShowErsttipp(cur);
+      updateRaceTitleHint(cur);
       return;
     }
     // Classic: Autoplay current stage once per stage (round start + after skip/wrong).
@@ -1456,6 +1577,36 @@
     playClip();
   });
   $('btnRevealPlay')?.addEventListener('click', () => playRevealTrack({ auto: false }));
+
+  function onVolumeInput(e) {
+    const pct = Number(e.target.value);
+    if (!Number.isFinite(pct)) return;
+    setVolume(pct / 100);
+  }
+  $('audioVolumePlay')?.addEventListener('input', onVolumeInput);
+  $('audioVolumeReveal')?.addEventListener('input', onVolumeInput);
+  syncVolumeSliders(getVolume());
+
+  const seekEl = $('revealSeek');
+  if (seekEl) {
+    seekEl.addEventListener('pointerdown', () => {
+      seekDragging = true;
+    });
+    const endDrag = () => {
+      seekDragging = false;
+    };
+    seekEl.addEventListener('pointerup', endDrag);
+    seekEl.addEventListener('pointercancel', endDrag);
+    seekEl.addEventListener('input', () => {
+      if (!audio) return;
+      const v = Number(seekEl.value);
+      if (!Number.isFinite(v)) return;
+      try {
+        audio.currentTime = v;
+      } catch { /* ignore */ }
+      updateRevealTransport(audio);
+    });
+  }
 
   function applyAckState(res) {
     if (res?.state) {

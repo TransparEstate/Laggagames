@@ -9,6 +9,61 @@ const RACE_MIN_POINTS = 10;
 const RACE_FIRST_BONUS = 25;
 const RACE_GO_LEAD_MS = 1500;
 const RACE_ARM_TIMEOUT_MS = 8000;
+const RACE_TITLE_HINT_MS = 1200;
+const RACE_TITLE_HINT_CAP = 0.55;
+
+function hashSeed(str) {
+  let h = 2166136261;
+  const s = String(str || '');
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function seededShuffle(arr, seed) {
+  const a = arr.slice();
+  let s = seed >>> 0;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    const j = s % (i + 1);
+    const tmp = a[i];
+    a[i] = a[j];
+    a[j] = tmp;
+  }
+  return a;
+}
+
+function isHintLetter(ch) {
+  return /[A-Za-zÄÖÜäöüß0-9]/.test(ch);
+}
+
+/**
+ * Partial title drip after first correct race tip.
+ * Never reveals more than RACE_TITLE_HINT_CAP of letter chars during play.
+ */
+function buildRaceTitleHint(title, firstCorrectAt, now, songId) {
+  if (firstCorrectAt == null || !title) return null;
+  const chars = [...String(title)];
+  const letterIdx = [];
+  for (let i = 0; i < chars.length; i++) {
+    if (isHintLetter(chars[i])) letterIdx.push(i);
+  }
+  if (!letterIdx.length) return String(title);
+  const order = seededShuffle(letterIdx, hashSeed(songId || title));
+  const elapsed = Math.max(0, (Number(now) || Date.now()) - Number(firstCorrectAt));
+  const byTime = Math.floor(elapsed / RACE_TITLE_HINT_MS) + 1;
+  const cap = Math.max(1, Math.floor(letterIdx.length * RACE_TITLE_HINT_CAP));
+  const revealCount = Math.min(cap, byTime, letterIdx.length);
+  const revealed = new Set(order.slice(0, revealCount));
+  return chars
+    .map((ch, i) => {
+      if (!isHintLetter(ch)) return ch;
+      return revealed.has(i) ? ch : '·';
+    })
+    .join('');
+}
 
 function normalizeGuess(text) {
   return String(text || '')
@@ -281,6 +336,11 @@ function publicState(room, forSocketId) {
       raceClipSec: race ? RACE_CLIP_SEC : null,
       raceGoFired: !!room.current.goFired,
       firstBonusAwarded: !!room.current.firstCorrectId,
+      firstCorrectAt: race && room.current.firstCorrectAt ? room.current.firstCorrectAt : null,
+      titleHint:
+        race && room.current.firstCorrectAt && !showAnswer
+          ? buildRaceTitleHint(room.current.title, room.current.firstCorrectAt, now, room.current.songId)
+          : null,
       pointsPreview,
       standings: race ? raceStandings(room) : [],
       serverNow: now,
@@ -472,6 +532,7 @@ function beginRound(room, playableSongs) {
     playAt: null,
     endsAt: null,
     firstCorrectId: null,
+    firstCorrectAt: null,
     armed: new Set(),
     goFired: false,
   };
@@ -685,7 +746,10 @@ function submitGuess(room, socketId, text) {
     const elapsed = Math.max(0, now - room.current.playAt);
     const base = racePointsForElapsed(elapsed);
     const isFirst = !room.current.firstCorrectId;
-    if (isFirst) room.current.firstCorrectId = socketId;
+    if (isFirst) {
+      room.current.firstCorrectId = socketId;
+      room.current.firstCorrectAt = now;
+    }
     const bonus = isFirst ? RACE_FIRST_BONUS : 0;
     const points = base + bonus;
     const player = room.players.find((p) => p.id === socketId);
@@ -900,6 +964,9 @@ module.exports = {
   RACE_FIRST_BONUS,
   RACE_GO_LEAD_MS,
   RACE_ARM_TIMEOUT_MS,
+  RACE_TITLE_HINT_MS,
+  RACE_TITLE_HINT_CAP,
+  buildRaceTitleHint,
   createEmptyRoom,
   publicState,
   addPlayer,

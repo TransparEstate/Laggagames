@@ -93,6 +93,26 @@ function clearRaceTimers(room) {
     clearTimeout(room._raceEndTimer);
     room._raceEndTimer = null;
   }
+  if (room._titleHintTimer) {
+    clearInterval(room._titleHintTimer);
+    room._titleHintTimer = null;
+  }
+}
+
+function scheduleTitleHintBroadcast(room) {
+  if (!room || !game.raceOn(room) || !room.current?.firstCorrectAt) return;
+  if (room._titleHintTimer) return;
+  const ms = game.RACE_TITLE_HINT_MS || 1200;
+  room._titleHintTimer = setInterval(() => {
+    if (!room.current || room.phase !== 'playing' || !room.current.firstCorrectAt) {
+      if (room._titleHintTimer) {
+        clearInterval(room._titleHintTimer);
+        room._titleHintTimer = null;
+      }
+      return;
+    }
+    broadcastRoom(room);
+  }, ms);
 }
 
 function scheduleRaceEnd(room) {
@@ -574,6 +594,9 @@ io.on('connection', (socket) => {
     if (result.error) return typeof ack === 'function' && ack(result);
     if (result.correct && game.raceOn(room) && room.phase === 'reveal') {
       clearRaceTimers(room);
+    }
+    if (result.correct && result.firstBonus && game.raceOn(room) && room.phase === 'playing') {
+      scheduleTitleHintBroadcast(room);
     }
     broadcastRoom(room);
     if (typeof ack === 'function') {
