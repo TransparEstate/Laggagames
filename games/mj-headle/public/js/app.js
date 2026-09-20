@@ -552,13 +552,15 @@
     $('catalogMeta').textContent = meta;
   }
 
+  const GUESS_SUGGEST_LIMIT = 12;
+
   function filterSongs(query) {
     const q = String(query || '')
       .toLowerCase()
       .normalize('NFKD')
       .replace(/[\u0300-\u036f]/g, '')
       .trim();
-    if (!q) return catalog.slice();
+    if (!q) return [];
     return catalog.filter((s) => {
       const t = String(s.title || '')
         .toLowerCase()
@@ -571,12 +573,13 @@
   function renderGuessResults(query, { open } = { open: true }) {
     const box = $('guessResults');
     if (!box) return;
-    if (!open) {
+    const q = String(query || '').trim();
+    if (!open || !q) {
       box.hidden = true;
       box.innerHTML = '';
       return;
     }
-    const hits = filterSongs(query);
+    const hits = filterSongs(q).slice(0, GUESS_SUGGEST_LIMIT);
     if (!hits.length) {
       box.innerHTML = '<li class="empty">Kein Treffer im Katalog</li>';
       box.hidden = false;
@@ -597,6 +600,16 @@
     const form = $('guessForm');
     if (!input || !box) return;
 
+    function fillInputFromTitle(title) {
+      const t = String(title || '');
+      input.value = t;
+      try {
+        input.setSelectionRange(t.length, t.length);
+      } catch {
+        /* ignore */
+      }
+    }
+
     function moveActive(delta) {
       const items = [...box.querySelectorAll('li[data-title]')];
       if (!items.length || box.hidden) return false;
@@ -605,17 +618,11 @@
       const current = items[idx];
       const currentTitle = current.dataset.title || current.textContent || '';
 
-      // First Tab/arrow: adopt the already-highlighted hit into the input so it's obvious.
+      // First Tab/arrow: put highlighted hit into the input so selection is obvious.
       if (input.value !== currentTitle) {
         items.forEach((el) => el.classList.remove('active'));
         current.classList.add('active');
-        input.value = currentTitle;
-        const len = input.value.length;
-        try {
-          input.setSelectionRange(len, len);
-        } catch {
-          /* ignore */
-        }
+        fillInputFromTitle(currentTitle);
         current.scrollIntoView({ block: 'nearest' });
         return true;
       }
@@ -623,19 +630,19 @@
       const next = items[(idx + delta + items.length) % items.length];
       items.forEach((el) => el.classList.remove('active'));
       next.classList.add('active');
-      const title = next.dataset.title || next.textContent || '';
-      input.value = title;
-      try {
-        input.setSelectionRange(title.length, title.length);
-      } catch {
-        /* ignore */
-      }
+      fillInputFromTitle(next.dataset.title || next.textContent || '');
       next.scrollIntoView({ block: 'nearest' });
       return true;
     }
 
-    input.addEventListener('input', () => renderGuessResults(input.value, { open: true }));
-    input.addEventListener('focus', () => renderGuessResults(input.value, { open: true }));
+    function openSuggestions() {
+      renderGuessResults(input.value, { open: true });
+    }
+
+    input.addEventListener('input', openSuggestions);
+    input.addEventListener('focus', openSuggestions);
+    // Clicking an already-focused field must reopen the list (focus won't fire again).
+    input.addEventListener('click', openSuggestions);
     input.addEventListener('keydown', (e) => {
       const items = [...box.querySelectorAll('li[data-title]')];
       const listOpen = !box.hidden && items.length > 0;
@@ -655,11 +662,12 @@
         moveActive(-1);
         return;
       }
-      if (e.key === 'Enter' && listOpen) {
-        const active = items.find((el) => el.classList.contains('active')) || items[0];
-        if (active) {
+      if (e.key === 'Enter') {
+        // Enter = rate what's in the field (Tab/click choose the title).
+        // Do not overwrite typed text with the first/active hit — that hid the list
+        // feeling broken after a wrong auto-pick from a full-catalog dropdown.
+        if (listOpen) {
           e.preventDefault();
-          input.value = active.dataset.title || active.textContent;
           renderGuessResults('', { open: false });
           if (form && typeof form.requestSubmit === 'function') form.requestSubmit();
           else form?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
@@ -674,7 +682,7 @@
       const li = e.target.closest('li[data-title]');
       if (!li) return;
       e.preventDefault();
-      input.value = li.dataset.title || li.textContent;
+      fillInputFromTitle(li.dataset.title || li.textContent);
       renderGuessResults('', { open: false });
     });
     document.addEventListener('click', (e) => {

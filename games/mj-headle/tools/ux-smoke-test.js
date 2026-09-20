@@ -427,9 +427,12 @@ section('static UI markers');
   assert.ok(html.includes('class="brand home-enter"') || html.includes('home-enter'));
   assert.ok(js.includes("e.key === 'Tab'"));
   assert.ok(js.includes('requestSubmit'));
+  assert.ok(js.includes('GUESS_SUGGEST_LIMIT') || js.includes('slice(0, GUESS_SUGGEST_LIMIT)'), 'capped suggest list');
+  assert.ok(js.includes("addEventListener('click', openSuggestions)") || js.includes('openSuggestions'), 'reopen list on click');
+  assert.ok(js.includes('fillInputFromTitle') || js.includes('input.value = currentTitle'), 'Tab fills input');
   assert.ok(
-    js.includes('function moveActive') && js.includes('input.value = title') || js.includes('input.value = currentTitle'),
-    'Tab/arrow selection fills guessInput'
+    /if \(!q\) return \[\];/.test(js) || js.includes("if (!open || !q)"),
+    'no full-catalog dropdown on empty query'
   );
   assert.ok(js.includes('setSelectionRange'), 'cursor at end after Tab fill');
   assert.ok(js.includes('buildRaceTitleHint') || js.includes('titleHint') || js.includes('updateRaceTitleHint'));
