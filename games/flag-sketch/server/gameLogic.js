@@ -2,10 +2,10 @@ const path = require('path');
 const fs = require('fs');
 
 const flagsData = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '..', 'data', 'flags.json'), 'utf8')
+  fs.readFileSync(path.join(__dirname, '..', 'assets', 'flags.json'), 'utf8')
 );
 const roasts = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '..', 'data', 'roasts.json'), 'utf8')
+  fs.readFileSync(path.join(__dirname, '..', 'assets', 'roasts.json'), 'utf8')
 );
 
 const HINT_KEYS = [

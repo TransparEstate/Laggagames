@@ -19,8 +19,8 @@ Blindhälften mit **Text-Brief** (kein Flaggenbild), Composite-Naht, Lookalike-R
 
 ## Daten
 
-- `data/flags.json` — Briefe, Meta, Lookalike-Cluster
-- `data/roasts.json` — Tonfallen-Copy
+- `assets/flags.json` — Briefe, Meta, Lookalike-Cluster
+- `assets/roasts.json` — Tonfallen-Copy
 
 ## Checks
 
