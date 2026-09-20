@@ -97,6 +97,7 @@ Bucket: **`lagga-mj-headle`** (bereits angelegt).
 
 - `catalog/songs.json` — Manifest
 - `audio/<song-id>.mp3` (auch `.m4a` / `.ogg` / `.wav`)
+- `meta/race-highscores.json` — Race-Allzeit-Scoreboard (überlebt Redeploys)
 
 ### Env (in `games/mj-headle/.env`)
 
