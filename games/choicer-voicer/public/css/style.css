@@ -965,9 +965,33 @@ select {
   color: var(--text);
 }
 
+.projects-card {
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.projects-drawer {
+  margin: 0;
+}
+
+.projects-drawer summary {
+  gap: 10px;
+}
+
+.projects-drawer summary .btn {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.projects-drawer[open] {
+  padding-bottom: 12px;
+}
+
 .project-list {
   display: grid;
-  gap: 10px;
+  gap: 6px;
 }
 
 .project-row {
@@ -975,11 +999,11 @@ select {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 12px;
+  gap: 6px 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
   background: var(--bg-elevated);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .project-row-main {
@@ -989,18 +1013,24 @@ select {
 
 .project-row-main strong {
   display: block;
-  font-size: 1rem;
+  font-size: 0.92rem;
+  font-weight: 600;
 }
 
 .project-row-main .muted {
-  margin: 2px 0 0;
-  font-size: 0.82rem;
+  margin: 1px 0 0;
+  font-size: 0.78rem;
 }
 
 .project-row-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
+}
+
+.project-row-actions .btn {
+  padding: 4px 8px;
+  font-size: 0.78rem;
 }
 
 /* Dashboard */

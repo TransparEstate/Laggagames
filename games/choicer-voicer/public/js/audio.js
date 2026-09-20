@@ -14,8 +14,13 @@
   let monitorAnalyser = null;
   let livePeaks = [];
   let liveRaf = null;
-  let liveCollectTimer = null;
   let liveStartedAt = 0;
+  let liveMonitorActive = false;
+  let liveBucketFill = 0;
+  let liveBucketMin = 0;
+  let liveBucketMax = 0;
+  let liveSamplesPerBucket = 960; // ~20 ms @ 48 kHz
+  const LIVE_BUCKET_SEC = 0.02;
 
   /** Mic → nur Gain → MediaRecorder (sauber, ohne Voice-FX) */
   let recordCtx = null;
@@ -213,6 +218,36 @@ registerProcessor('${PCM_WORKLET_NAME}', CvPcmCaptureProcessor);
     if (!pcmActive || !input?.length) return;
     pcmChunks.push(input instanceof Float32Array ? input : new Float32Array(input));
     pcmSamples += input.length;
+    // Live-Peaks ab Cue — unabhängig vom UI-Monitor, damit kein Sample verloren geht
+    if (pcmCueSample != null) {
+      appendLivePeaksFromSamples(input);
+    }
+  }
+
+  function resetLivePeakBuilder(sampleRate) {
+    livePeaks = [];
+    liveBucketFill = 0;
+    liveBucketMin = 0;
+    liveBucketMax = 0;
+    const sr = sampleRate || recordCtx?.sampleRate || 48000;
+    liveSamplesPerBucket = Math.max(1, Math.round(sr * LIVE_BUCKET_SEC));
+  }
+
+  function appendLivePeaksFromSamples(samples) {
+    if (!samples?.length) return;
+    for (let i = 0; i < samples.length; i++) {
+      const v = samples[i];
+      if (v < liveBucketMin) liveBucketMin = v;
+      if (v > liveBucketMax) liveBucketMax = v;
+      liveBucketFill += 1;
+      if (liveBucketFill >= liveSamplesPerBucket) {
+        livePeaks.push({ min: liveBucketMin, max: liveBucketMax });
+        liveBucketFill = 0;
+        liveBucketMin = 0;
+        liveBucketMax = 0;
+        if (livePeaks.length > 600) livePeaks.splice(0, livePeaks.length - 480);
+      }
+    }
   }
 
   /** AudioContext schon am Klick öffnen — Safari braucht die User-Geste. */
@@ -227,6 +262,10 @@ registerProcessor('${PCM_WORKLET_NAME}', CvPcmCaptureProcessor);
       }
     }
     if (recordCtx.state === 'suspended') await recordCtx.resume();
+    // Worklet früh laden, damit der erste REC-Klick nicht darauf wartet
+    try {
+      await ensurePcmWorklet(recordCtx);
+    } catch (_) {}
     return recordCtx;
   }
 
@@ -241,18 +280,14 @@ registerProcessor('${PCM_WORKLET_NAME}', CvPcmCaptureProcessor);
   }
 
   function stopLiveMonitor() {
+    liveMonitorActive = false;
     if (liveRaf) {
       cancelAnimationFrame(liveRaf);
       liveRaf = null;
     }
-    if (liveCollectTimer) {
-      clearInterval(liveCollectTimer);
-      liveCollectTimer = null;
-    }
     try {
       monitorSource?.disconnect();
     } catch (_) {}
-    // Processed tap analyser lives on recordCtx — only disconnect, don't close recordCtx
     if (monitorAnalyser && recordChain?.monitorTap) {
       try {
         recordChain.monitorTap.disconnect(monitorAnalyser);
@@ -270,84 +305,57 @@ registerProcessor('${PCM_WORKLET_NAME}', CvPcmCaptureProcessor);
   }
 
   /**
-   * Collect mic peaks while recording for live waveform overlay.
-   * Uses the processed voice chain when recording is active.
-   * @param {(peaks: {min:number,max:number}[], elapsedMs: number) => void} onFrame
+   * Live waveform from the same PCM capture buffer (sample-accurate vs. Analyser).
+   * Peaks start at the recording cue; time axis = (pcmSamples - cue) / sampleRate.
+   * @param {(peaks: {min:number,max:number}[], elapsedMs: number, meta: object) => void} onFrame
    */
   async function startLiveMonitor(onFrame) {
     stopLiveMonitor();
-    livePeaks = [];
-
-    const useProcessed = !!(recordCtx && recordChain?.monitorTap);
-    let analyser;
-    let data;
-
-    if (useProcessed) {
-      monitorCtx = null;
-      monitorSource = null;
-      monitorAnalyser = recordCtx.createAnalyser();
-      monitorAnalyser.fftSize = 1024;
-      monitorAnalyser.smoothingTimeConstant = 0.15;
-      recordChain.monitorTap.connect(monitorAnalyser);
-      analyser = monitorAnalyser;
-    } else {
-      const stream = await ensureMic();
-      monitorCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (monitorCtx.state === 'suspended') await monitorCtx.resume();
-      monitorSource = monitorCtx.createMediaStreamSource(stream);
-      monitorAnalyser = monitorCtx.createAnalyser();
-      monitorAnalyser.fftSize = 1024;
-      monitorAnalyser.smoothingTimeConstant = 0.15;
-      monitorSource.connect(monitorAnalyser);
-      analyser = monitorAnalyser;
-    }
-
-    data = new Float32Array(analyser.fftSize);
-    liveStartedAt = performance.now();
-
-    liveCollectTimer = setInterval(() => {
-      if (!analyser) return;
-      analyser.getFloatTimeDomainData(data);
-      let min = 0;
-      let max = 0;
-      for (let i = 0; i < data.length; i++) {
-        const v = data[i];
-        if (v < min) min = v;
-        if (v > max) max = v;
-      }
-      if (Math.abs(min) < 0.01 && Math.abs(max) < 0.01) {
-        min = 0;
-        max = 0;
-      }
-      livePeaks.push({ min, max });
-      // Cap history so GC / redraw stay cheap during long takes
-      if (livePeaks.length > 600) livePeaks.splice(0, livePeaks.length - 480);
-    }, 40);
+    // Peak-Reset übernimmt markRecordingCue (Sample-Null am REC-Start)
+    if (!livePeaks) livePeaks = [];
+    liveMonitorActive = true;
+    if (!liveStartedAt) liveStartedAt = performance.now();
 
     let lastFrameAt = 0;
     const tick = () => {
-      if (!analyser) return;
+      if (!liveMonitorActive) return;
       const now = performance.now();
-      // ~20 fps UI — weniger Main-Thread-Last während PCM-Capture
       if (now - lastFrameAt >= 48) {
         lastFrameAt = now;
-        const elapsedMs = now - liveStartedAt;
-        if (typeof onFrame === 'function') onFrame(livePeaks, elapsedMs);
+        const elapsedSec = getLivePcmElapsedSec();
+        const elapsedMs = elapsedSec * 1000;
+        if (typeof onFrame === 'function') {
+          onFrame(livePeaks, elapsedMs, {
+            elapsedSec,
+            bucketSec: LIVE_BUCKET_SEC,
+            cued: pcmCueSample != null,
+            sampleRate: recordCtx?.sampleRate || 48000,
+          });
+        }
       }
       liveRaf = requestAnimationFrame(tick);
     };
     liveRaf = requestAnimationFrame(tick);
 
-    return { ok: true, processed: useProcessed };
+    return { ok: true, processed: true, source: 'pcm' };
   }
 
   function getLivePeaks() {
     return livePeaks;
   }
 
+  function getLiveBucketSec() {
+    return LIVE_BUCKET_SEC;
+  }
+
+  function getLivePcmElapsedSec() {
+    if (pcmCueSample == null) return 0;
+    const sr = recordCtx?.sampleRate || 48000;
+    return Math.max(0, (pcmSamples - pcmCueSample) / sr);
+  }
+
   function getLiveElapsedMs() {
-    if (!liveStartedAt) return 0;
-    return performance.now() - liveStartedAt;
+    return getLivePcmElapsedSec() * 1000;
   }
 
   function measurePeak(buffer) {
@@ -772,6 +780,8 @@ registerProcessor('${PCM_WORKLET_NAME}', CvPcmCaptureProcessor);
   /** Sample-Index am Sprech-Cue — Vorlauf wird später verworfen, Inhalt nicht verschoben. */
   function markRecordingCue() {
     pcmCueSample = pcmSamples;
+    resetLivePeakBuilder(recordCtx?.sampleRate);
+    liveStartedAt = performance.now();
     return pcmCueSample;
   }
 
@@ -981,6 +991,8 @@ registerProcessor('${PCM_WORKLET_NAME}', CvPcmCaptureProcessor);
     stopLiveMonitor,
     getLivePeaks,
     getLiveElapsedMs,
+    getLivePcmElapsedSec,
+    getLiveBucketSec,
     blobToBase64,
     playUrl,
     playBase64,

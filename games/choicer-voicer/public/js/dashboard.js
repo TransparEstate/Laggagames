@@ -162,10 +162,16 @@
     }
   }
 
+  function updateProjectsSummary(count) {
+    const label = document.getElementById('projectsSummaryLabel');
+    if (label) label.textContent = `Gespeicherte Projekte (${count})`;
+  }
+
   function renderProjects() {
     if (!projectList || inParty) return;
     const filter = projectPackFilter?.value || '';
     const rows = cachedProjects.filter((p) => !filter || p.packId === filter);
+    updateProjectsSummary(cachedProjects.length);
     if (!rows.length) {
       projectList.innerHTML =
         '<p class="muted">Noch keine lokalen Projekte — nach der Premiere speichern.</p>';
@@ -429,7 +435,11 @@
   projectPackFilter?.addEventListener('change', () => renderProjects());
 
   if (btnImportProjectFile && projectFileInput && !inParty) {
-    btnImportProjectFile.addEventListener('click', () => projectFileInput.click());
+    btnImportProjectFile.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      projectFileInput.click();
+    });
     projectFileInput.addEventListener('change', async () => {
       const file = projectFileInput.files?.[0];
       projectFileInput.value = '';

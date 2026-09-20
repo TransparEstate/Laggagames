@@ -1,6 +1,11 @@
 (function (global) {
   let audioCtx = null;
 
+  /** AudioBuffer → Map(buckets → peaks[]) */
+  const peakCache = new WeakMap();
+  /** Canvas → last sized { cssW, cssH, dpr } */
+  const canvasSizeCache = new WeakMap();
+
   function getCtx() {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -47,47 +52,103 @@
     return peaks;
   }
 
+  function getBufferPeaks(audioBuffer, buckets) {
+    if (!audioBuffer || !buckets) return null;
+    let byBuckets = peakCache.get(audioBuffer);
+    if (!byBuckets) {
+      byBuckets = new Map();
+      peakCache.set(audioBuffer, byBuckets);
+    }
+    if (byBuckets.has(buckets)) return byBuckets.get(buckets);
+    const peaks = peaksFromBuffer(audioBuffer, buckets);
+    byBuckets.set(buckets, peaks);
+    return peaks;
+  }
+
   /**
-   * Peaks aligned to a shared timeline (seconds). Shorter audio only fills its span;
-   * optional offsetSec leaves empty lead-in (or shifts earlier when negative).
+   * Cached peaks for the audio's span on a timeline (no offset applied — draw with translate).
    */
-  function peaksOnTimeline(audioBuffer, buckets, timelineSec, offsetSec = 0) {
+  function peaksForTimelineSpan(audioBuffer, buckets, timelineSec) {
     if (!audioBuffer || !buckets) return null;
     const timeline = Math.max(0.2, Number(timelineSec) || audioBuffer.duration || 0.2);
-    const offset = Number(offsetSec) || 0;
-    const offsetBuckets = Math.round((offset / timeline) * buckets);
     const usedBuckets = Math.max(
       1,
       Math.min(buckets, Math.round((audioBuffer.duration / timeline) * buckets))
     );
-    const partial = peaksFromBuffer(audioBuffer, usedBuckets);
-    const peaks = new Array(buckets);
-    for (let i = 0; i < buckets; i++) {
-      const j = i - offsetBuckets;
-      peaks[i] = j >= 0 && j < usedBuckets ? partial[j] : { min: 0, max: 0 };
-    }
-    return peaks;
+    return {
+      peaks: getBufferPeaks(audioBuffer, usedBuckets),
+      usedBuckets,
+      timeline,
+      duration: audioBuffer.duration,
+    };
   }
 
-  function drawWavePath(ctx, peaks, midY, amp, mirror) {
+  function drawWavePath(ctx, peaks, midY, amp, mirror, totalWidth) {
     const n = peaks.length;
     if (!n) return;
-    const w = ctx.canvas.width / n;
+    const span = Math.max(1, Number(totalWidth) || 1);
+    const step = span / n;
     ctx.beginPath();
     for (let i = 0; i < n; i++) {
-      const x = i * w + w / 2;
+      const x = i * step + step / 2;
       const y = midY - peaks[i].max * amp;
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
     if (mirror) {
       for (let i = n - 1; i >= 0; i--) {
-        const x = i * w + w / 2;
+        const x = i * step + step / 2;
         const y = midY - peaks[i].min * amp;
         ctx.lineTo(x, y);
       }
       ctx.closePath();
     }
+  }
+
+  function ensureCanvasSize(canvas) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const cssW = canvas.clientWidth || 640;
+    const cssH = canvas.clientHeight || 160;
+    const prev = canvasSizeCache.get(canvas);
+    const needResize =
+      !prev || prev.cssW !== cssW || prev.cssH !== cssH || prev.dpr !== dpr;
+    if (needResize) {
+      canvas.width = Math.floor(cssW * dpr);
+      canvas.height = Math.floor(cssH * dpr);
+      canvasSizeCache.set(canvas, { cssW, cssH, dpr });
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, w: cssW, h: cssH, dpr, resized: needResize };
+  }
+
+    function drawBufferedWave(
+      ctx,
+      audioBuffer,
+      buckets,
+      timelineSec,
+      offsetSec,
+      w,
+      mid,
+      amp,
+      fill,
+      stroke,
+      lineWidth = 1.5
+    ) {
+    const span = peaksForTimelineSpan(audioBuffer, buckets, timelineSec);
+    if (!span?.peaks?.length) return;
+    const timeline = span.timeline;
+    const offsetPx = ((Number(offsetSec) || 0) / timeline) * w;
+    const usedWidth = Math.max(2, (span.duration / timeline) * w);
+    ctx.save();
+    ctx.translate(offsetPx, 0);
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = lineWidth;
+    drawWavePath(ctx, span.peaks, mid, amp, true, usedWidth);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
   }
 
   /**
@@ -96,16 +157,7 @@
    * @param {{ original?: AudioBuffer|null, take?: AudioBuffer|null, durationLabel?: string, timelineSec?: number }} opts
    */
   function drawOverlap(canvas, opts = {}) {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const cssW = canvas.clientWidth || 640;
-    const cssH = canvas.clientHeight || 160;
-    canvas.width = Math.floor(cssW * dpr);
-    canvas.height = Math.floor(cssH * dpr);
-
-    const ctx = canvas.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const w = cssW;
-    const h = cssH;
+    const { ctx, w, h } = ensureCanvasSize(canvas);
 
     // Background
     const bg = ctx.createLinearGradient(0, 0, w, h);
@@ -157,23 +209,35 @@
     const takeOffsetSec = audioOffsetSec + timingOffsetSec;
 
     if (original) {
-      const peaks = peaksOnTimeline(original, buckets, timelineSec, audioOffsetSec);
-      ctx.fillStyle = 'rgba(255, 77, 141, 0.28)';
-      ctx.strokeStyle = 'rgba(255, 77, 141, 0.85)';
-      ctx.lineWidth = 1.5;
-      drawWavePath(ctx, peaks, mid, amp, true);
-      ctx.fill();
-      ctx.stroke();
+      drawBufferedWave(
+        ctx,
+        original,
+        buckets,
+        timelineSec,
+        audioOffsetSec,
+        w,
+        mid,
+        amp,
+        'rgba(255, 77, 141, 0.28)',
+        'rgba(255, 77, 141, 0.85)',
+        1.5
+      );
     }
 
     if (take) {
-      const peaks = peaksOnTimeline(take, buckets, timelineSec, takeOffsetSec);
-      ctx.fillStyle = 'rgba(124, 92, 255, 0.32)';
-      ctx.strokeStyle = 'rgba(167, 139, 255, 0.95)';
-      ctx.lineWidth = 1.75;
-      drawWavePath(ctx, peaks, mid, amp, true);
-      ctx.fill();
-      ctx.stroke();
+      drawBufferedWave(
+        ctx,
+        take,
+        buckets,
+        timelineSec,
+        takeOffsetSec,
+        w,
+        mid,
+        amp,
+        'rgba(124, 92, 255, 0.32)',
+        'rgba(167, 139, 255, 0.95)',
+        1.75
+      );
     }
 
     if (!original && !take && !(opts.livePeaks && opts.livePeaks.length)) {
@@ -250,32 +314,27 @@
       ctx.restore();
     }
 
-    // Live take while recording — time-aligned to expected duration (with optional lead-in)
+    // Live take while recording — fixed-time buckets from PCM (not stretched)
     const livePeaks = opts.livePeaks;
+    const liveBucketSec = Math.max(0.008, Number(opts.liveBucketSec) || 0.02);
     const progress = Math.max(0, Math.min(1.05, Number(opts.progress) || 0));
     if (livePeaks && livePeaks.length) {
-      const offsetX = w * Math.max(0, Math.min(1, audioOffsetSec / Math.max(timelineSec, 0.2)));
-      const endX = Math.max(offsetX + 2, w * Math.min(1, progress || 0));
-      const liveWidth = Math.max(2, endX - offsetX);
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(offsetX, 0, liveWidth, h);
-      ctx.clip();
-
       const n = livePeaks.length;
-      const step = liveWidth / Math.max(1, n);
+      ctx.save();
       ctx.fillStyle = 'rgba(124, 92, 255, 0.38)';
       ctx.strokeStyle = 'rgba(196, 181, 255, 1)';
       ctx.lineWidth = 1.8;
       ctx.beginPath();
       for (let i = 0; i < n; i++) {
-        const x = offsetX + i * step + step / 2;
+        const t = audioOffsetSec + i * liveBucketSec;
+        const x = w * Math.max(0, Math.min(1, t / Math.max(timelineSec, 0.2)));
         const y = mid - livePeaks[i].max * amp;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
       for (let i = n - 1; i >= 0; i--) {
-        const x = offsetX + i * step + step / 2;
+        const t = audioOffsetSec + i * liveBucketSec;
+        const x = w * Math.max(0, Math.min(1, t / Math.max(timelineSec, 0.2)));
         const y = mid - livePeaks[i].min * amp;
         ctx.lineTo(x, y);
       }
@@ -315,6 +374,9 @@
   const originalCache = new Map();
   const takeCache = new Map();
 
+  /** Last drawn take/original buffers for fast timing drag (no re-decode). */
+  let lastDrawBuffers = { original: null, take: null, takeKey: null, originalUrl: null };
+
   async function loadOriginal(url) {
     if (!url) return null;
     if (originalCache.has(url)) return originalCache.get(url);
@@ -324,7 +386,8 @@
   }
 
   async function loadTake({ takeBlob, takeBase64, takeMime, cacheKey } = {}) {
-    const key = cacheKey || (takeBlob ? `blob:${takeBlob.size}` : takeBase64 ? `b64:${takeBase64.slice(0, 32)}` : null);
+    const key =
+      cacheKey || (takeBlob ? `blob:${takeBlob.size}` : takeBase64 ? `b64:${takeBase64.slice(0, 32)}` : null);
     if (!key) return null;
     if (takeCache.has(key)) return takeCache.get(key);
     let buf = null;
@@ -332,6 +395,50 @@
     else if (takeBase64) buf = await decodeBase64(takeBase64, takeMime);
     if (buf) takeCache.set(key, buf);
     return buf;
+  }
+
+  function getCachedDrawState() {
+    return lastDrawBuffers;
+  }
+
+  /**
+   * Sync redraw with cached buffers + new timing offset (drag hotpath).
+   */
+  function drawTiming(
+    canvas,
+    {
+      timingOffsetSec,
+      timelineSec,
+      audioOffsetSec,
+      durationLabel,
+      cueMarkerSec,
+      voiceStartSec,
+      playhead,
+    } = {}
+  ) {
+    if (!canvas) return false;
+    const { original, take } = lastDrawBuffers;
+    if (!original && !take) return false;
+    const lead = Math.max(0, Number(audioOffsetSec) || 0);
+    const timing = Number(timingOffsetSec) || 0;
+    let voice = voiceStartSec;
+    if (take && voice == null && global.CVAudio?.measureSpeechOnsetSec) {
+      const onset = global.CVAudio.measureSpeechOnsetSec(take);
+      if (Number.isFinite(onset)) voice = lead + timing + onset;
+    }
+    drawOverlap(canvas, {
+      original,
+      take,
+      timelineSec,
+      audioOffsetSec: lead,
+      timingOffsetSec: timing,
+      cueMarkerSec: cueMarkerSec ?? (lead > 0.04 ? lead : 0),
+      voiceStartSec: voice,
+      voiceStartLabel: 'Stimme',
+      durationLabel,
+      playhead,
+    });
+    return true;
   }
 
   /**
@@ -354,6 +461,14 @@
     if (!canvas) return;
     const original = originalUrl ? originalCache.get(originalUrl) || null : null;
     const take = takeKey ? takeCache.get(takeKey) || null : null;
+    if (original || take) {
+      lastDrawBuffers = {
+        original,
+        take,
+        takeKey: takeKey || null,
+        originalUrl: originalUrl || null,
+      };
+    }
     drawOverlap(canvas, {
       original,
       take,
@@ -375,6 +490,7 @@
     {
       originalUrl,
       livePeaks,
+      liveBucketSec,
       elapsedMs,
       expectedMs,
       timelineSec,
@@ -387,6 +503,13 @@
   ) {
     if (!canvas) return;
     const original = originalUrl ? originalCache.get(originalUrl) || null : null;
+    if (original) {
+      lastDrawBuffers = {
+        ...lastDrawBuffers,
+        original,
+        originalUrl: originalUrl || lastDrawBuffers.originalUrl,
+      };
+    }
     const expected = Math.max(800, Number(expectedMs) || 4000);
     const progress =
       Number.isFinite(progressOpt)
@@ -396,6 +519,7 @@
       original,
       take: null,
       livePeaks: livePeaks || [],
+      liveBucketSec: liveBucketSec || 0.02,
       progress,
       playhead: Number.isFinite(playheadOpt) ? playheadOpt : progress,
       audioOffsetSec,
@@ -427,12 +551,21 @@
 
     try {
       if (takeBlob || takeBase64) {
-        takeKey = takeBlob ? `blob:${takeBlob.size}:${takeBlob.type}` : `b64:${String(takeBase64).slice(0, 40)}`;
+        takeKey = takeBlob
+          ? `blob:${takeBlob.size}:${takeBlob.type}`
+          : `b64:${String(takeBase64).slice(0, 40)}`;
         take = await loadTake({ takeBlob, takeBase64, takeMime, cacheKey: takeKey });
       }
     } catch (err) {
       console.warn('Take waveform decode failed', err);
     }
+
+    lastDrawBuffers = {
+      original,
+      take,
+      takeKey,
+      originalUrl: originalUrl || null,
+    };
 
     if (original) duration = Math.max(duration, original.duration);
     if (take) duration = Math.max(duration, take.duration);
@@ -469,6 +602,8 @@
       voiceStartSec,
       cueMarkerSec: lead,
       timingOffsetSec: timing,
+      timelineSec: axis,
+      audioOffsetSec: lead,
     };
   }
 
@@ -477,6 +612,8 @@
     drawOverlap,
     drawLive,
     drawPlayhead,
+    drawTiming,
+    getCachedDrawState,
     loadOriginal,
     loadTake,
   };
