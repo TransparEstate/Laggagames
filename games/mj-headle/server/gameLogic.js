@@ -61,6 +61,7 @@ function createEmptyRoom(code, hostSocketId) {
     playerRuns: {},
     roundRecap: [],
     songMeta: {},
+    raceHighscoreRecorded: false,
     createdAt: Date.now(),
     lastActivity: Date.now(),
   };
@@ -100,6 +101,8 @@ function emptyProgress() {
     text: '',
     correct: false,
     points: 0,
+    basePoints: 0,
+    bonusPoints: 0,
     stageIndex: 0,
     done: false,
     giveUp: false,
@@ -169,6 +172,8 @@ function recordRecap(room, socketId, roundIndex, song, progress) {
     playerId: socketId,
     name: (player && player.name) || 'Spieler',
     points: progress.points || 0,
+    basePoints: progress.basePoints != null ? progress.basePoints : progress.points || 0,
+    bonusPoints: progress.bonusPoints || 0,
     correct: !!progress.correct,
     giveUp: !!progress.giveUp,
     stageIndex: progress.stageIndex || 0,
@@ -195,6 +200,8 @@ function raceStandings(room) {
       id: p.id,
       name: p.name,
       points: g.points || 0,
+      basePoints: g.basePoints != null ? g.basePoints : g.points || 0,
+      bonusPoints: g.bonusPoints || 0,
       reactionMs: g.reactionMs,
       firstBonus: !!g.firstBonus,
     });
@@ -242,6 +249,8 @@ function publicState(room, forSocketId) {
             text: me.text,
             correct: !!me.correct,
             points: me.points || 0,
+            basePoints: me.basePoints != null ? me.basePoints : me.points || 0,
+            bonusPoints: me.bonusPoints || 0,
             stageIndex: myStage,
             done: !!me.done,
             giveUp: !!me.giveUp,
@@ -284,6 +293,8 @@ function publicState(room, forSocketId) {
         text: me.text,
         correct: !!me.correct,
         points: me.points || 0,
+        basePoints: me.basePoints != null ? me.basePoints : me.points || 0,
+        bonusPoints: me.bonusPoints || 0,
         stageIndex: myStage,
         done: !!me.done,
         giveUp: !!me.giveUp,
@@ -470,6 +481,7 @@ function startMatch(room, playableSongs) {
   room.playerRuns = {};
   room.roundRecap = [];
   room.songMeta = {};
+  room.raceHighscoreRecorded = false;
   for (const song of playableSongs) {
     if (room.trackIds.indexOf(song.id) !== -1) rememberSong(room, song);
   }
@@ -518,6 +530,8 @@ function finishPlayerRound(room, socketId, opts) {
   const correct = !!opts.correct;
   const giveUp = !!opts.giveUp;
   const points = Number(opts.points) || 0;
+  const basePoints = opts.basePoints != null ? Number(opts.basePoints) || 0 : points;
+  const bonusPoints = Number(opts.bonusPoints) || 0;
   const stageIndex = Number(opts.stageIndex) || 0;
   const reactionMs = opts.reactionMs != null ? opts.reactionMs : null;
   const firstBonus = !!opts.firstBonus;
@@ -529,6 +543,8 @@ function finishPlayerRound(room, socketId, opts) {
     run.progress.text = String(text || '').trim();
     run.progress.correct = correct;
     run.progress.points = points;
+    run.progress.basePoints = basePoints;
+    run.progress.bonusPoints = bonusPoints;
     run.progress.stageIndex = stageIndex;
     run.progress.done = true;
     run.progress.giveUp = giveUp;
@@ -540,6 +556,8 @@ function finishPlayerRound(room, socketId, opts) {
       ok: true,
       correct,
       points,
+      basePoints,
+      bonusPoints,
       giveUp,
       stageIndex,
       reactionMs,
@@ -553,6 +571,8 @@ function finishPlayerRound(room, socketId, opts) {
   progress.text = String(text || '').trim();
   progress.correct = correct;
   progress.points = points;
+  progress.basePoints = basePoints;
+  progress.bonusPoints = bonusPoints;
   progress.stageIndex = stageIndex;
   progress.done = true;
   progress.giveUp = giveUp;
@@ -565,6 +585,8 @@ function finishPlayerRound(room, socketId, opts) {
     ok: true,
     correct,
     points: progress.points,
+    basePoints: progress.basePoints,
+    bonusPoints: progress.bonusPoints,
     giveUp,
     stageIndex: progress.stageIndex,
     reactionMs,
@@ -647,7 +669,8 @@ function submitGuess(room, socketId, text) {
     const base = racePointsForElapsed(elapsed);
     const isFirst = !room.current.firstCorrectId;
     if (isFirst) room.current.firstCorrectId = socketId;
-    const points = base + (isFirst ? RACE_FIRST_BONUS : 0);
+    const bonus = isFirst ? RACE_FIRST_BONUS : 0;
+    const points = base + bonus;
     const player = room.players.find((p) => p.id === socketId);
     if (player) {
       player.score = (player.score || 0) + points;
@@ -658,6 +681,8 @@ function submitGuess(room, socketId, text) {
       correct: true,
       giveUp: false,
       points,
+      basePoints: base,
+      bonusPoints: bonus,
       stageIndex: 0,
       reactionMs: elapsed,
       firstBonus: isFirst,
@@ -678,7 +703,7 @@ function submitGuess(room, socketId, text) {
         player.score = (player.score || 0) + points;
         room.scores[socketId] = player.score;
       }
-      return finishPlayerRound(room, socketId, { text, correct: true, giveUp: false, points, stageIndex });
+      return finishPlayerRound(room, socketId, { text, correct: true, giveUp: false, points, basePoints: points, bonusPoints: 0, stageIndex });
     }
     progress.text = String(text || '').trim();
     progress.correct = false;
@@ -704,7 +729,7 @@ function submitGuess(room, socketId, text) {
       player.score = (player.score || 0) + points;
       room.scores[socketId] = player.score;
     }
-    return finishPlayerRound(room, socketId, { text, correct: true, giveUp: false, points, stageIndex });
+    return finishPlayerRound(room, socketId, { text, correct: true, giveUp: false, points, basePoints: points, bonusPoints: 0, stageIndex });
   }
   progress.text = String(text || '').trim();
   progress.correct = false;
@@ -739,6 +764,8 @@ function endRaceWindow(room) {
     progress.text = '';
     progress.correct = false;
     progress.points = 0;
+    progress.basePoints = 0;
+    progress.bonusPoints = 0;
     progress.done = true;
     progress.giveUp = true;
     progress.at = now;
@@ -834,6 +861,7 @@ function restartSession(room) {
   room.playerRuns = {};
   room.roundRecap = [];
   room.songMeta = {};
+  room.raceHighscoreRecorded = false;
   for (const p of room.players) {
     p.score = 0;
     p.ready = false;
@@ -877,4 +905,5 @@ module.exports = {
   applyRaceGo,
   endRaceWindow,
   maybeReveal,
+  raceStandings,
 };
