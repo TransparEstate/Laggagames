@@ -37,15 +37,15 @@
 
     <section class="card upload-card" id="soloSections">
       <h2>Voicepack hochladen</h2>
-      <p class="muted" id="uploadHint">ZIP im Choicer-Voicer-Format hier ablegen.</p>
+      <p class="muted" id="uploadHint">ZIP oder RAR im Choicer-Voicer-Format hier ablegen.</p>
       <div class="upload-drop" id="uploadDrop" tabindex="0">
-        <input type="file" id="packFile" hidden />
-        <p><strong>ZIP hierher ziehen</strong> oder tippen/klicken</p>
+        <input type="file" id="packFile" accept=".zip,.rar,application/zip,application/vnd.rar,application/x-rar-compressed" hidden />
+        <p><strong>ZIP/RAR hierher ziehen</strong> oder tippen/klicken</p>
         <p class="muted" style="margin:6px 0 0;font-size:0.9rem">
-          Im Dialog „Alle Dateien“ wählen, dann die <strong>.zip</strong> auswählen.
+          Im Dialog „Alle Dateien“ wählen, dann die <strong>.zip</strong> oder <strong>.rar</strong> auswählen.
         </p>
         <button type="button" class="btn btn-sm btn-secondary" id="btnPickZip" style="margin-top:12px">
-          ZIP-Datei auswählen…
+          Archiv auswählen…
         </button>
       </div>
       <p class="muted hidden" id="storageHint" style="margin:10px 0 0;font-size:0.9rem"></p>

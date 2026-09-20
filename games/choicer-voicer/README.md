@@ -9,8 +9,10 @@ Dub-Studio: Voicepacks hochladen, solo oder Multiplayer dubben, Takes exportiere
 
 Alle Voicepacks liegen **ausschließlich in Cloudflare R2** (Bucket z.B. `choicer-voicer-packs`).
 
+- Upload: **ZIP oder RAR** im Choicer-Voicer-Format.
 - Jeder Upload ist für alle Nutzer sichtbar.
 - Identische Packs werden per Content-Hash dedupliziert (kein zweites Exemplar).
+- Packs können **nicht** über die UI gelöscht werden — Entfernen nur manuell in Cloudflare R2.
 - Lokal/Railway speichern Packs nicht dauerhaft — nur ephemeres Staging beim Upload.
 - Beim Start lädt der Server vorhandene R2-Manifeste; der Katalog ist also nicht leer, wenn bereits Packs in Cloudflare liegen.
 

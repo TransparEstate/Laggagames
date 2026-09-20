@@ -216,13 +216,17 @@ function resolvePackDir(packId) {
   return null;
 }
 
+function findPackInfoFileName(files) {
+  return files.find((f) => String(f).toLowerCase() === '_pack_info.ini') || null;
+}
+
 function loadPackFromDir(packId, packDir, source) {
-  const infoPath = path.join(packDir, '_pack_info.ini');
-  const info = fs.existsSync(infoPath)
+  const files = fs.readdirSync(packDir);
+  const infoName = findPackInfoFileName(files);
+  const infoPath = infoName ? path.join(packDir, infoName) : null;
+  const info = infoPath
     ? parsePackInfo(fs.readFileSync(infoPath, 'utf8'))
     : { title: packId, icon: null, authors: [] };
-
-  const files = fs.readdirSync(packDir);
   const sceneFiles = files
     .filter((f) => /^\d+_.*\.txt$/i.test(f))
     .sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
