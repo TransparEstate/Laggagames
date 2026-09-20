@@ -664,9 +664,33 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`MJ Headle listening on :${PORT}`);
-  console.log(
-    `R2: ${r2.isEnabled() ? `enabled (${r2.bucket()})` : 'disabled — local data/audio fallback'}`
-  );
+async function start() {
+  const hsHydrate = await raceHighscores.hydrateFromR2();
+  if (hsHydrate.skipped) {
+    console.log(`[mj-headle] highscores: local only (${raceHighscores.DATA_FILE})`);
+  } else if (hsHydrate.loaded) {
+    console.log(
+      `[mj-headle] highscores: loaded from R2 ${hsHydrate.key} (${hsHydrate.buckets} buckets)`
+    );
+  } else if (hsHydrate.seeded) {
+    console.log(
+      `[mj-headle] highscores: seeded R2 ${hsHydrate.key} from local (${hsHydrate.buckets} buckets)`
+    );
+  } else if (hsHydrate.empty) {
+    console.log(`[mj-headle] highscores: empty (will persist to R2 ${hsHydrate.key})`);
+  } else if (hsHydrate.error) {
+    console.warn(`[mj-headle] highscores hydrate: ${hsHydrate.error}`);
+  }
+
+  server.listen(PORT, () => {
+    console.log(`MJ Headle listening on :${PORT}`);
+    console.log(
+      `R2: ${r2.isEnabled() ? `enabled (${r2.bucket()})` : 'disabled — local data/audio fallback'}`
+    );
+  });
+}
+
+start().catch((err) => {
+  console.error('[mj-headle] start failed', err);
+  process.exit(1);
 });

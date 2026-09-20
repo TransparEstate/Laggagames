@@ -1180,12 +1180,24 @@
     focusPrimaryControl('lobby');
   }
 
+  function formatRoundChip(cur) {
+    const n = cur?.round || (state?.roundIndex != null ? state.roundIndex + 1 : 1);
+    const total = cur?.totalRounds || state?.totalRounds || state?.settings?.rounds || 5;
+    return `Runde ${n}/${total}`;
+  }
+
+  function isLastRound(cur) {
+    const n = Number(cur?.round) || (state?.roundIndex != null ? state.roundIndex + 1 : 0);
+    const total = Number(cur?.totalRounds) || Number(state?.totalRounds) || 0;
+    return total > 0 && n >= total;
+  }
+
   function renderPlay() {
     show('play');
     maybeResetRoundUi();
     const cur = state.current;
     const race = raceModeOn();
-    $('roundLabel').textContent = `Runde ${cur?.round || 1}/${cur?.totalRounds || state.totalRounds}`;
+    $('roundLabel').textContent = formatRoundChip(cur);
     const stageTrack = $('stageTrack');
     const raceHud = $('raceHud');
     if (race) {
@@ -1265,6 +1277,8 @@
     stopAudio({ expected: true });
     const done = state.current?.playersDone ?? 0;
     const total = (state.players || []).filter((p) => p.connected !== false).length;
+    const waitRound = $('waitRoundLabel');
+    if (waitRound) waitRound.textContent = formatRoundChip(state.current);
     $('waitHint').textContent =
       `Du hast alle Runden gespielt (${done}/${total} fertig). Kein Zwischenstand — das Scoreboard kommt, wenn alle durch sind.`;
     renderPlayers($('waitList'), 'scores');
@@ -1311,6 +1325,8 @@
   function renderRevealView() {
     show('reveal');
     const cur = state.current;
+    const revealRound = $('revealRoundLabel');
+    if (revealRound) revealRound.textContent = formatRoundChip(cur);
     const fxKey = `${state.roundIndex}:${cur?.songId || ''}:reveal`;
     const sub = $('revealSub');
     if (sub) {
@@ -1328,7 +1344,11 @@
       }, Math.min(1200, String(cur?.title || '').length * 48 + 200));
       renderRevealBreakdown($('revealList'), cur?.standings || [], state.players || []);
     }
-    $('btnNext').hidden = !(isHost() && seesSharedReveal());
+    const btnNext = $('btnNext');
+    if (btnNext) {
+      btnNext.hidden = !(isHost() && seesSharedReveal());
+      btnNext.textContent = isLastRound(cur) ? 'Ergebnisse' : 'Nächste Runde';
+    }
     const wait = $('revealWaitHint');
     if (wait) wait.hidden = true;
     const autoKey = `${state.roundIndex}:${cur?.songId || ''}`;
@@ -1478,8 +1498,12 @@
     if (nameEl) nameEl.textContent = winner ? String(winner.name || '—').toUpperCase() : 'NIEMAND';
     if (scoreEl) {
       scoreEl.textContent = winner
-        ? `${winner.score || 0} Punkte — Zeit zum Feiern`
+        ? `${winner.score || 0} Punkte über alle Runden`
         : 'Kein Scoreboard';
+    }
+    const standingsTitle = $('standingsTitle');
+    if (standingsTitle) {
+      standingsTitle.hidden = !(state.leaderboard && state.leaderboard.length);
     }
     $('leaderboard').innerHTML = (state.leaderboard || [])
       .map((p) => `<li><span>${escapeHtml(p.name)}</span><strong>${p.score || 0}</strong></li>`)

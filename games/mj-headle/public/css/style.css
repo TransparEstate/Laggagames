@@ -419,7 +419,7 @@ main {
   animation: winLabelIn 0.55s ease both;
 }
 .view-finished .winner-score {
-  margin: 0 0 1.25rem;
+  margin: 0 0 1.75rem;
   color: var(--muted);
   font-size: 1.05rem;
   animation: fadeUp 0.6s 0.2s ease both;
@@ -427,8 +427,17 @@ main {
 .view-finished .win-eyebrow {
   animation: fadeUp 0.45s ease both;
 }
+.standings-title {
+  margin: 0.25rem auto 0.65rem;
+  font-family: var(--display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-size: 1.15rem;
+}
 .view-finished .leaderboard {
   animation: fadeUp 0.55s 0.28s ease both;
+  margin-bottom: 0.5rem;
 }
 .view-finished .leaderboard li:first-child {
   border-color: rgba(240, 201, 106, 0.55);
@@ -461,34 +470,42 @@ main {
   to { opacity: 1; transform: none; }
 }
 .recap-title {
-  margin: 1.75rem 0 0.75rem;
+  margin: 2rem 0 0.85rem;
   font-family: var(--display);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--gold);
   font-size: 1.35rem;
 }
 .round-recap {
   text-align: left;
-  max-height: min(42vh, 360px);
+  width: min(100%, 36rem);
+  margin: 0 auto;
+  max-height: min(70vh, 640px);
   overflow: auto;
   display: grid;
-  gap: 0.85rem;
-  padding-right: 0.25rem;
+  gap: 1rem;
+  padding: 0.15rem 0.35rem 0.5rem 0;
 }
 .recap-round {
   border: 1px solid var(--line);
-  padding: 0.75rem 0.9rem;
-  background: rgba(20, 16, 18, 0.45);
+  padding: 1rem 1.1rem 0.95rem;
+  background: rgba(20, 16, 18, 0.55);
+  border-radius: 2px;
 }
 .recap-round header {
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.65rem;
   color: var(--ink);
+  line-height: 1.35;
+}
+.recap-round .player-list {
+  margin: 0;
 }
 .recap-artist {
   display: block;
   color: var(--muted);
   font-size: 0.85rem;
-  margin-top: 0.15rem;
+  margin-top: 0.25rem;
 }
 .modal {
   position: fixed;
@@ -517,6 +534,20 @@ main {
   margin: 0 0 1.1rem;
   color: var(--muted);
   line-height: 1.45;
+}
+.round-chip {
+  margin: 0 0 0.85rem;
+  font-family: var(--display);
+  font-size: clamp(0.95rem, 2.8vw, 1.15rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+  text-align: center;
+}
+.view-play .round-chip {
+  margin: 0;
+  text-align: left;
+  letter-spacing: 0.1em;
 }
 .round-meta {
   display: flex;
