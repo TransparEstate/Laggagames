@@ -1,0 +1,31 @@
+{
+  "seam": [
+    "Naht des Jahres. Chirurgen weinen.",
+    "Links will Europa, rechts will Chaos.",
+    "Das ist keine Flagge — das ist eine Beziehungskrise.",
+    "Zwei Wahrheiten, null Diplomatie.",
+    "Frankenstein beantragt Asyl.",
+    "Die Mitte hat aufgegeben.",
+    "UNO-Resolution: bitte nochmal.",
+    "Sieht aus wie Copy-Paste mit Beef.",
+    "Grenzvertrag: mündlich, alkoholisiert.",
+    "Kunst. Traurige, witzige Kunst."
+  ],
+  "correct": [
+    "Okay, Flaggen-Nerd. Respekt.",
+    "Zu schnell. Verdächtig.",
+    "Lookalike überlebt — diesmal.",
+    "Diplomatie erfolgreich."
+  ],
+  "wrong": [
+    "Lookalike hat zugeschlagen.",
+    "Fast. Emotional fast.",
+    "Das war die Nachbarfalle.",
+    "Gehirn sagte Ja. Flagge sagte Nein."
+  ],
+  "vote": [
+    "Chaos-Krone vergeben.",
+    "Kunst-Komitee hat getagt.",
+    "Fast-richtig-Lob ausgesprochen."
+  ]
+}

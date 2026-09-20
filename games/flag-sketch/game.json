@@ -1,0 +1,12 @@
+{
+  "id": "flag-sketch",
+  "name": "Flag Sketch",
+  "tagline": "Blind Hälften malen, Frankenstein raten — mit Tonfallen",
+  "description": "Nur Text-Brief, keine Flagge sehen: je Runde eine Hälfte malen, zusammensetzen, Lookalikes bei fremden Mashups raten. 3 Runden Party-Comedy.",
+  "status": "playable",
+  "entry": "server/index.js",
+  "partySupport": true,
+  "routes": {
+    "home": "/"
+  }
+}
