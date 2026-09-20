@@ -56,6 +56,22 @@ function testLogic() {
   assert(pub.current.de === name, 'reveal name');
   assert(pub.current.flagUrl.includes(room.current.iso.toLowerCase()), 'flag url');
 
+  // finish + highscore
+  const hs = require('../server/raceHighscores');
+  const tmp = path.join(require('os').tmpdir(), `flag-rush-hs-verify-${Date.now()}.json`);
+  hs.setDataFileForTests(tmp);
+  room.phase = 'finished';
+  room.totalRounds = 5;
+  const recorded = hs.recordRaceFinish(room);
+  assert(recorded.ok && recorded.results?.length === 1, 'hs record');
+  const board = hs.getBoard(5);
+  assert(board.entries.some((e) => e.name === 'Solo'), 'hs board has Solo');
+  try {
+    require('fs').unlinkSync(tmp);
+  } catch {
+    /* ignore */
+  }
+
   console.log('OK gameLogic', countries.count, 'countries');
 }
 

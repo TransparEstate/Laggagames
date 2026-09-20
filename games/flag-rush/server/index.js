@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 
 const game = require('./gameLogic');
 const countries = require('./countries');
+const raceHighscores = require('./raceHighscores');
 
 const PORT = Number(process.env.PORT) || 3031;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
@@ -179,6 +180,15 @@ function scheduleRoundEnd(room) {
   }, delay);
 }
 
+function maybeRecordHighscores(room) {
+  if (!room || room.phase !== 'finished') return;
+  try {
+    raceHighscores.recordRaceFinish(room);
+  } catch (err) {
+    console.warn('[flag-rush] highscore write failed', err.message || err);
+  }
+}
+
 function scheduleAfterReveal(room) {
   if (room._timers.after) clearTimeout(room._timers.after);
   room._timers.after = setTimeout(() => {
@@ -186,6 +196,7 @@ function scheduleAfterReveal(room) {
     if (!rooms.has(room.code)) return;
     if (room.phase !== 'reveal') return;
     const result = game.advanceAfterReveal(room);
+    if (result.finished) maybeRecordHighscores(room);
     broadcastRoom(room);
     if (result.next) scheduleRoundEnd(room);
   }, game.REVEAL_MS);
@@ -241,6 +252,19 @@ app.get('/api/countries', (req, res) => {
       return { iso2: c.iso2, de: c.de, en: c.en, difficulty: c.difficulty };
     }),
   });
+});
+
+app.get('/api/race-highscores', (req, res) => {
+  const roundsRaw = req.query.rounds;
+  if (roundsRaw == null || roundsRaw === '') {
+    return res.json({
+      ok: true,
+      buckets: raceHighscores.listBuckets(),
+      board: raceHighscores.getBoard(10),
+    });
+  }
+  const board = raceHighscores.getBoard(roundsRaw);
+  res.json({ ok: true, ...board });
 });
 
 /* ── Sockets ──────────────────────────────────────────────── */
