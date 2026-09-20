@@ -66,10 +66,29 @@ function getRoom(id) {
   return rooms.get(id) || null;
 }
 
-function ensureHost(room) {
-  if (room.hostId && room.players.has(room.hostId)) return;
-  const first = [...room.players.keys()][0] || null;
-  room.hostId = first;
+function ensureHost(room, preferredMemberId) {
+  if (preferredMemberId) {
+    const lead = [...room.players.values()].find(
+      (p) => p.connected !== false && p.memberId && p.memberId === preferredMemberId
+    );
+    if (lead) {
+      room.hostId = lead.id;
+      room.leadMemberId = preferredMemberId;
+      return;
+    }
+  }
+  if (room.leadMemberId) {
+    const lead = [...room.players.values()].find(
+      (p) => p.connected !== false && p.memberId && p.memberId === room.leadMemberId
+    );
+    if (lead) {
+      room.hostId = lead.id;
+      return;
+    }
+  }
+  if (room.hostId && room.players.get(room.hostId)?.connected !== false) return;
+  const first = [...room.players.values()].find((p) => p.connected !== false);
+  room.hostId = first?.id || null;
 }
 
 function clearTimer(room, key) {
@@ -197,7 +216,9 @@ io.on('connection', (socket) => {
         memberId,
         connected: true,
       });
-      ensureHost(room);
+      const leadId = hub.party?.leadId || null;
+      if (leadId) room.leadMemberId = leadId;
+      ensureHost(room, leadId);
       game.ensurePlayerScore(room, socket.id);
       socket.join(partyId);
       socketMeta.set(socket.id, { roomId: partyId, partyId });
@@ -236,12 +257,27 @@ io.on('connection', (socket) => {
     broadcast(room);
   });
 
-  socket.on('match:start', (_payload, ack) => {
+  socket.on('match:start', (payload = {}, ack) => {
     const meta = socketMeta.get(socket.id);
     const room = meta && getRoom(meta.roomId);
     if (!room) return ack?.({ error: 'Kein Raum.' });
-    if (socket.id !== room.hostId) return ack?.({ error: 'Nur Host startet.' });
+    if (socket.id !== room.hostId) return ack?.({ error: 'Nur der Host startet.' });
     if (room.players.size < 1) return ack?.({ error: 'Keine Spieler.' });
+    if (room.phase !== 'lobby' && room.phase !== 'finished') {
+      return ack?.({ error: 'Match läuft schon.' });
+    }
+    // Apply settings in the same click (no separate save needed)
+    if (payload.rounds != null || payload.drawSeconds != null || Array.isArray(payload.hints)) {
+      const next = { ...room.settings };
+      if (payload.rounds != null) next.rounds = Math.min(7, Math.max(1, Number(payload.rounds) || 3));
+      if (payload.drawSeconds != null) {
+        next.drawSeconds = Math.min(180, Math.max(20, Number(payload.drawSeconds) || 60));
+      }
+      if (Array.isArray(payload.hints)) {
+        next.hints = payload.hints.filter((h) => game.HINT_KEYS.includes(h));
+      }
+      room.settings = next;
+    }
     clearTimer(room, 'draw');
     clearTimer(room, 'reveal');
     game.startMatch(room);
@@ -310,11 +346,41 @@ io.on('connection', (socket) => {
     broadcast(room);
   });
 
-  socket.on('session:return-hub', async (_payload, ack) => {
+  async function returnPartyToHub(socket, ack) {
     const meta = socketMeta.get(socket.id);
-    if (meta?.partyId) await postHubPartyReturn(meta.partyId);
+    if (!meta) {
+      ack?.({ ok: true, redirect: '/' });
+      return;
+    }
+    const room = getRoom(meta.roomId);
+    const partyId = meta.partyId || null;
+
+    if (partyId && partyId !== 'LOCALVS' && process.env.ALLOW_LOCAL_VERSUS !== '1') {
+      const ret = await postHubPartyReturn(partyId);
+      if (ret.error) {
+        // Still leave the game UI — hub may already be cleared
+        console.warn('[flag-sketch] hub return failed', ret.error);
+      }
+    }
+
+    if (room) {
+      clearTimer(room, 'draw');
+      clearTimer(room, 'reveal');
+      io.to(room.id).emit('session:returned', { partyId, hub: '/' });
+      for (const pid of [...room.players.keys()]) {
+        socketMeta.delete(pid);
+      }
+      rooms.delete(room.id);
+    } else {
+      socketMeta.delete(socket.id);
+      socket.emit('session:returned', { partyId, hub: '/' });
+    }
     ack?.({ ok: true, redirect: '/' });
-  });
+  }
+
+  // Canonical name (other games) + alias used by early UI
+  socket.on('session:return-to-lobby', (payload, ack) => returnPartyToHub(socket, ack));
+  socket.on('session:return-hub', (payload, ack) => returnPartyToHub(socket, ack));
 
   socket.on('disconnect', () => {
     const meta = socketMeta.get(socket.id);

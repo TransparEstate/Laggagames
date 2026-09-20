@@ -12,7 +12,7 @@
 <body>
   <div class="bg"></div>
   <header class="top">
-    <a class="back" href="/">← Lagga Club</a>
+    <button type="button" class="back" id="btnExit">← Zur Hub-Party</button>
     <div class="brand">Flag Sketch</div>
     <div id="phasePill" class="pill">Lobby</div>
   </header>
@@ -21,26 +21,26 @@
 
   <main>
     <section id="viewLobby" class="panel">
-      <h1>Blindhälften. Naht-Chaos. Lookalikes.</h1>
-      <p class="lede">Nur Text-Brief — keine Flagge sehen. Eine Hälfte malen, zusammensetzen, fremde Frankenstein-Flaggen raten.</p>
+      <h1>Flag Sketch</h1>
+      <p class="lede">Nur Text-Brief → Hälfte malen → zusammensetzen → Lookalike raten.</p>
       <div id="soloJoin" class="stack">
         <label>Name <input id="nameInput" maxlength="24" placeholder="Dein Name" /></label>
-        <button id="btnSolo" class="btn primary">Solo starten</button>
+        <button id="btnSolo" class="btn primary">Solo: Spiel starten</button>
       </div>
       <div id="lobbyBody" class="stack" hidden>
+        <p id="lobbyStatus" class="muted"></p>
         <div id="playerList" class="players"></div>
         <div id="hostSettings" class="settings" hidden>
-          <h2>Host-Settings</h2>
           <label>Runden <input id="setRounds" type="number" min="1" max="7" value="3" /></label>
-          <label>Zeichenzeit (s) <input id="setDrawSec" type="number" min="20" max="180" value="60" /></label>
-          <fieldset>
-            <legend>Hinweise (Tonfallen-light)</legend>
+          <label>Zeichenzeit (Sek.) <input id="setDrawSec" type="number" min="20" max="180" value="60" /></label>
+          <details class="hints-fold">
+            <summary>Optionale Hinweise</summary>
             <div id="hintToggles" class="hints"></div>
-          </fieldset>
-          <button id="btnSaveSettings" class="btn">Settings speichern</button>
-          <button id="btnStart" class="btn primary">Match starten</button>
+          </details>
+          <button id="btnStart" class="btn primary">Spiel starten</button>
         </div>
-        <p id="waitHost" class="muted" hidden>Warte auf Host…</p>
+        <p id="waitHost" class="muted" hidden>Warte bis der Party-Lead startet…</p>
+        <button id="btnLeaveLobby" class="btn ghost" type="button">Spiel verlassen → Hub-Party</button>
       </div>
     </section>
 
@@ -91,7 +91,7 @@
       <div id="truthGallery" class="gallery"></div>
       <ol id="scoreList" class="scores"></ol>
       <button id="btnContinue" class="btn primary" hidden>Weiter</button>
-      <button id="btnReturnHub" class="btn" hidden>Zurück zur Lobby</button>
+      <button id="btnReturnHub" class="btn ghost" hidden>Spiel verlassen → Hub-Party</button>
     </section>
   </main>
 

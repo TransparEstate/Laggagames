@@ -24,6 +24,7 @@
   const els = {
     phasePill: $('phasePill'),
     tonfalle: $('tonfalle'),
+    btnExit: $('btnExit'),
     viewLobby: $('viewLobby'),
     viewDraw: $('viewDraw'),
     viewReveal: $('viewReveal'),
@@ -32,15 +33,16 @@
     viewScore: $('viewScore'),
     soloJoin: $('soloJoin'),
     lobbyBody: $('lobbyBody'),
+    lobbyStatus: $('lobbyStatus'),
     nameInput: $('nameInput'),
     btnSolo: $('btnSolo'),
     playerList: $('playerList'),
     hostSettings: $('hostSettings'),
     waitHost: $('waitHost'),
+    btnLeaveLobby: $('btnLeaveLobby'),
     hintToggles: $('hintToggles'),
     setRounds: $('setRounds'),
     setDrawSec: $('setDrawSec'),
-    btnSaveSettings: $('btnSaveSettings'),
     btnStart: $('btnStart'),
     sideTag: $('sideTag'),
     briefText: $('briefText'),
@@ -72,6 +74,8 @@
   let timerIv = null;
   let selectedVoteMashup = null;
   let prevAssignKey = '';
+  let leaving = false;
+  let inPartySession = !!partyId;
 
   const ctx = els.canvas.getContext('2d');
   ctx.lineCap = 'round';
@@ -130,6 +134,10 @@
     lab.innerHTML = `<input type="checkbox" value="${id}" /> ${label}`;
     els.hintToggles.appendChild(lab);
   });
+  // defaults
+  els.hintToggles.querySelectorAll('input').forEach((inp) => {
+    inp.checked = inp.value === 'shapeHint' || inp.value === 'palette';
+  });
 
   function showOnly(view) {
     [
@@ -167,6 +175,43 @@
         finished: 'Ende',
       }[phase] || phase
     );
+  }
+
+  function syncExitButton(s) {
+    const party = !!(s?.party || inPartySession);
+    els.btnExit.textContent = party ? '← Zur Hub-Party' : '← Lagga Club';
+    if (els.btnLeaveLobby) els.btnLeaveLobby.hidden = !party;
+    if (els.btnReturnHub) els.btnReturnHub.hidden = !party;
+  }
+
+  function goHub() {
+    leaving = true;
+    location.href = '/';
+  }
+
+  function leaveToHub() {
+    if (leaving) return;
+    window.FlagSfx?.unlock();
+    if (!socket || !inPartySession) {
+      goHub();
+      return;
+    }
+    leaving = true;
+    const done = () => goHub();
+    const t = setTimeout(done, 2500);
+    socket.emit('session:return-to-lobby', {}, () => {
+      clearTimeout(t);
+      done();
+    });
+  }
+
+  function currentSettingsPayload() {
+    const hints = [...els.hintToggles.querySelectorAll('input:checked')].map((i) => i.value);
+    return {
+      rounds: Number(els.setRounds.value) || 3,
+      drawSeconds: Number(els.setDrawSec.value) || 60,
+      hints,
+    };
   }
 
   function renderMashupCard(m, { showTruth = false, selectable = false } = {}) {
@@ -226,9 +271,11 @@
   }
 
   function render(s) {
-    if (!s) return;
+    if (!s || leaving) return;
+    if (s.party) inPartySession = true;
     els.phasePill.textContent = phaseLabel(s.phase);
     setTonfalle(s.tonfalle);
+    syncExitButton(s);
 
     if (s.phase === 'drawing' && s.draw) {
       const key = `${s.draw.mashupId}:${s.draw.side}:${!!s.draw.byeSecond}`;
@@ -244,11 +291,19 @@
       showOnly(els.viewLobby);
       els.soloJoin.hidden = true;
       els.lobbyBody.hidden = false;
+      els.lobbyStatus.textContent = s.party
+        ? s.isHost
+          ? 'Du bist Host (Party-Lead). Einstellungen ok? → Spiel starten.'
+          : 'Verbunden. Warte auf den Party-Lead.'
+        : 'Solo-Lobby — du bist Host.';
       els.playerList.innerHTML = '';
       (s.players || []).forEach((p) => {
         const chip = document.createElement('span');
         chip.className = 'player-chip' + (p.id === s.hostId ? ' host' : '');
-        chip.textContent = p.name + (p.id === s.you ? ' (du)' : '');
+        chip.textContent =
+          p.name +
+          (p.id === s.you ? ' (du)' : '') +
+          (p.id === s.hostId ? ' · Host' : '');
         els.playerList.appendChild(chip);
       });
       els.hostSettings.hidden = !s.isHost;
@@ -269,7 +324,7 @@
       const d = s.draw;
       if (d) {
         els.sideTag.textContent =
-          (d.side === 'left' ? 'LINKS' : 'RECHTS') + (d.byeSecond ? ' · Bye #2' : '');
+          (d.side === 'left' ? 'LINKS' : 'RECHTS') + (d.byeSecond ? ' · 2. Hälfte' : '');
         els.briefText.textContent = d.brief || '';
         els.hintChips.innerHTML = '';
         (d.hints || []).forEach((h) => {
@@ -279,6 +334,7 @@
           els.hintChips.appendChild(c);
         });
         els.btnSubmitDraw.disabled = !!d.submitted;
+        els.btnSubmitDraw.textContent = d.submitted ? 'Abgegeben…' : 'Hälfte abgeben';
       }
       tickTimer(s.drawEndsAt);
       return;
@@ -367,52 +423,67 @@
         });
       els.btnContinue.hidden = !s.isHost;
       els.btnContinue.textContent = s.phase === 'finished' ? 'Nochmal Lobby' : 'Nächste Runde';
-      els.btnReturnHub.hidden = !s.party;
+      els.btnReturnHub.hidden = !s.party && !inPartySession;
     }
   }
 
-  function join() {
+  function join({ autoStart = false } = {}) {
     if (socket) {
       socket.removeAllListeners();
       socket.disconnect();
     }
+    leaving = false;
     socket = io({ path: GB ? `${GB}/socket.io` : '/socket.io' });
     socket.on('state:update', render);
     socket.on('sfx', (p) => window.FlagSfx?.play(p?.id));
+    socket.on('session:returned', () => goHub());
 
     const name = (els.nameInput.value || prefillName || 'Spieler').trim() || 'Spieler';
     if (partyId) {
+      inPartySession = true;
       els.soloJoin.hidden = true;
+      syncExitButton({ party: true });
       socket.emit('session:join-party', { partyId, name, memberId }, (ack) => {
-        if (ack?.error) return alert(ack.error);
+        if (ack?.error) {
+          leaving = false;
+          alert(ack.error);
+          return;
+        }
         if (ack?.state) render(ack.state);
       });
     } else {
       socket.emit('session:join', { name }, (ack) => {
-        if (ack?.error) return alert(ack.error);
+        if (ack?.error) {
+          leaving = false;
+          alert(ack.error);
+          return;
+        }
         if (ack?.state) render(ack.state);
+        if (autoStart) {
+          socket.emit('match:start', currentSettingsPayload(), (startAck) => {
+            if (startAck?.error) alert(startAck.error);
+          });
+        }
       });
     }
   }
 
   els.nameInput.value = prefillName || '';
+  syncExitButton({ party: !!partyId });
+
   els.btnSolo.addEventListener('click', () => {
     window.FlagSfx?.unlock();
-    join();
+    join({ autoStart: true });
   });
-  els.btnSaveSettings.addEventListener('click', () => {
-    const hints = [...els.hintToggles.querySelectorAll('input:checked')].map((i) => i.value);
-    socket.emit('settings:update', {
-      rounds: Number(els.setRounds.value),
-      drawSeconds: Number(els.setDrawSec.value),
-      hints,
-    });
-  });
+
   els.btnStart.addEventListener('click', () => {
     window.FlagSfx?.unlock();
     clearCanvas();
-    socket.emit('match:start', {});
+    socket.emit('match:start', currentSettingsPayload(), (ack) => {
+      if (ack?.error) alert(ack.error);
+    });
   });
+
   els.btnEraser.addEventListener('click', () => {
     eraser = !eraser;
     els.btnEraser.textContent = eraser ? 'Stift' : 'Radierer';
@@ -421,18 +492,20 @@
   els.btnSubmitDraw.addEventListener('click', () => {
     window.FlagSfx?.unlock();
     socket.emit('draw:submit', { dataUrl: els.canvas.toDataURL('image/png') }, (ack) => {
+      if (ack?.error) alert(ack.error);
       if (ack?.byeContinue) clearCanvas();
     });
   });
   els.btnContinue.addEventListener('click', () => {
     clearCanvas();
-    socket.emit('round:continue', {});
-  });
-  els.btnReturnHub.addEventListener('click', () => {
-    socket.emit('session:return-hub', {}, (ack) => {
-      location.href = ack?.redirect || '/';
+    socket.emit('round:continue', {}, (ack) => {
+      if (ack?.error) alert(ack.error);
     });
   });
+
+  els.btnExit.addEventListener('click', leaveToHub);
+  els.btnLeaveLobby?.addEventListener('click', leaveToHub);
+  els.btnReturnHub.addEventListener('click', leaveToHub);
 
   if (partyId) join();
 })();
