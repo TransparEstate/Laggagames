@@ -580,6 +580,42 @@ main {
   font-size: 0.82rem;
 }
 
+.guess-attempts {
+  width: 100%;
+  margin-top: 0.65rem;
+  text-align: left;
+}
+.guess-attempts-label {
+  margin: 0 0 0.3rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.guess-attempts-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  max-height: 5.5rem;
+  overflow-y: auto;
+}
+.guess-attempts-list li {
+  padding: 0.2rem 0.55rem;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+.guess-attempts-list li.ok {
+  border-color: rgba(240, 201, 106, 0.45);
+  color: var(--gold-bright);
+  background: rgba(212, 168, 75, 0.12);
+}
+
 .highscore-panel {
   margin: 1.25rem 0 0.5rem;
   text-align: left;

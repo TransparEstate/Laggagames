@@ -118,6 +118,26 @@
     }
   }
 
+  function renderGuessAttempts(attempts) {
+    const wrap = $('guessAttempts');
+    const list = $('guessAttemptsList');
+    if (!wrap || !list) return;
+    const rows = Array.isArray(attempts) ? attempts : [];
+    if (!rows.length) {
+      wrap.hidden = true;
+      list.innerHTML = '';
+      return;
+    }
+    wrap.hidden = false;
+    list.innerHTML = rows
+      .map((a) => {
+        const cls = a.correct ? 'ok' : '';
+        return `<li class="${cls}">${escapeHtml(a.text || '')}</li>`;
+      })
+      .join('');
+    list.scrollTop = list.scrollHeight;
+  }
+
   function renderRaceStandingsList(rows) {
     const list = $('raceStandings');
     if (!list) return;
@@ -840,6 +860,7 @@
       feedback.className = 'feedback';
     }
     renderGuessResults('', { open: false });
+    renderGuessAttempts([]);
     stopAudio({ expected: true });
     if (raceModeOn()) {
       void preloadRoundClips(cur.songId, [cur.raceClipSec || raceMeta.clipSec || 30]);
@@ -971,6 +992,7 @@
     }
     const submit = $('btnGuess') || $('guessForm').querySelector('button[type="submit"]');
     if (submit) submit.disabled = done || (race && !cur?.raceGoFired);
+    renderGuessAttempts(cur?.myGuess?.attempts || []);
     setPlayUi({
       playing: $('btnPlay')?.classList.contains('playing'),
       caption: done

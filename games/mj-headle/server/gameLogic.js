@@ -109,7 +109,19 @@ function emptyProgress() {
     at: null,
     reactionMs: null,
     firstBonus: false,
+    attempts: [],
   };
+}
+
+function pushAttempt(progress, text, correct) {
+  if (!progress) return;
+  if (!Array.isArray(progress.attempts)) progress.attempts = [];
+  const t = String(text || '').trim();
+  if (!t) return;
+  const last = progress.attempts[progress.attempts.length - 1];
+  if (last && last.text === t && !!last.correct === !!correct) return;
+  progress.attempts.push({ text: t.slice(0, 80), correct: !!correct, at: Date.now() });
+  if (progress.attempts.length > 24) progress.attempts = progress.attempts.slice(-24);
 }
 
 function emptyRun() {
@@ -256,6 +268,7 @@ function publicState(room, forSocketId) {
             giveUp: !!me.giveUp,
             reactionMs: me.reactionMs,
             firstBonus: !!me.firstBonus,
+            attempts: Array.isArray(me.attempts) ? me.attempts : [],
           }
         : null,
       playersDone: Object.values(room.current.guesses || {}).filter((g) => g.done).length,
@@ -298,6 +311,7 @@ function publicState(room, forSocketId) {
         stageIndex: myStage,
         done: !!me.done,
         giveUp: !!me.giveUp,
+        attempts: Array.isArray(me.attempts) ? me.attempts : [],
       },
       playersDone: connectedPlayers(room).filter((p) => room.playerRuns[p.id] && room.playerRuns[p.id].matchDone).length,
       matchDone: !!run.matchDone,
@@ -551,6 +565,7 @@ function finishPlayerRound(room, socketId, opts) {
     run.progress.at = Date.now();
     run.progress.reactionMs = reactionMs;
     run.progress.firstBonus = firstBonus;
+    if (correct || giveUp) pushAttempt(run.progress, text, correct);
     const advanced = advanceAsyncPlayer(room, socketId);
     return {
       ok: true,
@@ -579,6 +594,7 @@ function finishPlayerRound(room, socketId, opts) {
   progress.at = Date.now();
   progress.reactionMs = reactionMs;
   progress.firstBonus = firstBonus;
+  if (correct || giveUp) pushAttempt(progress, text, correct);
   room.lastActivity = Date.now();
   maybeReveal(room);
   return {
@@ -662,8 +678,9 @@ function submitGuess(room, socketId, text) {
       progress.correct = false;
       progress.points = 0;
       progress.at = now;
+      pushAttempt(progress, text, false);
       room.lastActivity = now;
-      return { ok: true, correct: false };
+      return { ok: true, correct: false, attempts: progress.attempts };
     }
     const elapsed = Math.max(0, now - room.current.playAt);
     const base = racePointsForElapsed(elapsed);
@@ -709,12 +726,13 @@ function submitGuess(room, socketId, text) {
     progress.correct = false;
     progress.points = 0;
     progress.at = Date.now();
+    pushAttempt(progress, text, false);
     if (progress.stageIndex >= CLIP_STAGES.length - 1) {
       return finishPlayerRound(room, socketId, { text, correct: false, giveUp: true, stageIndex: progress.stageIndex });
     }
     progress.stageIndex += 1;
     room.lastActivity = Date.now();
-    return { ok: true, correct: false, stageIndex: progress.stageIndex };
+    return { ok: true, correct: false, stageIndex: progress.stageIndex, attempts: progress.attempts };
   }
 
   if (!room.current || room.current.revealed) return { error: 'Keine aktive Runde.' };
@@ -735,6 +753,7 @@ function submitGuess(room, socketId, text) {
   progress.correct = false;
   progress.points = 0;
   progress.at = Date.now();
+  pushAttempt(progress, text, false);
   if (progress.stageIndex >= CLIP_STAGES.length - 1) {
     return finishPlayerRound(room, socketId, { text, correct: false, giveUp: true, stageIndex: progress.stageIndex });
   }
