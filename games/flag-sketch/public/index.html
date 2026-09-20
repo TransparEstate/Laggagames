@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flag Sketch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="bg"></div>
+  <header class="top">
+    <a class="back" href="/">← Lagga Club</a>
+    <div class="brand">Flag Sketch</div>
+    <div id="phasePill" class="pill">Lobby</div>
+  </header>
+
+  <p id="tonfalle" class="tonfalle" hidden></p>
+
+  <main>
+    <section id="viewLobby" class="panel">
+      <h1>Blindhälften. Naht-Chaos. Lookalikes.</h1>
+      <p class="lede">Nur Text-Brief — keine Flagge sehen. Eine Hälfte malen, zusammensetzen, fremde Frankenstein-Flaggen raten.</p>
+      <div id="soloJoin" class="stack">
+        <label>Name <input id="nameInput" maxlength="24" placeholder="Dein Name" /></label>
+        <button id="btnSolo" class="btn primary">Solo starten</button>
+      </div>
+      <div id="lobbyBody" class="stack" hidden>
+        <div id="playerList" class="players"></div>
+        <div id="hostSettings" class="settings" hidden>
+          <h2>Host-Settings</h2>
+          <label>Runden <input id="setRounds" type="number" min="1" max="7" value="3" /></label>
+          <label>Zeichenzeit (s) <input id="setDrawSec" type="number" min="20" max="180" value="60" /></label>
+          <fieldset>
+            <legend>Hinweise (Tonfallen-light)</legend>
+            <div id="hintToggles" class="hints"></div>
+          </fieldset>
+          <button id="btnSaveSettings" class="btn">Settings speichern</button>
+          <button id="btnStart" class="btn primary">Match starten</button>
+        </div>
+        <p id="waitHost" class="muted" hidden>Warte auf Host…</p>
+      </div>
+    </section>
+
+    <section id="viewDraw" class="panel" hidden>
+      <div class="draw-head">
+        <div>
+          <div class="side-tag" id="sideTag">LINKS</div>
+          <h2>Dein Brief</h2>
+        </div>
+        <div class="timer" id="drawTimer">60</div>
+      </div>
+      <p id="briefText" class="brief"></p>
+      <div id="hintChips" class="chips"></div>
+      <div class="canvas-wrap">
+        <canvas id="drawCanvas" width="360" height="480"></canvas>
+      </div>
+      <div class="tools">
+        <input type="color" id="inkColor" value="#111111" />
+        <input type="range" id="inkSize" min="2" max="28" value="8" />
+        <button id="btnEraser" class="btn small">Radierer</button>
+        <button id="btnClear" class="btn small">Clear</button>
+        <button id="btnSubmitDraw" class="btn primary">Hälfte abgeben</button>
+      </div>
+    </section>
+
+    <section id="viewReveal" class="panel" hidden>
+      <h2>Naht-Reveal</h2>
+      <div id="mashupGallery" class="gallery"></div>
+    </section>
+
+    <section id="viewGuess" class="panel" hidden>
+      <h2>Lookalike-Falle</h2>
+      <p class="muted">Welche Flagge sollte das werden?</p>
+      <div id="guessMashup" class="gallery"></div>
+      <div id="guessOptions" class="options"></div>
+      <p id="guessWait" class="muted" hidden>Warte auf die anderen…</p>
+    </section>
+
+    <section id="viewVote" class="panel" hidden>
+      <h2>Tonfalle: Vote</h2>
+      <p class="muted">Chaos · Fast richtig · Kunst</p>
+      <div id="voteGallery" class="gallery"></div>
+      <div id="voteLabels" class="options"></div>
+    </section>
+
+    <section id="viewScore" class="panel" hidden>
+      <h2 id="scoreTitle">Zwischenstand</h2>
+      <div id="truthGallery" class="gallery"></div>
+      <ol id="scoreList" class="scores"></ol>
+      <button id="btnContinue" class="btn primary" hidden>Weiter</button>
+      <button id="btnReturnHub" class="btn" hidden>Zurück zur Lobby</button>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/sfx.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
