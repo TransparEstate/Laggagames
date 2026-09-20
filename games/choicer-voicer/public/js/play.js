@@ -101,6 +101,10 @@
   let waveToken = 0;
   let timingSaveTimer = null;
   let timingDrag = null;
+  let timingDrawRaf = null;
+  let pendingTimingDrawSec = null;
+  let waveDrawMeta = null;
+  let sceneWarmToken = 0;
   let submitPromptDismissed = false;
   let movieCtl = null;
   let exportCache = null;
@@ -213,15 +217,57 @@
     if (btnTimingReset) btnTimingReset.disabled = disabled || Math.abs(v) < 0.005;
   }
 
-  function applyTimingOffsetLocal(nextSec, { persist = true } = {}) {
+  function paintTimingWaveform(offsetSec) {
+    if (!waveCanvas || typeof CVWaveform === 'undefined') return false;
+    const scene = selectedScene();
+    if (!scene) return false;
+    const lead = WAVE_COMPARE_LEAD_SEC;
+    const speechSec = Math.max(0.4, sceneEnd(scene) - (scene.timestamp || 0));
+    const timelineSec = waveDrawMeta?.timelineSec || speechSec + lead;
+    const timing = clampTimingOffsetSec(offsetSec);
+    const painted = CVWaveform.drawTiming?.(waveCanvas, {
+      timingOffsetSec: timing,
+      timelineSec,
+      audioOffsetSec: lead,
+      cueMarkerSec: lead,
+      durationLabel: `${speechSec.toFixed(1)}s`,
+      voiceStartSec: null,
+    });
+    if (painted) {
+      if (waveHint) {
+        const offTxt = Math.abs(timing) >= 0.005 ? ` · Shift ${formatTimingOffset(timing)}` : '';
+        waveHint.textContent = `Grün = REC · Ziehen = Timing${offTxt} · Rosa = Original · Violett = Take`;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function scheduleTimingPaint(offsetSec) {
+    pendingTimingDrawSec = offsetSec;
+    if (timingDrawRaf) return;
+    timingDrawRaf = requestAnimationFrame(() => {
+      timingDrawRaf = null;
+      const v = pendingTimingDrawSec;
+      pendingTimingDrawSec = null;
+      if (v == null) return;
+      if (!paintTimingWaveform(v)) refreshWaveform();
+    });
+  }
+
+  function applyTimingOffsetLocal(nextSec, { persist = true, fullRefresh = false } = {}) {
     const v = clampTimingOffsetSec(nextSec);
     if (recorded) recorded = { ...recorded, timingOffsetSec: v };
     if (savedTake) savedTake = { ...savedTake, timingOffsetSec: v };
     syncTimingControls(v, { hasTake: !!(recorded || savedTake || state?.takeStatus?.[selectedSceneId]) });
-    refreshWaveform();
     exportCache = null;
     premixBuffer = null;
     premixToken += 1;
+    if (fullRefresh) {
+      refreshWaveform();
+    } else {
+      scheduleTimingPaint(v);
+    }
     if (persist) scheduleTimingPersist(v);
   }
 
@@ -323,6 +369,13 @@
       timingOffsetSec,
     });
     if (token !== waveToken) return;
+
+    waveDrawMeta = {
+      timelineSec: result.timelineSec || timelineSec,
+      audioOffsetSec: leadSec,
+      takeKey: result.takeKey || null,
+      originalUrl: scene?.referenceUrl || null,
+    };
 
     if (waveHint) {
       if (result.hasOriginal && result.hasTake) {
@@ -1044,6 +1097,24 @@
         updateRecordButtons();
         refreshWaveform();
       });
+    warmSceneForRecording(scene);
+  }
+
+  function warmSceneForRecording(scene) {
+    if (!scene || typeof CVAudio === 'undefined') return;
+    const token = ++sceneWarmToken;
+    const tasks = [];
+    tasks.push(
+      CVAudio.ensureMic()
+        .then(() => CVAudio.prepareRecordContext?.())
+        .catch(() => null)
+    );
+    if (scene.referenceUrl && CVWaveform?.loadOriginal) {
+      tasks.push(CVWaveform.loadOriginal(scene.referenceUrl).catch(() => null));
+    }
+    Promise.all(tasks).then(() => {
+      if (token !== sceneWarmToken || selectedSceneId !== scene.id) return;
+    });
   }
 
   function renderProgressBoard() {
@@ -2053,21 +2124,20 @@ async function startMultiplayer() {
     recordPrerollActive = true;
     try {
       CVAudio.stopPlayback();
-      await CVAudio.ensureMic();
-      if (typeof CVAudio.prepareRecordContext === 'function') {
-        await CVAudio.prepareRecordContext();
-      }
+      // Warm paths may already be ready from selectScene — still await briefly if cold
+      const warm = Promise.all([
+        CVAudio.ensureMic(),
+        typeof CVAudio.prepareRecordContext === 'function'
+          ? CVAudio.prepareRecordContext()
+          : Promise.resolve(),
+        ensureReferenceDuration(scene),
+        scene.referenceUrl && CVWaveform?.loadOriginal
+          ? CVWaveform.loadOriginal(scene.referenceUrl).catch(() => null)
+          : Promise.resolve(),
+      ]);
+      await warm;
 
-      // Measure spoken line length so recording stops with the text, not a silent gap
-      await ensureReferenceDuration(scene);
       sceneMeta.textContent = `${scene.character} · ${scene.timestamp.toFixed(1)}–${sceneEnd(scene).toFixed(1)}s`;
-
-      // Preload original so live overlay can compare immediately
-      if (scene.referenceUrl && CVWaveform?.loadOriginal) {
-        try {
-          await CVWaveform.loadOriginal(scene.referenceUrl);
-        } catch (_) {}
-      }
 
       await playSegmentOnly({
         forRecording: true,
@@ -2084,18 +2154,26 @@ async function startMultiplayer() {
           }, Math.round(windowSec * 1000 + 80));
 
           stopWavePlayhead();
-          await CVAudio.startLiveMonitor((peaks, elapsedMs) => {
+          await CVAudio.startLiveMonitor((peaks, elapsedMs, meta = {}) => {
             if (!isRecording || !waveCanvas || !CVWaveform?.drawLive) return;
             const lead = WAVE_COMPARE_LEAD_SEC;
             const speechSec = Math.max(0.15, sceneEnd(scene) - (scene.timestamp || 0));
             const timelineSec = lead + speechSec;
-            const origin = (scene.timestamp || 0) - lead;
-            const t = video.currentTime || scene.timestamp || 0;
-            const progress = Math.max(0, Math.min(1.05, (t - origin) / timelineSec));
+            const bucketSec = meta.bucketSec || CVAudio.getLiveBucketSec?.() || 0.02;
+            const elapsedSec =
+              Number.isFinite(meta.elapsedSec)
+                ? meta.elapsedSec
+                : (Number(elapsedMs) || 0) / 1000;
+            // Progress from PCM sample clock after cue (not video.currentTime)
+            const progress = Math.max(
+              0,
+              Math.min(1.05, (lead + (meta.cued ? elapsedSec : 0)) / timelineSec)
+            );
             CVWaveform.drawLive(waveCanvas, {
               originalUrl: scene.referenceUrl || null,
-              livePeaks: peaks,
-              elapsedMs,
+              livePeaks: meta.cued ? peaks : [],
+              liveBucketSec: bucketSec,
+              elapsedMs: elapsedSec * 1000,
               expectedMs,
               timelineSec,
               audioOffsetSec: lead,
@@ -2316,7 +2394,7 @@ socket.on('state:update', (next) => {
     const next = clampTimingOffsetSec(timingDrag.origin + timingPxToSec(e.clientX - timingDrag.startX));
     timingDrag = null;
     waveCanvas?.classList.remove('is-dragging');
-    applyTimingOffsetLocal(next, { persist: true });
+    applyTimingOffsetLocal(next, { persist: true, fullRefresh: true });
   }
 
   if (waveCanvas) {
@@ -2333,7 +2411,7 @@ socket.on('state:update', (next) => {
     });
     timingOffsetEl.addEventListener('change', () => {
       const ms = Number(timingOffsetEl.value) || 0;
-      applyTimingOffsetLocal(ms / 1000, { persist: true });
+      applyTimingOffsetLocal(ms / 1000, { persist: true, fullRefresh: true });
     });
   }
   if (btnTimingMinus) {

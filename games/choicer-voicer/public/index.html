@@ -57,31 +57,31 @@
       <p class="ok-msg hidden" id="uploadOk"></p>
     </section>
 
-    <section class="card" style="margin-top:16px" id="projectsSection">
-      <div class="dash-section-head" style="margin-bottom:10px">
-        <h2 style="margin:0">Gespeicherte Projekte</h2>
-        <div class="dash-top-actions" style="margin-left:0">
-          <button class="btn btn-sm btn-ghost" id="btnImportProjectFile" type="button">Datei importieren</button>
-          <input id="projectFileInput" type="file" accept=".json,application/json,.cvproject.json" hidden />
-        </div>
-      </div>
-      <p class="muted" style="margin:0 0 12px;font-size:0.9rem">
-        Nur auf diesem Gerät (Browser) — Takes zum Nachbearbeiten.
-      </p>
-      <label for="projectPackFilter">Pack filtern</label>
-      <select id="projectPackFilter" style="max-width:360px;margin-bottom:12px">
-        <option value="">Alle Packs</option>
-      </select>
-      <div class="project-list" id="projectList">
-        <p class="muted">Keine lokalen Projekte.</p>
-      </div>
-    </section>
-
     <section class="card" style="margin-top:16px">
       <h2 style="margin:0 0 14px">Deine Packs</h2>
       <div class="pack-grid" id="packGrid">
         <p class="muted">Lade Packs…</p>
       </div>
+    </section>
+
+    <section class="card projects-card" style="margin-top:16px" id="projectsSection">
+      <details class="dub-drawer projects-drawer" id="projectsDrawer">
+        <summary>
+          <span id="projectsSummaryLabel">Gespeicherte Projekte (0)</span>
+          <button class="btn btn-sm btn-ghost" id="btnImportProjectFile" type="button">Datei importieren</button>
+          <input id="projectFileInput" type="file" accept=".json,application/json,.cvproject.json" hidden />
+        </summary>
+        <p class="muted" style="margin:0 0 10px;font-size:0.85rem">
+          Nur auf diesem Gerät (Browser) — Takes zum Nachbearbeiten.
+        </p>
+        <label for="projectPackFilter">Pack filtern</label>
+        <select id="projectPackFilter" style="max-width:360px;margin-bottom:10px">
+          <option value="">Alle Packs</option>
+        </select>
+        <div class="project-list" id="projectList">
+          <p class="muted">Keine lokalen Projekte.</p>
+        </div>
+      </details>
     </section>
   </main>
 
