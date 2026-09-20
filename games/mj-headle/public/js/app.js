@@ -48,37 +48,52 @@
   let letterRevealTimer = null;
   let countUpRafs = [];
   let highscoreCache = { rounds: null, board: null };
-  const VOLUME_KEY = 'mj-headle-volume';
+  const VOLUME_PLAY = 0.85; // feste Standardlautstärke beim Raten
+  const VOLUME_REVEAL_KEY = 'mj-headle-volume-reveal';
+  const VOLUME_LEGACY_KEY = 'mj-headle-volume';
   let seekDragging = false;
 
-  function getVolume() {
-    const raw = Number(localStorage.getItem(VOLUME_KEY));
-    if (!Number.isFinite(raw)) return 0.8;
-    return Math.max(0, Math.min(1, raw));
+  function clampVol(v, fallback) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(0, Math.min(1, n));
   }
 
-  function setVolume(v) {
-    const next = Math.max(0, Math.min(1, Number(v)));
-    localStorage.setItem(VOLUME_KEY, String(next));
-    if (audio) {
+  function getPlayVolume() {
+    return VOLUME_PLAY;
+  }
+
+  function getRevealVolume() {
+    const stored = localStorage.getItem(VOLUME_REVEAL_KEY);
+    if (stored != null) return clampVol(stored, 0.55);
+    // Alte Ein-Key-Einstellung → Reveal, damit niedrige Werte nicht das Raten kaputt machen
+    const legacy = localStorage.getItem(VOLUME_LEGACY_KEY);
+    if (legacy != null) return clampVol(legacy, 0.55);
+    return 0.55;
+  }
+
+  function setRevealVolume(v) {
+    const next = clampVol(v, 0.55);
+    localStorage.setItem(VOLUME_REVEAL_KEY, String(next));
+    if (audio && revealPlaying) {
       try {
         audio.volume = next;
       } catch { /* ignore */ }
     }
-    syncVolumeSliders(next);
+    syncRevealVolumeSlider(next);
     return next;
   }
 
-  function syncVolumeSliders(v) {
-    const pct = Math.round((v != null ? v : getVolume()) * 100);
+  function syncRevealVolumeSlider(v) {
+    const pct = Math.round((v != null ? v : getRevealVolume()) * 100);
     const reveal = $('audioVolumeReveal');
     if (reveal && Number(reveal.value) !== pct) reveal.value = String(pct);
   }
 
-  function applyVolume(el) {
+  function applyVolume(el, kind = 'play') {
     if (!el) return;
     try {
-      el.volume = getVolume();
+      el.volume = kind === 'reveal' ? getRevealVolume() : getPlayVolume();
     } catch { /* ignore */ }
   }
 
@@ -759,7 +774,7 @@
     const el = new Audio(src);
     audio = el;
     el.preload = 'auto';
-    applyVolume(el);
+    applyVolume(el, 'play');
     setPlayUi({
       playing: false,
       caption: atServerMs != null ? 'Startet gleich…' : 'Lädt Clip…',
@@ -952,9 +967,10 @@
     const el = new Audio(url);
     audio = el;
     el.preload = 'auto';
-    applyVolume(el);
+    applyVolume(el, 'reveal');
     const btn = $('btnRevealPlay');
     if (btn) btn.textContent = 'Lädt…';
+    syncRevealVolumeSlider();
 
     const wireTransport = () => {
       if (token !== audioToken || audio !== el) return;
@@ -1652,10 +1668,10 @@
   function onVolumeInput(e) {
     const pct = Number(e.target.value);
     if (!Number.isFinite(pct)) return;
-    setVolume(pct / 100);
+    setRevealVolume(pct / 100);
   }
   $('audioVolumeReveal')?.addEventListener('input', onVolumeInput);
-  syncVolumeSliders(getVolume());
+  syncRevealVolumeSlider(getRevealVolume());
 
   const seekEl = $('revealSeek');
   if (seekEl) {
