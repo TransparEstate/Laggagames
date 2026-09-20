@@ -24,28 +24,35 @@
       <h1>Flagge. Tippen. Punkten.</h1>
       <p class="lead">Erkenne die Flagge so schnell wie möglich — Solo üben oder Party-Race über die Hub-Lobby.</p>
 
-      <div class="setup" id="soloSetup">
-        <label class="field">
-          <span>Name</span>
-          <input id="soloName" type="text" maxlength="24" placeholder="Dein Name" autocomplete="nickname" />
-        </label>
-        <label class="field">
-          <span>Runden</span>
-          <select id="soloRounds">
-            <option value="5">5</option>
-            <option value="10" selected>10</option>
-            <option value="15">15</option>
-          </select>
-        </label>
-        <label class="field">
-          <span>Schwierigkeit</span>
-          <select id="soloDifficulty">
-            <option value="easy">Leicht</option>
-            <option value="medium" selected>Mittel</option>
-            <option value="hard">Schwer</option>
-          </select>
-        </label>
-        <button type="button" class="btn primary" id="btnSoloStart">Solo starten</button>
+      <div class="home-layout">
+        <div class="setup" id="soloSetup">
+          <label class="field">
+            <span>Name</span>
+            <input id="soloName" type="text" maxlength="24" placeholder="Dein Name" autocomplete="nickname" />
+          </label>
+          <label class="field">
+            <span>Runden</span>
+            <select id="soloRounds">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="15">15</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Schwierigkeit</span>
+            <select id="soloDifficulty">
+              <option value="easy">Leicht</option>
+              <option value="medium" selected>Mittel</option>
+              <option value="hard">Schwer</option>
+            </select>
+          </label>
+          <button type="button" class="btn primary" id="btnSoloStart">Solo starten</button>
+        </div>
+        <aside class="home-scoreboard highscore-panel" id="homeHighscorePanel">
+          <h3 class="highscore-title">Race Allzeit · <span id="homeHighscoreRounds">10</span> Runden</h3>
+          <ol class="highscore-list" id="homeHighscoreList"></ol>
+          <p class="hint" id="homeHighscoreEmpty" hidden>Noch keine Rekorde für diese Rundenzahl.</p>
+        </aside>
       </div>
       <p class="hint" id="homeHint"></p>
       <p class="meta" id="homeMeta"></p>
@@ -55,37 +62,46 @@
     <section class="view" id="view-lobby" hidden>
       <p class="eyebrow" id="lobbyEyebrow">Lobby</p>
       <h2 id="lobbyTitle">Wartet auf Start…</h2>
-      <div class="lobby-grid">
-        <div class="panel">
-          <h3>Spieler</h3>
-          <ul class="player-list" id="lobbyPlayers"></ul>
-        </div>
-        <div class="panel" id="lobbyControls">
-          <h3>Einstellungen</h3>
-          <label class="field">
-            <span>Runden</span>
-            <select id="lobbyRounds">
-              <option value="5">5</option>
-              <option value="10" selected>10</option>
-              <option value="15">15</option>
-            </select>
-          </label>
-          <label class="field">
-            <span>Schwierigkeit</span>
-            <select id="lobbyDifficulty">
-              <option value="easy">Leicht</option>
-              <option value="medium" selected>Mittel</option>
-              <option value="hard">Schwer</option>
-            </select>
-          </label>
-          <div class="btn-row">
-            <button type="button" class="btn" id="btnReady">Ready</button>
-            <button type="button" class="btn primary" id="btnStart" hidden>Start</button>
+      <div class="lobby-layout">
+        <div class="lobby-main">
+          <div class="lobby-grid">
+            <div class="panel">
+              <h3>Spieler</h3>
+              <ul class="player-list" id="lobbyPlayers"></ul>
+            </div>
+            <div class="panel" id="lobbyControls">
+              <h3>Einstellungen</h3>
+              <label class="field">
+                <span>Runden</span>
+                <select id="lobbyRounds">
+                  <option value="5">5</option>
+                  <option value="10" selected>10</option>
+                  <option value="15">15</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Schwierigkeit</span>
+                <select id="lobbyDifficulty">
+                  <option value="easy">Leicht</option>
+                  <option value="medium" selected>Mittel</option>
+                  <option value="hard">Schwer</option>
+                </select>
+              </label>
+              <div class="btn-row">
+                <button type="button" class="btn" id="btnReady">Ready</button>
+                <button type="button" class="btn primary" id="btnStart" hidden>Start</button>
+              </div>
+            </div>
           </div>
+          <p class="hint" id="lobbyHint"></p>
+          <button type="button" class="btn ghost" id="btnLeaveLobby">Zurück zur Hub-Party</button>
         </div>
+        <aside class="lobby-scoreboard highscore-panel" id="lobbyHighscorePanel">
+          <h3 class="highscore-title">Race Allzeit · <span id="lobbyHighscoreRounds">10</span> Runden</h3>
+          <ol class="highscore-list" id="lobbyHighscoreList"></ol>
+          <p class="hint" id="lobbyHighscoreEmpty" hidden>Noch keine Rekorde für diese Rundenzahl.</p>
+        </aside>
       </div>
-      <p class="hint" id="lobbyHint"></p>
-      <button type="button" class="btn ghost" id="btnLeaveLobby">Zurück zur Hub-Party</button>
     </section>
 
     <!-- PLAY -->
@@ -101,18 +117,21 @@
       </div>
 
       <form class="guess-form" id="guessForm" autocomplete="off">
-        <input
-          id="guessInput"
-          type="text"
-          placeholder="Welches Land?"
-          maxlength="80"
-          autocomplete="off"
-          autocapitalize="off"
-          spellcheck="false"
-        />
+        <div class="guess-wrap">
+          <input
+            id="guessInput"
+            type="text"
+            placeholder="Welches Land? · Tab zum Auswählen"
+            maxlength="80"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+          <ul class="suggest" id="suggestList" hidden role="listbox"></ul>
+        </div>
         <button type="submit" class="btn primary" id="btnGuess">Tippen</button>
       </form>
-      <ul class="suggest" id="suggestList" hidden></ul>
+      <p class="hint kb-hint">Tab / ↑↓ wählt Vorschlag · Enter tippt</p>
       <p class="guess-feedback" id="guessFeedback" aria-live="polite"></p>
 
       <ul class="standings" id="raceStandings"></ul>
@@ -135,7 +154,13 @@
       <p class="eyebrow">Fertig</p>
       <h2 id="winnerTitle">Gewonnen!</h2>
       <p class="winner-score" id="winnerScore"></p>
+      <p class="highscore-banner" id="finishedHighscoreBanner" hidden></p>
       <ol class="ranking" id="finalRanking"></ol>
+      <div class="highscore-panel" id="finishedHighscorePanel">
+        <h3 class="highscore-title">Race Allzeit · <span id="finishedHighscoreRounds">10</span> Runden</h3>
+        <ol class="highscore-list" id="finishedHighscoreList"></ol>
+        <p class="hint" id="finishedHighscoreEmpty" hidden>Noch keine Rekorde für diese Rundenzahl.</p>
+      </div>
       <ul class="recap" id="recapList"></ul>
       <div class="btn-row">
         <button type="button" class="btn primary" id="btnRematch" hidden>Nochmal</button>

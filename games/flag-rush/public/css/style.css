@@ -140,7 +140,7 @@ h3 { margin: 0 0 0.75rem; font-size: 0.95rem; color: var(--muted); font-weight: 
   border-radius: 1rem;
   padding: 1rem;
 }
-.player-list, .standings, .ranking, .recap, .suggest {
+.player-list, .standings, .ranking, .recap {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -206,32 +206,130 @@ h3 { margin: 0 0 0.75rem; font-size: 0.95rem; color: var(--muted); font-weight: 
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.5rem;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.15rem;
+  align-items: start;
+}
+.guess-wrap {
+  position: relative;
+  min-width: 0;
+}
+.guess-wrap input {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  padding: 0.7rem 0.85rem;
+}
+.guess-wrap input:focus {
+  outline: 2px solid var(--accent-dim);
+  border-color: transparent;
 }
 .suggest {
-  background: var(--panel);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  background: #102820;
   border: 1px solid var(--line);
   border-radius: 0.75rem;
-  margin-bottom: 0.75rem;
   overflow: hidden;
+  max-height: 14rem;
+  overflow-y: auto;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
 }
-.suggest li button {
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  color: var(--ink);
-  font: inherit;
+.suggest li {
   padding: 0.55rem 0.85rem;
   cursor: pointer;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.95rem;
 }
-.suggest li button:hover { background: rgba(62, 207, 142, 0.12); }
+.suggest li:last-child { border-bottom: 0; }
+.suggest li:hover,
+.suggest li.active {
+  background: rgba(62, 207, 142, 0.16);
+  color: var(--ink);
+}
+.suggest li.empty {
+  color: var(--muted);
+  cursor: default;
+}
+.suggest li.empty:hover { background: transparent; }
+
 .guess-feedback { min-height: 1.4em; margin: 0.35rem 0 1rem; font-weight: 600; }
 .guess-feedback.ok { color: var(--accent); }
 .guess-feedback.bad { color: var(--danger); }
+.kb-hint { margin: 0.25rem 0 0.5rem; font-size: 0.8rem; }
 
 .standings { margin-top: 0.5rem; }
 .standings .first { color: var(--warn); }
 .winner-score { font-size: 1.2rem; color: var(--accent); margin: 0 0 1rem; }
 .recap { margin: 1.25rem 0; font-size: 0.9rem; color: var(--muted); }
 .recap strong { color: var(--ink); }
+
+/* Allzeit-Scoreboard (wie MJ Headle) */
+.home-layout,
+.lobby-layout {
+  display: grid;
+  gap: 1.25rem;
+  align-items: start;
+}
+@media (min-width: 720px) {
+  .home-layout,
+  .lobby-layout {
+    grid-template-columns: 1fr minmax(220px, 0.85fr);
+  }
+}
+.home-scoreboard,
+.lobby-scoreboard,
+.highscore-panel {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 1rem;
+  padding: 1rem 1.05rem 1.1rem;
+  min-height: 10rem;
+}
+.highscore-title {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.highscore-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: hs;
+}
+.highscore-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.95rem;
+  counter-increment: hs;
+}
+.highscore-list li::before {
+  content: counter(hs) ".";
+  color: var(--muted);
+  min-width: 1.4rem;
+}
+.highscore-list li:last-child { border-bottom: 0; }
+.highscore-list li:first-child {
+  color: var(--warn);
+}
+.highscore-list li strong {
+  font-variant-numeric: tabular-nums;
+}
+.highscore-banner {
+  color: var(--warn);
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}

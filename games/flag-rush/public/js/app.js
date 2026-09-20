@@ -24,6 +24,8 @@
   let tickTimer = null;
   let suggestTimer = null;
   let lastFlagKey = null;
+  let highscoreCache = { rounds: null, board: null };
+  let lastFinishedHsKey = null;
 
   function showView(name) {
     for (const [key, el] of Object.entries(views)) {
@@ -41,24 +43,92 @@
     return p ? p.score || 0 : 0;
   }
 
+  function escapeHtml(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   function updateScoreChip() {
     const chip = $('scoreChip');
     const val = $('scoreValue');
     if (!chip || !val) return;
-    const score = myScore();
-    const show = state && state.phase && state.phase !== 'lobby' && !(state.solo && state.phase === 'lobby');
-    chip.hidden = !show && score === 0;
     if (state && (state.phase === 'playing' || state.phase === 'reveal' || state.phase === 'finished')) {
       chip.hidden = false;
+    } else {
+      chip.hidden = true;
     }
-    val.textContent = String(score);
+    val.textContent = String(myScore());
   }
 
+  /* ── Highscores ─────────────────────────────────────────── */
+  async function fetchRaceHighscores(rounds) {
+    const n = Math.max(1, Math.min(20, Number(rounds) || 10));
+    try {
+      const res = await fetch(`${GB}/api/race-highscores?rounds=${n}`);
+      const data = await res.json();
+      highscoreCache = { rounds: n, board: data };
+      return data;
+    } catch {
+      return { rounds: n, entries: [] };
+    }
+  }
+
+  function fillHighscoreList(listEl, emptyEl, board) {
+    const entries = board?.entries || [];
+    if (listEl) {
+      listEl.innerHTML = entries
+        .map((e) => `<li><span>${escapeHtml(e.name)}</span><strong>${e.score || 0}</strong></li>`)
+        .join('');
+    }
+    if (emptyEl) emptyEl.hidden = entries.length > 0;
+  }
+
+  async function refreshHomeHighscore() {
+    const rounds = Number($('soloRounds')?.value) || 10;
+    const label = $('homeHighscoreRounds');
+    if (label) label.textContent = String(rounds);
+    const board = await fetchRaceHighscores(rounds);
+    fillHighscoreList($('homeHighscoreList'), $('homeHighscoreEmpty'), board);
+  }
+
+  async function refreshLobbyHighscore() {
+    const rounds =
+      Number($('lobbyRounds')?.value) || state?.settings?.rounds || 10;
+    const label = $('lobbyHighscoreRounds');
+    if (label) label.textContent = String(rounds);
+    const board = await fetchRaceHighscores(rounds);
+    fillHighscoreList($('lobbyHighscoreList'), $('lobbyHighscoreEmpty'), board);
+  }
+
+  async function refreshFinishedHighscore() {
+    const rounds = state?.totalRounds || state?.settings?.rounds || 10;
+    const label = $('finishedHighscoreRounds');
+    if (label) label.textContent = String(rounds);
+    const board = await fetchRaceHighscores(rounds);
+    fillHighscoreList($('finishedHighscoreList'), $('finishedHighscoreEmpty'), board);
+
+    const banner = $('finishedHighscoreBanner');
+    if (!banner) return;
+    const myName = (me()?.name || '').toLowerCase();
+    const rank = (board.entries || []).findIndex((e) => String(e.name || '').toLowerCase() === myName) + 1;
+    const key = `${rounds}:${myScore()}:${rank}`;
+    if (rank > 0 && rank <= 10 && key !== lastFinishedHsKey) {
+      lastFinishedHsKey = key;
+      banner.hidden = false;
+      banner.textContent =
+        rank === 1 ? 'Neuer Allzeit-Rekord!' : `Platz ${rank} in der Allzeit-Liste`;
+    } else if (!rank) {
+      banner.hidden = true;
+    }
+  }
+
+  /* ── Socket ─────────────────────────────────────────────── */
   function connectSocket() {
     if (socket) return Promise.resolve(socket);
     return new Promise((resolve, reject) => {
-      const scriptPath = GB ? `${GB}/socket.io/socket.io.js` : '/socket.io/socket.io.js';
-      // socket.io client is loaded via script tag; ensure io exists
       if (typeof io === 'undefined') {
         reject(new Error('socket.io Client fehlt'));
         return;
@@ -73,7 +143,6 @@
       socket.on('session:returned', () => {
         location.href = '/';
       });
-      // sync clock
       socket.emit('clock:ping', {}, (res) => {
         if (res?.serverNow) clockOffsetMs = res.serverNow - Date.now();
       });
@@ -90,14 +159,9 @@
     const phase = state?.phase || 'lobby';
 
     if (phase === 'lobby') {
-      if (state.solo) {
-        // solo auto-starts from home; if rematch, show lobby-like home controls via rematch
-        showView(state.solo ? 'lobby' : 'home');
-        renderLobby();
-      } else {
-        showView('lobby');
-        renderLobby();
-      }
+      showView('lobby');
+      renderLobby();
+      void refreshLobbyHighscore();
       stopTick();
       return;
     }
@@ -116,6 +180,7 @@
     if (phase === 'finished') {
       showView('finished');
       renderFinished();
+      void refreshFinishedHighscore();
       stopTick();
     }
   }
@@ -157,7 +222,6 @@
         : 'Warte auf den Host.';
 
     if (state.solo && isHost) {
-      // Solo: one click start from lobby after rematch
       $('btnStart').hidden = false;
       $('btnStart').textContent = 'Runde starten';
     }
@@ -176,14 +240,6 @@
     }
   }
 
-  function escapeHtml(s) {
-    return String(s || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
   function renderPlay() {
     const cur = state?.current;
     if (!cur) return;
@@ -196,7 +252,7 @@
       $('guessInput').value = '';
       $('guessFeedback').textContent = '';
       $('guessFeedback').className = 'guess-feedback';
-      $('suggestList').hidden = true;
+      renderSuggest('', { open: false });
       $('guessInput').disabled = !!(cur.myGuess && cur.myGuess.done);
       $('btnGuess').disabled = !!(cur.myGuess && cur.myGuess.done);
       if (!(cur.myGuess && cur.myGuess.done)) {
@@ -221,11 +277,6 @@
     const timer = $('raceTimer');
     timer.textContent = `${sec}s`;
     timer.classList.toggle('urgent', left < 5000);
-    const preview =
-      cur.myGuess && !cur.myGuess.done && cur.pointsPreview != null
-        ? cur.pointsPreview
-        : cur.pointsPreview;
-    // recompute locally for smoothness
     const elapsed = Math.max(0, serverNow() - cur.playAt);
     const windowMs = cur.raceWindowMs || 20000;
     const t = Math.min(1, elapsed / windowMs);
@@ -296,45 +347,152 @@
     }
   }
 
-  async function fetchSuggest(q) {
-    if (!q || q.length < 1) {
-      $('suggestList').hidden = true;
+  /* ── Suggest / Tab-Auswahl (wie MJ Headle) ──────────────── */
+  function renderSuggest(query, { open } = { open: true }) {
+    const box = $('suggestList');
+    if (!box) return;
+    const q = String(query || '').trim();
+    if (!open || !q) {
+      box.hidden = true;
+      box.innerHTML = '';
+      return;
+    }
+    // async fill via fetchSuggest
+  }
+
+  async function fetchSuggest(q, { open } = { open: true }) {
+    const box = $('suggestList');
+    if (!box) return;
+    const query = String(q || '').trim();
+    if (!open || !query) {
+      box.hidden = true;
+      box.innerHTML = '';
       return;
     }
     try {
-      const res = await fetch(`${GB}/api/suggest?q=${encodeURIComponent(q)}`);
+      const res = await fetch(`${GB}/api/suggest?q=${encodeURIComponent(query)}`);
       const data = await res.json();
-      const list = $('suggestList');
-      list.innerHTML = '';
       const items = data.suggestions || [];
       if (!items.length) {
-        list.hidden = true;
+        box.innerHTML = '<li class="empty">Kein Treffer</li>';
+        box.hidden = false;
         return;
       }
-      for (const s of items) {
-        const li = document.createElement('li');
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = s.de === s.en ? s.de : `${s.de} / ${s.en}`;
-        btn.addEventListener('click', () => {
-          $('guessInput').value = s.de;
-          list.hidden = true;
-          submitGuess();
-        });
-        li.appendChild(btn);
-        list.appendChild(li);
-      }
-      list.hidden = false;
+      box.innerHTML = items
+        .map((s, i) => {
+          const label = s.de === s.en ? s.de : `${s.de} / ${s.en}`;
+          return `<li data-name="${escapeHtml(s.de)}" class="${i === 0 ? 'active' : ''}">${escapeHtml(label)}</li>`;
+        })
+        .join('');
+      box.hidden = false;
     } catch {
-      $('suggestList').hidden = true;
+      box.hidden = true;
+      box.innerHTML = '';
     }
+  }
+
+  function bindGuessSearch() {
+    const input = $('guessInput');
+    const box = $('suggestList');
+    const form = $('guessForm');
+    if (!input || !box) return;
+
+    function fillInputFromName(name) {
+      const t = String(name || '');
+      input.value = t;
+      try {
+        input.setSelectionRange(t.length, t.length);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    function moveActive(delta) {
+      const items = [...box.querySelectorAll('li[data-name]')];
+      if (!items.length || box.hidden) return false;
+      let idx = items.findIndex((el) => el.classList.contains('active'));
+      if (idx < 0) idx = 0;
+      const current = items[idx];
+      const currentName = current.dataset.name || current.textContent || '';
+
+      // Erster Tab/Pfeil: aktiven Treffer ins Feld — Auswahl sichtbar.
+      if (input.value !== currentName) {
+        items.forEach((el) => el.classList.remove('active'));
+        current.classList.add('active');
+        fillInputFromName(currentName);
+        current.scrollIntoView({ block: 'nearest' });
+        return true;
+      }
+
+      const next = items[(idx + delta + items.length) % items.length];
+      items.forEach((el) => el.classList.remove('active'));
+      next.classList.add('active');
+      fillInputFromName(next.dataset.name || next.textContent || '');
+      next.scrollIntoView({ block: 'nearest' });
+      return true;
+    }
+
+    function openSuggestions() {
+      clearTimeout(suggestTimer);
+      const q = input.value.trim();
+      suggestTimer = setTimeout(() => fetchSuggest(q, { open: true }), 80);
+    }
+
+    input.addEventListener('input', openSuggestions);
+    input.addEventListener('focus', openSuggestions);
+    input.addEventListener('click', openSuggestions);
+    input.addEventListener('keydown', (e) => {
+      const items = [...box.querySelectorAll('li[data-name]')];
+      const listOpen = !box.hidden && items.length > 0;
+
+      if (e.key === 'Tab' && listOpen) {
+        e.preventDefault();
+        moveActive(e.shiftKey ? -1 : 1);
+        return;
+      }
+      if (e.key === 'ArrowDown' && listOpen) {
+        e.preventDefault();
+        moveActive(1);
+        return;
+      }
+      if (e.key === 'ArrowUp' && listOpen) {
+        e.preventDefault();
+        moveActive(-1);
+        return;
+      }
+      if (e.key === 'Enter') {
+        if (listOpen) {
+          e.preventDefault();
+          fetchSuggest('', { open: false });
+          if (form && typeof form.requestSubmit === 'function') form.requestSubmit();
+          else form?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+        return;
+      }
+      if (e.key === 'Escape') {
+        fetchSuggest('', { open: false });
+      }
+    });
+
+    box.addEventListener('mousedown', (e) => {
+      const li = e.target.closest('li[data-name]');
+      if (!li) return;
+      e.preventDefault();
+      fillInputFromName(li.dataset.name || li.textContent);
+      fetchSuggest('', { open: false });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (e.target === input || box.contains(e.target)) return;
+      fetchSuggest('', { open: false });
+    });
   }
 
   function submitGuess() {
     if (!socket || !state || state.phase !== 'playing') return;
     const text = $('guessInput').value.trim();
     if (!text) return;
-    $('suggestList').hidden = true;
+    fetchSuggest('', { open: false });
     socket.emit('round:guess', { text }, (res) => {
       if (res?.error && !res.correct) {
         $('guessFeedback').textContent = res.error;
@@ -386,7 +544,6 @@
           }
           playerId = res.playerId;
           applyState(res.state);
-          // auto-start solo match
           socket.emit('game:start', {}, (startRes) => {
             if (startRes?.error) $('lobbyHint').textContent = startRes.error;
             if (startRes?.state) applyState(startRes.state);
@@ -398,20 +555,23 @@
     }
   });
 
+  $('soloRounds').addEventListener('change', () => {
+    void refreshHomeHighscore();
+  });
+
   $('guessForm').addEventListener('submit', (e) => {
     e.preventDefault();
     submitGuess();
   });
 
-  $('guessInput').addEventListener('input', () => {
-    clearTimeout(suggestTimer);
-    const q = $('guessInput').value.trim();
-    suggestTimer = setTimeout(() => fetchSuggest(q), 120);
-  });
+  bindGuessSearch();
 
   $('lobbyRounds').addEventListener('change', () => {
     if (!socket) return;
-    socket.emit('lobby:set-rounds', { rounds: Number($('lobbyRounds').value) });
+    socket.emit('lobby:set-rounds', { rounds: Number($('lobbyRounds').value) }, () => {
+      void refreshLobbyHighscore();
+    });
+    void refreshLobbyHighscore();
   });
   $('lobbyDifficulty').addEventListener('change', () => {
     if (!socket) return;
@@ -430,22 +590,23 @@
   });
   $('btnRematch').addEventListener('click', () => {
     if (!socket) return;
+    lastFinishedHsKey = null;
     socket.emit('game:rematch', {});
   });
   $('btnHome').addEventListener('click', () => {
-    location.href = GB || '/';
+    const base = GB || location.pathname.replace(/\/?$/, '/');
+    location.href = base;
   });
   $('btnLeaveLobby').addEventListener('click', leaveToHubParty);
   $('btnLeaveFinished').addEventListener('click', leaveToHubParty);
 
-  // Party boot
   async function boot() {
     await loadMeta();
+    await refreshHomeHighscore();
     if (!partyId) {
       showView('home');
       return;
     }
-    // Party mode: hide solo, join party session
     $('soloSetup').hidden = true;
     $('homeHint').textContent = 'Party wird verbunden…';
     showView('home');

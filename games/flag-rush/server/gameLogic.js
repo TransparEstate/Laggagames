@@ -28,6 +28,7 @@ function createEmptyRoom(code, hostSocketId) {
     current: null,
     scores: {},
     roundRecap: [],
+    raceHighscoreRecorded: false,
     createdAt: Date.now(),
     lastActivity: Date.now(),
     _timers: {},
@@ -205,6 +206,7 @@ function beginMatch(room) {
   }
   room.current = null;
   room.phase = 'playing';
+  room.raceHighscoreRecorded = false;
   room.lastActivity = Date.now();
   startRound(room);
   return { ok: true };
@@ -336,6 +338,7 @@ function rematch(room) {
   room.flagIds = [];
   room.roundRecap = [];
   room.scores = {};
+  room.raceHighscoreRecorded = false;
   for (const p of room.players) {
     p.score = 0;
     p.ready = false;
