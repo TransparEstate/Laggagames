@@ -94,7 +94,113 @@ main {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
 }
-.view-home { padding-top: 12vh; text-align: center; }
+.view-home { padding-top: 8vh; text-align: center; }
+
+.home-layout,
+.lobby-layout {
+  display: grid;
+  gap: 1.25rem;
+  width: min(100%, 56rem);
+  margin: 1.25rem auto 0;
+  align-items: start;
+  text-align: left;
+}
+@media (min-width: 820px) {
+  .home-layout,
+  .lobby-layout {
+    grid-template-columns: 1fr minmax(14rem, 18rem);
+  }
+}
+
+.mode-pick {
+  display: grid;
+  gap: 0.85rem;
+}
+@media (min-width: 560px) {
+  .mode-pick {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.mode-card {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.03);
+  color: var(--ink);
+  text-align: left;
+  padding: 1.1rem 1.15rem 1.2rem;
+  cursor: pointer;
+  display: grid;
+  gap: 0.35rem;
+  font: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.mode-card:hover,
+.mode-card:focus-visible {
+  border-color: rgba(240, 201, 106, 0.55);
+  background: rgba(212, 168, 75, 0.08);
+  outline: none;
+}
+.mode-card.is-on {
+  border-color: rgba(240, 201, 106, 0.7);
+  background: rgba(212, 168, 75, 0.14);
+  box-shadow: 0 0 24px rgba(212, 168, 75, 0.12);
+}
+.mode-card:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.mode-card-kicker {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.mode-card-title {
+  font-family: var(--display);
+  font-size: clamp(1.8rem, 5vw, 2.4rem);
+  letter-spacing: 0.06em;
+  line-height: 1;
+  color: var(--gold-bright);
+}
+.mode-card-copy {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+.mode-card-race.is-on .mode-card-title,
+.mode-card-race:hover .mode-card-title {
+  text-shadow: 0 0 18px rgba(240, 201, 106, 0.35);
+}
+
+.home-scoreboard,
+.lobby-scoreboard {
+  border: 1px solid var(--line);
+  background: rgba(20, 16, 18, 0.55);
+  padding: 1rem 1.05rem 1.1rem;
+  min-height: 12rem;
+}
+.home-scoreboard .highscore-title,
+.lobby-scoreboard .highscore-title {
+  margin-top: 0;
+}
+.field-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.5rem 0 0.75rem;
+}
+.field-inline span { color: var(--muted); font-size: 0.85rem; }
+.field-inline input {
+  width: 4.5rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.03);
+  color: var(--ink);
+  font: inherit;
+}
+
+.lobby-main { min-width: 0; }
 
 .brand {
   margin: 0;

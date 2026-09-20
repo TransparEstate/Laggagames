@@ -384,6 +384,7 @@ io.on('connection', (socket) => {
         return;
       }
       if (payload.rounds) game.setRounds(room, socket.id, payload.rounds);
+      if (payload.mode) game.setMode(room, socket.id, payload.mode);
       socket.join(room.code);
       if (typeof ack === 'function') {
         ack({
