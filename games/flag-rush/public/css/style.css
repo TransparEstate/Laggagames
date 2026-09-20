@@ -1,0 +1,237 @@
+:root {
+  --bg0: #0c1a17;
+  --bg1: #143029;
+  --ink: #f2f7f4;
+  --muted: #a8bdb4;
+  --accent: #3ecf8e;
+  --accent-dim: #1f8f5f;
+  --warn: #f0b429;
+  --danger: #e85d5d;
+  --panel: rgba(18, 42, 36, 0.72);
+  --line: rgba(242, 247, 244, 0.12);
+  --font-display: "Bricolage Grotesque", Georgia, serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--bg0);
+  line-height: 1.45;
+}
+
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(900px 500px at 10% -10%, rgba(62, 207, 142, 0.22), transparent 60%),
+    radial-gradient(700px 420px at 90% 0%, rgba(240, 180, 41, 0.12), transparent 55%),
+    linear-gradient(165deg, var(--bg1), var(--bg0) 55%);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+}
+.back { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
+.back:hover { color: var(--ink); }
+.brand {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  flex: 1;
+}
+.scorechip {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+main {
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+.view[hidden] { display: none !important; }
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  color: var(--accent);
+  margin: 0 0 0.5rem;
+}
+h1, h2 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 0 0 0.75rem;
+}
+h1 { font-size: clamp(2rem, 6vw, 3rem); }
+h2 { font-size: clamp(1.5rem, 4vw, 2.1rem); }
+h3 { margin: 0 0 0.75rem; font-size: 0.95rem; color: var(--muted); font-weight: 600; }
+.lead { color: var(--muted); margin: 0 0 1.5rem; max-width: 36rem; }
+.sub { color: var(--muted); margin: 0 0 1rem; }
+.hint { color: var(--muted); font-size: 0.9rem; }
+.meta { color: var(--muted); font-size: 0.8rem; margin-top: 1.5rem; }
+
+.setup {
+  display: grid;
+  gap: 0.85rem;
+  max-width: 22rem;
+}
+.field { display: grid; gap: 0.35rem; font-size: 0.85rem; color: var(--muted); }
+.field input, .field select, .guess-form input {
+  font: inherit;
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  padding: 0.7rem 0.85rem;
+}
+.field input:focus, .field select:focus, .guess-form input:focus {
+  outline: 2px solid var(--accent-dim);
+  border-color: transparent;
+}
+
+.btn {
+  font: inherit;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  border-radius: 0.7rem;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+}
+.btn:hover { background: rgba(255, 255, 255, 0.12); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+  border-color: transparent;
+  color: #062016;
+}
+.btn.primary:hover { filter: brightness(1.05); }
+.btn.ghost { background: transparent; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.5rem; }
+
+.lobby-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 640px) {
+  .lobby-grid { grid-template-columns: 1.1fr 0.9fr; }
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1rem;
+}
+.player-list, .standings, .ranking, .recap, .suggest {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.player-list li, .standings li, .ranking li, .recap li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.95rem;
+}
+.player-list li:last-child,
+.standings li:last-child,
+.ranking li:last-child,
+.recap li:last-child { border-bottom: 0; }
+.badge {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.badge.ready { color: var(--accent); border-color: rgba(62, 207, 142, 0.4); }
+.badge.host { color: var(--warn); border-color: rgba(240, 180, 41, 0.4); }
+
+.race-hud {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+.race-timer {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.8rem;
+}
+.race-timer.urgent { color: var(--danger); }
+.race-points, .race-round { color: var(--muted); font-size: 0.95rem; }
+
+.flag-stage {
+  display: grid;
+  place-items: center;
+  margin: 0 auto 1.25rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line);
+  border-radius: 1.1rem;
+  min-height: 220px;
+}
+.flag-stage.compact { min-height: 160px; padding: 0.75rem; }
+.flag {
+  width: min(320px, 100%);
+  height: auto;
+  border-radius: 0.35rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  background: #111;
+}
+
+.guess-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.suggest {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+.suggest li button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  font: inherit;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+}
+.suggest li button:hover { background: rgba(62, 207, 142, 0.12); }
+.guess-feedback { min-height: 1.4em; margin: 0.35rem 0 1rem; font-weight: 600; }
+.guess-feedback.ok { color: var(--accent); }
+.guess-feedback.bad { color: var(--danger); }
+
+.standings { margin-top: 0.5rem; }
+.standings .first { color: var(--warn); }
+.winner-score { font-size: 1.2rem; color: var(--accent); margin: 0 0 1rem; }
+.recap { margin: 1.25rem 0; font-size: 0.9rem; color: var(--muted); }
+.recap strong { color: var(--ink); }

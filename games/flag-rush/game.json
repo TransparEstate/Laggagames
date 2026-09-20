@@ -1,0 +1,12 @@
+{
+  "id": "flag-rush",
+  "name": "Flag Rush",
+  "tagline": "Flaggen tippen — Solo oder Party-Race",
+  "description": "Klassisches Flaggen-Quiz: Flagge sehen, Land tippen (DE/EN). Solo zum Üben oder synchrones Party-Race über die Hub-Lobby — Punkte nach Tempo, First-Tipp-Bonus.",
+  "status": "playable",
+  "entry": "server/index.js",
+  "partySupport": true,
+  "routes": {
+    "home": "/"
+  }
+}
