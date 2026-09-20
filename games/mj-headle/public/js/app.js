@@ -600,11 +600,36 @@
     function moveActive(delta) {
       const items = [...box.querySelectorAll('li[data-title]')];
       if (!items.length || box.hidden) return false;
-      const idx = items.findIndex((el) => el.classList.contains('active'));
-      const base = idx < 0 ? 0 : idx;
-      const next = items[(base + delta + items.length) % items.length];
+      let idx = items.findIndex((el) => el.classList.contains('active'));
+      if (idx < 0) idx = 0;
+      const current = items[idx];
+      const currentTitle = current.dataset.title || current.textContent || '';
+
+      // First Tab/arrow: adopt the already-highlighted hit into the input so it's obvious.
+      if (input.value !== currentTitle) {
+        items.forEach((el) => el.classList.remove('active'));
+        current.classList.add('active');
+        input.value = currentTitle;
+        const len = input.value.length;
+        try {
+          input.setSelectionRange(len, len);
+        } catch {
+          /* ignore */
+        }
+        current.scrollIntoView({ block: 'nearest' });
+        return true;
+      }
+
+      const next = items[(idx + delta + items.length) % items.length];
       items.forEach((el) => el.classList.remove('active'));
       next.classList.add('active');
+      const title = next.dataset.title || next.textContent || '';
+      input.value = title;
+      try {
+        input.setSelectionRange(title.length, title.length);
+      } catch {
+        /* ignore */
+      }
       next.scrollIntoView({ block: 'nearest' });
       return true;
     }
