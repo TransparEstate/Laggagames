@@ -215,16 +215,27 @@ section('race points decay + first bonus + window continues');
   const first = game.submitGuess(room, 'host', title);
   assert.ok(first.correct, first.error);
   assert.ok(first.firstBonus);
+  assert.ok(first.basePoints != null);
+  assert.strictEqual(first.bonusPoints, game.RACE_FIRST_BONUS);
+  assert.strictEqual(first.points, first.basePoints + first.bonusPoints);
   assert.ok(first.points >= game.RACE_MIN_POINTS + game.RACE_FIRST_BONUS);
   assert.strictEqual(room.phase, 'playing', 'timer continues after first correct');
   const guestWrong = game.submitGuess(room, 'guest', 'Nope Not A Song');
   assert.ok(guestWrong.ok && guestWrong.correct === false);
   assert.strictEqual(room.current.guesses.guest.done, false);
+  assert.ok(Array.isArray(room.current.guesses.guest.attempts));
+  assert.strictEqual(room.current.guesses.guest.attempts.length, 1);
+  assert.strictEqual(room.current.guesses.guest.attempts[0].text, 'Nope Not A Song');
+  game.submitGuess(room, 'guest', 'Still Wrong');
+  assert.strictEqual(room.current.guesses.guest.attempts.length, 2);
   const second = game.submitGuess(room, 'guest', title);
   assert.ok(second.correct);
   assert.strictEqual(second.firstBonus, false);
+  assert.strictEqual(second.bonusPoints, 0);
   assert.ok(second.points < first.points);
   assert.strictEqual(room.phase, 'reveal');
+  const standings = game.raceStandings(room);
+  assert.ok(standings.some((r) => r.firstBonus && r.bonusPoints === game.RACE_FIRST_BONUS));
   console.log('ok: race scoring + continue after first');
 }
 
@@ -276,6 +287,77 @@ section('leave empties room');
   console.log('ok: hard leave deletes empty room');
 }
 
+section('race standings empty after beginRound');
+{
+  const room = roomWithTwo();
+  game.setMode(room, 'host', 'race');
+  game.setRounds(room, 'host', 2);
+  game.startMatch(room, songs);
+  game.applyRaceGo(room, { playAt: Date.now() - 200, endsAt: Date.now() + 20000 });
+  game.submitGuess(room, 'host', room.current.title);
+  game.submitGuess(room, 'guest', room.current.title);
+  assert.ok(game.raceStandings(room).length >= 1);
+  assert.ok(game.nextRound(room, songs).ok);
+  assert.deepStrictEqual(game.raceStandings(room), []);
+  const pub = game.publicState(room, 'host');
+  assert.deepStrictEqual(pub.current.standings, []);
+  assert.strictEqual(pub.current.firstBonusAwarded, false);
+  console.log('ok: standings reset on next race round');
+}
+
+section('race highscores buckets by rounds');
+{
+  const hs = require('../server/raceHighscores');
+  const tmp = path.join(root, 'data', `race-highscores-test-${process.pid}.json`);
+  hs.setDataFileForTests(tmp);
+  try {
+    if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+    const a = hs.submitScore({ name: 'Alpha', score: 100, rounds: 5, solo: true });
+    assert.ok(a.ok);
+    assert.ok(a.isNewRecord);
+    const b = hs.submitScore({ name: 'Beta', score: 200, rounds: 5, solo: true });
+    assert.ok(b.isNewRecord);
+    const c = hs.submitScore({ name: 'Alpha', score: 90, rounds: 5, solo: true });
+    assert.strictEqual(c.isNewRecord, false, 'lower score does not replace');
+    const d = hs.submitScore({ name: 'Alpha', score: 250, rounds: 5, solo: true });
+    assert.ok(d.isNewRecord);
+    const board5 = hs.getBoard(5);
+    assert.ok(board5.entries.some((e) => e.name === 'Alpha' && e.score === 250));
+    assert.ok(board5.entries.some((e) => e.name === 'Beta' && e.score === 200));
+    hs.submitScore({ name: 'EightKid', score: 400, rounds: 8, solo: true });
+    const board8 = hs.getBoard(8);
+    assert.ok(board8.entries.some((e) => e.name === 'EightKid'));
+    assert.ok(!board5.entries.some((e) => e.name === 'EightKid'), '8-round score stays out of 5-round board');
+    const room = roomWithTwo();
+    room.settings.mode = 'race';
+    room.totalRounds = 3;
+    room.solo = true;
+    room.phase = 'finished';
+    room.players[0].score = 111;
+    room.players[1].score = 222;
+    room.raceHighscoreRecorded = false;
+    const rec = hs.recordRaceFinish(room);
+    assert.ok(rec.ok);
+    assert.ok(room.raceHighscoreRecorded);
+    const again = hs.recordRaceFinish(room);
+    assert.ok(again.already);
+    const board3 = hs.getBoard(3);
+    assert.ok(board3.entries.length >= 1);
+    const classic = roomWithTwo();
+    classic.settings.mode = 'classic';
+    classic.phase = 'finished';
+    classic.players[0].score = 999;
+    const skip = hs.recordRaceFinish(classic);
+    assert.ok(skip.skipped);
+    console.log('ok: highscore buckets + finish record');
+  } finally {
+    try {
+      if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+    } catch { /* ignore */ }
+    hs.setDataFileForTests(path.join(root, 'data', 'race-highscores.json'));
+  }
+}
+
 section('static UI markers');
 {
   const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
@@ -290,19 +372,32 @@ section('static UI markers');
   assert.ok(html.includes('id="leaveModal"'));
   assert.ok(html.includes('id="roundRecap"'));
   assert.ok(html.includes('id="view-wait"'));
+  assert.ok(html.includes('id="btnGuess"'));
+  assert.ok(html.includes('id="lobbyHighscorePanel"'));
+  assert.ok(html.includes('id="ersttippBurst"'));
   assert.ok(js.includes('session:return-to-lobby'));
   assert.ok(js.includes('waitingForOthers'));
   assert.ok(js.includes('roundRecap'));
   assert.ok(js.includes('lobby:set-mode'));
   assert.ok(js.includes('race:armed'));
   assert.ok(js.includes('handleRaceGo'));
+  assert.ok(html.includes('id="guessAttempts"'));
+  assert.ok(js.includes('function renderGuessAttempts'));
+  assert.ok(js.includes('function focusGuessInput'), 'targeted focus helper');
+  assert.ok(js.includes('function renderRaceStandingsList'), 'standings helper clears list');
+  assert.ok(js.includes('keepFocus: true'));
+  assert.ok(js.includes('animateLetterReveal'));
+  assert.ok(js.includes('showErsttippBurst'));
+  assert.ok(js.includes('/api/race-highscores'));
   assert.ok(css.includes('line-height: 1.05') || css.includes('line-height:1.05'));
   assert.ok(css.includes('.modal'));
   assert.ok(css.includes('.btn-danger') || css.includes('btn-danger'));
   assert.ok(css.includes('min-height: 100vh'), 'viewport fill');
   assert.ok(css.includes('background-attachment: fixed'), 'fixed atmosphere');
   assert.ok(css.includes('.race-hud'));
-  assert.ok(!js.includes("guessInput').focus()"), 'no auto-focus guess input');
+  assert.ok(css.includes('.ersttipp-burst'));
+  assert.ok(css.includes('.score-breakdown'));
+  assert.ok(css.includes(':focus-visible'));
   assert.ok(js.includes('function clearGuessInput'), 'clearGuessInput helper');
   assert.ok(js.includes('el.currentTime = 0'), 'reveal plays from start');
   const revealFn = js.slice(js.indexOf('function playRevealTrack'), js.indexOf('function maybeResetRoundUi'));
@@ -364,6 +459,25 @@ section('live catalog + socket syncReveal');
     const n = (data.songs || []).length;
     assert.ok(n > 12, `expected >12 songs, got ${n}`);
     console.log(`ok: catalog ${n} songs, playable=${data.playableCount}`);
+
+    const hsBody = await new Promise((resolve, reject) => {
+      http
+        .get(`http://127.0.0.1:${PORT}/api/race-highscores?rounds=5`, (res) => {
+          let body = '';
+          res.on('data', (c) => (body += c));
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(body));
+            } catch (e) {
+              reject(e);
+            }
+          });
+        })
+        .on('error', reject);
+    });
+    assert.strictEqual(hsBody.rounds, 5);
+    assert.ok(Array.isArray(hsBody.entries));
+    console.log('ok: race-highscores API');
 
     let ioClient;
     try {

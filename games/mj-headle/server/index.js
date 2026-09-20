@@ -10,6 +10,7 @@ const game = require('./gameLogic');
 const catalog = require('./catalog');
 const cueDetect = require('./cueDetect');
 const r2 = require('./r2');
+const raceHighscores = require('./raceHighscores');
 
 const PORT = Number(process.env.PORT) || 3010;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
@@ -63,9 +64,22 @@ async function postHubPartyReturn(partyId) {
 
 function broadcastRoom(room) {
   if (!room) return;
+  maybeRecordRaceHighscores(room);
   for (const player of room.players) {
     if (player.connected === false) continue;
     io.to(player.id).emit('state:update', rooms.getPublicState(room, player.id));
+  }
+}
+
+function maybeRecordRaceHighscores(room) {
+  if (!room || room.phase !== 'finished') return;
+  if (!game.raceOn(room)) return;
+  if (room.raceHighscoreRecorded) return;
+  try {
+    const result = raceHighscores.recordRaceFinish(room);
+    room._lastRaceHighscore = result;
+  } catch (err) {
+    console.warn('[mj-headle] race highscore write failed', err.message || err);
   }
 }
 
@@ -167,6 +181,23 @@ app.get('/health', async (_req, res) => {
       firstBonus: game.RACE_FIRST_BONUS,
     },
   });
+});
+
+app.get('/api/race-highscores', (req, res) => {
+  try {
+    const roundsRaw = req.query.rounds;
+    if (roundsRaw == null || roundsRaw === '') {
+      return res.json({
+        buckets: raceHighscores.listBuckets(),
+        defaultRounds: 5,
+        board: raceHighscores.getBoard(5),
+      });
+    }
+    const board = raceHighscores.getBoard(roundsRaw);
+    res.json(board);
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Highscore-Fehler' });
+  }
 });
 
 app.get('/api/songs', async (_req, res) => {

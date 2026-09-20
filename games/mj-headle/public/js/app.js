@@ -41,6 +41,13 @@
   let racePlayScheduled = false;
   let finishedFanfareKey = null;
   let confettiRaf = null;
+  let lastErsttippKey = null;
+  let lastRevealFxKey = null;
+  let lastFocusViewKey = null;
+  let leaveFocusRestore = null;
+  let letterRevealTimer = null;
+  let countUpRafs = [];
+  let highscoreCache = { rounds: null, board: null };
 
   function show(name) {
     Object.entries(views).forEach(([key, el]) => {
@@ -87,6 +94,241 @@
       clearInterval(raceCountdownTimer);
       raceCountdownTimer = null;
     }
+  }
+
+  function clearLetterReveal() {
+    if (letterRevealTimer) {
+      clearTimeout(letterRevealTimer);
+      letterRevealTimer = null;
+    }
+  }
+
+  function clearCountUps() {
+    for (const id of countUpRafs) cancelAnimationFrame(id);
+    countUpRafs = [];
+  }
+
+  function focusGuessInput() {
+    const input = $('guessInput');
+    if (!input || input.disabled) return;
+    try {
+      input.focus({ preventScroll: true });
+    } catch {
+      input.focus();
+    }
+  }
+
+  function renderGuessAttempts(attempts) {
+    const wrap = $('guessAttempts');
+    const list = $('guessAttemptsList');
+    if (!wrap || !list) return;
+    const rows = Array.isArray(attempts) ? attempts : [];
+    if (!rows.length) {
+      wrap.hidden = true;
+      list.innerHTML = '';
+      return;
+    }
+    wrap.hidden = false;
+    list.innerHTML = rows
+      .map((a) => {
+        const cls = a.correct ? 'ok' : '';
+        return `<li class="${cls}">${escapeHtml(a.text || '')}</li>`;
+      })
+      .join('');
+    list.scrollTop = list.scrollHeight;
+  }
+
+  function renderRaceStandingsList(rows) {
+    const list = $('raceStandings');
+    if (!list) return;
+    const items = Array.isArray(rows) ? rows : [];
+    list.innerHTML = items
+      .map((r) => {
+        const ms = r.reactionMs != null ? `${(r.reactionMs / 1000).toFixed(1).replace('.', ',')}s` : '—';
+        const bonus = r.firstBonus ? '<span class="bonus">Ersttipp</span>' : '';
+        return `<li><span>${escapeHtml(r.name)}${bonus}</span><span>${ms} · +${r.points}</span></li>`;
+      })
+      .join('');
+  }
+
+  function showErsttippBurst(name, bonus) {
+    const el = $('ersttippBurst');
+    if (!el) return;
+    const nameEl = $('ersttippName');
+    const bonusEl = $('ersttippBonus');
+    if (nameEl) nameEl.textContent = String(name || 'Spieler');
+    if (bonusEl) bonusEl.textContent = `+${bonus || raceMeta.firstBonus || 25}`;
+    el.hidden = false;
+    clearTimeout(showErsttippBurst._t);
+    showErsttippBurst._t = setTimeout(() => {
+      el.hidden = true;
+    }, 1250);
+  }
+
+  function maybeShowErsttipp(cur) {
+    if (!raceModeOn() || !cur) return;
+    const rows = cur.standings || [];
+    const first = rows.find((r) => r.firstBonus);
+    if (!first) return;
+    const key = `${cur.round}:${cur.songId}:${first.id}`;
+    if (key === lastErsttippKey) return;
+    lastErsttippKey = key;
+    showErsttippBurst(first.name, first.bonusPoints || raceMeta.firstBonus || 25);
+  }
+
+  async function fetchRaceHighscores(rounds) {
+    const n = Math.max(1, Math.min(20, Number(rounds) || 5));
+    try {
+      const res = await fetch(`${GB}/api/race-highscores?rounds=${n}`);
+      const data = await res.json();
+      highscoreCache = { rounds: n, board: data };
+      return data;
+    } catch {
+      return { rounds: n, entries: [] };
+    }
+  }
+
+  function fillHighscoreList(listEl, emptyEl, board) {
+    const entries = board?.entries || [];
+    if (listEl) {
+      listEl.innerHTML = entries
+        .map((e) => `<li><span>${escapeHtml(e.name)}</span><strong>${e.score || 0}</strong></li>`)
+        .join('');
+    }
+    if (emptyEl) emptyEl.hidden = entries.length > 0;
+  }
+
+  async function refreshLobbyHighscore() {
+    const panel = $('lobbyHighscorePanel');
+    if (!panel) return;
+    const race = !!$('modeRaceToggle')?.checked || raceModeOn();
+    panel.hidden = !race;
+    if (!race) return;
+    const rounds = Number($('roundsInput')?.value) || state?.settings?.rounds || 5;
+    const roundsLabel = $('lobbyHighscoreRounds');
+    if (roundsLabel) roundsLabel.textContent = String(rounds);
+    const board = await fetchRaceHighscores(rounds);
+    fillHighscoreList($('lobbyHighscoreList'), $('lobbyHighscoreEmpty'), board);
+  }
+
+  async function refreshFinishedHighscore() {
+    const panel = $('finishedHighscorePanel');
+    const banner = $('finishedHighscoreBanner');
+    if (!raceModeOn()) {
+      if (panel) panel.hidden = true;
+      if (banner) banner.hidden = true;
+      return;
+    }
+    const rounds = state?.totalRounds || state?.settings?.rounds || 5;
+    const board = await fetchRaceHighscores(rounds);
+    if (panel) panel.hidden = false;
+    const roundsLabel = $('finishedHighscoreRounds');
+    if (roundsLabel) roundsLabel.textContent = String(rounds);
+    fillHighscoreList($('finishedHighscoreList'), null, board);
+    const self = me();
+    if (banner && self) {
+      const nameKey = String(self.name || '').toLowerCase();
+      const rank = (board.entries || []).findIndex((e) => String(e.name || '').toLowerCase() === nameKey) + 1;
+      if (rank > 0 && rank <= 10) {
+        banner.hidden = false;
+        banner.textContent = rank === 1 ? 'Neuer Allzeit-Rekord!' : `Allzeit Platz ${rank} · ${rounds} Runden`;
+      } else {
+        banner.hidden = true;
+      }
+    }
+  }
+
+  function animateLetterReveal(title) {
+    clearLetterReveal();
+    const el = $('revealTitle');
+    if (!el) return;
+    const text = String(title || '—');
+    el.innerHTML = [...text]
+      .map((ch) =>
+        ch === ' '
+          ? '<span class="ch space on">&nbsp;</span>'
+          : `<span class="ch">${escapeHtml(ch)}</span>`
+      )
+      .join('');
+    const chars = [...el.querySelectorAll('.ch:not(.space)')];
+    let i = 0;
+    const step = () => {
+      if (i >= chars.length) return;
+      chars[i].classList.add('on');
+      i += 1;
+      letterRevealTimer = setTimeout(step, 48);
+    };
+    step();
+  }
+
+  function countLabel(el, prefix, target, durationMs) {
+    if (!el) return;
+    const to = Math.max(0, Number(target) || 0);
+    const start = performance.now();
+    const run = (now) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = `${prefix}${Math.round(to * eased)}`;
+      if (t < 1) countUpRafs.push(requestAnimationFrame(run));
+      else el.textContent = `${prefix}${to}`;
+    };
+    countUpRafs.push(requestAnimationFrame(run));
+  }
+
+  function renderRevealBreakdown(listEl, standings, players) {
+    if (!listEl) return;
+    clearCountUps();
+    if (!raceModeOn()) {
+      listEl.className = 'player-list';
+      renderPlayers(listEl, 'scores');
+      return;
+    }
+    listEl.className = 'score-breakdown';
+    const rows = (standings && standings.length ? standings.slice() : []) || [];
+    const seen = new Set(rows.map((r) => r.id));
+    for (const p of players || []) {
+      if (seen.has(p.id)) continue;
+      rows.push({
+        id: p.id,
+        name: p.name,
+        points: 0,
+        basePoints: 0,
+        bonusPoints: 0,
+        reactionMs: null,
+        firstBonus: false,
+      });
+    }
+
+    listEl.innerHTML = rows
+      .map((r, idx) => {
+        const base = r.basePoints != null ? r.basePoints : r.points || 0;
+        const bonus = r.bonusPoints || 0;
+        const total = r.points != null ? r.points : base + bonus;
+        const ms = r.reactionMs != null ? `${(r.reactionMs / 1000).toFixed(1).replace('.', ',')}s` : '—';
+        return `<li class="${r.firstBonus ? 'first' : ''}" style="animation-delay:${idx * 0.06}s">
+          <div class="sb-head"><span>${escapeHtml(r.name)}</span><span class="sb-total" data-count="${total}">+0</span></div>
+          <div class="sb-rows">
+            <span data-base="${base}">Zeit +0</span>
+            ${bonus > 0 ? `<span class="sb-bonus" data-bonus="${bonus}">Ersttipp +0</span>` : ''}
+            <span>${ms}</span>
+          </div>
+        </li>`;
+      })
+      .join('');
+
+    [...listEl.querySelectorAll('li')].forEach((li, idx) => {
+      const totalEl = li.querySelector('.sb-total');
+      const baseEl = li.querySelector('[data-base]');
+      const bonusEl = li.querySelector('[data-bonus]');
+      const base = Number(baseEl?.dataset.base) || 0;
+      const bonus = Number(bonusEl?.dataset.bonus) || 0;
+      const total = Number(totalEl?.dataset.count) || 0;
+      setTimeout(() => {
+        countLabel(baseEl, 'Zeit +', base, 700);
+        if (bonusEl) setTimeout(() => countLabel(bonusEl, 'Ersttipp +', bonus, 550), 280);
+        countLabel(totalEl, '+', total, 900);
+      }, 120 + idx * 80);
+    });
   }
 
   async function syncClock() {
@@ -484,6 +726,7 @@
     playClip({ auto: true, atServerMs: msg.playAt, durOverride: clipSec });
     startRaceCountdown();
     render();
+    focusGuessInput();
   }
 
   function startRaceCountdown() {
@@ -496,6 +739,8 @@
         return;
       }
       if (hud) hud.hidden = false;
+      renderRaceStandingsList(cur.standings || []);
+      maybeShowErsttipp(cur);
       const playAt = cur.playAt;
       const endsAt = cur.endsAt;
       const now = serverNowApprox();
@@ -509,7 +754,11 @@
       if (now < playAt) {
         const left = ((playAt - now) / 1000).toFixed(1).replace('.', ',');
         if (timerEl) timerEl.textContent = `in ${left}s`;
-        if (ptsEl) ptsEl.textContent = `Start · max ${raceMeta.maxPoints || 100} P`;
+        if (ptsEl) {
+          ptsEl.textContent =
+            `Start · max ${raceMeta.maxPoints || 100} P` +
+            (cur.firstBonusAwarded ? '' : ` (+${raceMeta.firstBonus || 25} Ersttipp)`);
+        }
         return;
       }
       const remainMs = Math.max(0, (endsAt || playAt + (cur.raceWindowMs || raceMeta.windowMs)) - now);
@@ -522,17 +771,6 @@
         ptsEl.textContent = cur.myGuess?.done
           ? `Dein Ergebnis: +${preview} P`
           : `jetzt ~${preview} P` + (cur.firstBonusAwarded ? '' : ` (+${raceMeta.firstBonus || 25} Ersttipp)`);
-      }
-      const list = $('raceStandings');
-      if (list) {
-        const rows = cur.standings || [];
-        list.innerHTML = rows
-          .map((r) => {
-            const ms = r.reactionMs != null ? `${(r.reactionMs / 1000).toFixed(1).replace('.', ',')}s` : '—';
-            const bonus = r.firstBonus ? '<span class="bonus">Ersttipp</span>' : '';
-            return `<li><span>${escapeHtml(r.name)}${bonus}</span><span>${ms} · +${r.points}</span></li>`;
-          })
-          .join('');
       }
     };
     tick();
@@ -598,8 +836,19 @@
     lastStageAutoKey = null;
     lastRaceArmKey = null;
     lastRaceGoKey = null;
+    lastErsttippKey = null;
+    lastRevealFxKey = null;
     racePlayScheduled = false;
     clearRaceCountdown();
+    clearLetterReveal();
+    clearCountUps();
+    renderRaceStandingsList([]);
+    if (state?.current) {
+      state.current.standings = [];
+      state.current.firstBonusAwarded = false;
+    }
+    const ptsEl = $('racePointsPreview');
+    if (ptsEl) ptsEl.textContent = `bis ${raceMeta.maxPoints || 100} P`;
     const input = $('guessInput');
     const feedback = $('feedback');
     if (input) {
@@ -611,6 +860,7 @@
       feedback.className = 'feedback';
     }
     renderGuessResults('', { open: false });
+    renderGuessAttempts([]);
     stopAudio({ expected: true });
     if (raceModeOn()) {
       void preloadRoundClips(cur.songId, [cur.raceClipSec || raceMeta.clipSec || 30]);
@@ -627,12 +877,31 @@
 
   function openLeaveModal() {
     const modal = $('leaveModal');
-    if (modal) modal.hidden = false;
+    if (!modal) return;
+    leaveFocusRestore = document.activeElement;
+    modal.hidden = false;
+    const cancel = $('btnLeaveCancel');
+    if (cancel) {
+      try {
+        cancel.focus({ preventScroll: true });
+      } catch {
+        cancel.focus();
+      }
+    }
   }
 
   function closeLeaveModal() {
     const modal = $('leaveModal');
     if (modal) modal.hidden = true;
+    const restore = leaveFocusRestore;
+    leaveFocusRestore = null;
+    if (restore && typeof restore.focus === 'function') {
+      try {
+        restore.focus({ preventScroll: true });
+      } catch {
+        restore.focus();
+      }
+    }
   }
 
   async function confirmLeave() {
@@ -691,6 +960,8 @@
         ? 'Party — Race-Modus. Warte, bis der Host startet.'
         : 'Party — warte, bis der Host startet.';
     }
+    void refreshLobbyHighscore();
+    focusPrimaryControl('lobby');
   }
 
   function renderPlay() {
@@ -719,8 +990,9 @@
       skipBtn.textContent = race ? 'Aufgeben' : 'Skippen';
       skipBtn.disabled = done || (race && !cur?.raceGoFired);
     }
-    const submit = $('guessForm').querySelector('button[type="submit"]');
+    const submit = $('btnGuess') || $('guessForm').querySelector('button[type="submit"]');
     if (submit) submit.disabled = done || (race && !cur?.raceGoFired);
+    renderGuessAttempts(cur?.myGuess?.attempts || []);
     setPlayUi({
       playing: $('btnPlay')?.classList.contains('playing'),
       caption: done
@@ -757,6 +1029,7 @@
           serverNow: cur.serverNow,
         });
       }
+      maybeShowErsttipp(cur);
       return;
     }
     // Classic: Autoplay current stage once per stage (round start + after skip/wrong).
@@ -780,12 +1053,64 @@
     renderPlayers($('waitList'), 'scores');
   }
 
+  function focusPrimaryControl(viewName) {
+    const key = `${viewName}:${state?.phase || ''}:${state?.current?.round || 0}:${state?.current?.songId || ''}`;
+    if (key === lastFocusViewKey) return;
+    lastFocusViewKey = key;
+    const focusEl = (el) => {
+      if (!el || el.hidden || el.disabled) return false;
+      try {
+        el.focus({ preventScroll: true });
+      } catch {
+        el.focus();
+      }
+      return true;
+    };
+    if (viewName === 'lobby') {
+      const name = $('nameInput');
+      if (name && !String(name.value || '').trim()) {
+        focusEl(name);
+        return;
+      }
+      if (isHost()) focusEl($('btnStart'));
+      else focusEl($('modeRaceToggle'));
+      return;
+    }
+    if (viewName === 'play') {
+      if (raceModeOn() && state?.current?.raceGoFired) focusGuessInput();
+      else focusEl($('btnPlay'));
+      return;
+    }
+    if (viewName === 'reveal') {
+      if (isHost()) focusEl($('btnNext'));
+      else focusEl($('btnRevealPlay'));
+      return;
+    }
+    if (viewName === 'finished') {
+      focusEl($('btnAgain'));
+    }
+  }
+
   function renderRevealView() {
     show('reveal');
     const cur = state.current;
-    $('revealTitle').textContent = cur?.title || '—';
-    $('revealSub').textContent = cur?.artist || '';
-    renderPlayers($('revealList'), 'scores');
+    const fxKey = `${state.roundIndex}:${cur?.songId || ''}:reveal`;
+    const sub = $('revealSub');
+    if (sub) {
+      sub.textContent = cur?.artist || '';
+      sub.style.opacity = '0';
+    }
+    if (fxKey !== lastRevealFxKey) {
+      lastRevealFxKey = fxKey;
+      animateLetterReveal(cur?.title || '—');
+      setTimeout(() => {
+        if (sub) {
+          sub.style.transition = 'opacity 0.45s ease';
+          sub.style.opacity = '1';
+        }
+      }, Math.min(1200, String(cur?.title || '').length * 48 + 200));
+      renderRevealBreakdown($('revealList'), cur?.standings || [], state.players || []);
+    }
     $('btnNext').hidden = !(isHost() && seesSharedReveal());
     const wait = $('revealWaitHint');
     if (wait) wait.hidden = true;
@@ -794,6 +1119,7 @@
       lastRevealAutoKey = autoKey;
       playRevealTrack({ auto: true });
     }
+    focusPrimaryControl('reveal');
   }
 
   function renderRoundRecap() {
@@ -808,7 +1134,12 @@
       .map((entry) => {
         const rows = (entry.results || [])
           .map((r) => {
-            const pts = r.points > 0 ? `+${r.points}` : r.giveUp ? '0 (Skip)' : '0';
+            const base = r.basePoints != null ? r.basePoints : r.points || 0;
+            const bonus = r.bonusPoints || 0;
+            let pts = r.points > 0 ? `+${r.points}` : r.giveUp ? '0 (Skip)' : '0';
+            if (r.points > 0 && (bonus > 0 || raceModeOn())) {
+              pts = bonus > 0 ? `+${base} · +${bonus} Bonus` : `+${base}`;
+            }
             return `<li><span>${escapeHtml(r.name)}</span><span>${pts}</span></li>`;
           })
           .join('');
@@ -966,6 +1297,8 @@
       burstConfetti();
       playVictoryFanfare();
     }
+    void refreshFinishedHighscore();
+    focusPrimaryControl('finished');
   }
 
   function render() {
@@ -1067,6 +1400,10 @@
   $('roundsInput').addEventListener('change', async () => {
     if (!isHost()) return;
     await emit('lobby:set-rounds', { rounds: Number($('roundsInput').value) || 5 });
+    void refreshLobbyHighscore();
+  });
+  $('roundsInput').addEventListener('input', () => {
+    void refreshLobbyHighscore();
   });
 
   $('syncRevealToggle')?.addEventListener('change', async () => {
@@ -1167,7 +1504,8 @@
         ? 'Nicht getroffen — weiter tippen'
         : 'Nicht getroffen — nächste Stufe';
       $('feedback').className = 'feedback bad';
-      clearGuessInput();
+      clearGuessInput({ keepFocus: true });
+      focusGuessInput();
     }
   });
 
@@ -1224,6 +1562,50 @@
   $('btnLeaveConfirm')?.addEventListener('click', () => confirmLeave());
   $('leaveModal')?.addEventListener('click', (e) => {
     if (e.target === $('leaveModal')) closeLeaveModal();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const modal = $('leaveModal');
+    const modalOpen = modal && !modal.hidden;
+    if (e.key === 'Escape') {
+      if (modalOpen) {
+        e.preventDefault();
+        closeLeaveModal();
+        return;
+      }
+      const box = $('guessResults');
+      if (box && !box.hidden) {
+        renderGuessResults('', { open: false });
+      }
+      return;
+    }
+
+    if (modalOpen) {
+      if (e.key !== 'Tab') return;
+      const focusables = [...modal.querySelectorAll('button, [href], input, select, textarea')]
+        .filter((el) => !el.disabled && el.offsetParent !== null);
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+      return;
+    }
+
+    const tag = (e.target && e.target.tagName) || '';
+    const typing = tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable;
+    if (e.key === ' ' && !typing) {
+      const playView = $('view-play');
+      if (playView && !playView.hidden) {
+        e.preventDefault();
+        $('btnPlay')?.click();
+      }
+    }
   });
 
   $('hubLink')?.addEventListener('click', (e) => {
