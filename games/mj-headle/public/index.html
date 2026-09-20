@@ -25,52 +25,82 @@
     <section id="view-home" class="view view-home">
       <p class="brand">MJ Headle</p>
       <h1 class="tag">Errate den Song am ersten Beat</h1>
-      <p class="lede">Classic: Stufen ab Cue · Race: wer den Song am schnellsten errät. Nur Michael Jackson.</p>
-      <div class="cta-row">
-        <button type="button" class="btn btn-primary" id="btnSolo">Solo starten</button>
+      <p class="lede">Wähle deinen Modus — Solo startet direkt, Party über die Lagga-Lobby.</p>
+      <div class="home-layout">
+        <div class="mode-pick" role="group" aria-label="Spielmodus">
+          <button type="button" class="mode-card" id="modeCardClassic" data-mode="classic">
+            <span class="mode-card-kicker">Stufen</span>
+            <strong class="mode-card-title">Classic</strong>
+            <span class="mode-card-copy">Heardle ab Cue — je später, desto weniger Punkte</span>
+          </button>
+          <button type="button" class="mode-card mode-card-race" id="modeCardRace" data-mode="race">
+            <span class="mode-card-kicker">Speed</span>
+            <strong class="mode-card-title">Race</strong>
+            <span class="mode-card-copy">30s-Clip, Punkte fallen mit der Zeit · Ersttipp-Bonus</span>
+          </button>
+        </div>
+        <aside class="home-scoreboard" id="homeHighscorePanel" hidden>
+          <h3 class="highscore-title">Race Allzeit</h3>
+          <label class="field field-inline" id="homeRoundsField">
+            <span>Runden</span>
+            <input id="homeRoundsInput" type="number" min="1" max="20" value="5" />
+          </label>
+          <ol class="highscore-list" id="homeHighscoreList"></ol>
+          <p class="hint" id="homeHighscoreEmpty" hidden>Noch keine Rekorde für diese Rundenzahl.</p>
+        </aside>
       </div>
-      <p class="hint" id="homeHint">Party? Starte MJ Headle über die Lagga-Lobby.</p>
+      <p class="hint" id="homeHint">Tippe Classic oder Race — ohne Party startest du Solo.</p>
       <p class="meta" id="catalogMeta">Katalog wird geladen…</p>
     </section>
 
     <section id="view-lobby" class="view" hidden>
       <p class="brand brand-sm">MJ Headle</p>
       <h2>Lobby</h2>
-      <div class="lobby-grid">
-        <label class="field">
-          <span>Dein Name</span>
-          <input id="nameInput" maxlength="24" placeholder="Name" />
-        </label>
-        <label class="field" id="roundsField">
-          <span>Runden</span>
-          <input id="roundsInput" type="number" min="1" max="20" value="5" />
-        </label>
+      <div class="lobby-layout">
+        <div class="lobby-main">
+          <div class="lobby-grid">
+            <label class="field">
+              <span>Dein Name</span>
+              <input id="nameInput" maxlength="24" placeholder="Name" />
+            </label>
+            <label class="field" id="roundsField">
+              <span>Runden</span>
+              <input id="roundsInput" type="number" min="1" max="20" value="5" />
+            </label>
+          </div>
+          <div class="mode-pick mode-pick-lobby" id="modePickLobby" role="group" aria-label="Spielmodus">
+            <button type="button" class="mode-card" id="lobbyModeClassic" data-mode="classic">
+              <span class="mode-card-kicker">Stufen</span>
+              <strong class="mode-card-title">Classic</strong>
+              <span class="mode-card-copy">Heardle mit Cue-Stufen</span>
+            </button>
+            <button type="button" class="mode-card mode-card-race" id="lobbyModeRace" data-mode="race">
+              <span class="mode-card-kicker">Speed</span>
+              <strong class="mode-card-title">Race</strong>
+              <span class="mode-card-copy">Wer schneller tippt, gewinnt</span>
+            </button>
+          </div>
+          <input type="checkbox" id="modeRaceToggle" hidden />
+          <label class="switch-field" id="syncRevealField" hidden>
+            <span class="switch-copy">
+              <strong>Gemeinsam aufdecken</strong>
+              <span class="switch-hint">An = alle warten, gemeinsames Reveal · Aus = ohne Zwischenstand, jeder spielt seine Runden, Scoreboard erst am Ende</span>
+            </span>
+            <input type="checkbox" id="syncRevealToggle" checked />
+          </label>
+          <ul class="player-list" id="playerList"></ul>
+          <div class="cta-row">
+            <button type="button" class="btn btn-primary" id="btnStart" hidden>Spiel starten</button>
+          </div>
+          <p class="hint" id="lobbyHint"></p>
+          <p class="hint kb-hint">Tipp: Tab durch die Lobby</p>
+        </div>
+        <aside class="lobby-scoreboard highscore-panel" id="lobbyHighscorePanel" hidden>
+          <h3 class="highscore-title">Race Allzeit · <span id="lobbyHighscoreRounds">5</span> Runden</h3>
+          <ol class="highscore-list" id="lobbyHighscoreList"></ol>
+          <p class="hint" id="lobbyHighscoreEmpty" hidden>Noch keine Rekorde für diese Rundenzahl.</p>
+        </aside>
       </div>
-      <label class="switch-field" id="modeField" hidden>
-        <span class="switch-copy">
-          <strong>Race-Modus</strong>
-          <span class="switch-hint">An = synchroner 30s-Clip, wer schneller tippt bekommt mehr Punkte (+Ersttipp-Bonus) · Aus = klassisches Heardle mit Stufen</span>
-        </span>
-        <input type="checkbox" id="modeRaceToggle" />
-      </label>
-      <label class="switch-field" id="syncRevealField" hidden>
-        <span class="switch-copy">
-          <strong>Gemeinsam aufdecken</strong>
-          <span class="switch-hint">An = alle warten, gemeinsames Reveal · Aus = ohne Zwischenstand, jeder spielt seine Runden, Scoreboard erst am Ende</span>
-        </span>
-        <input type="checkbox" id="syncRevealToggle" checked />
-      </label>
-      <ul class="player-list" id="playerList"></ul>
-      <div class="highscore-panel" id="lobbyHighscorePanel" hidden>
-        <h3 class="highscore-title">Race Allzeit · <span id="lobbyHighscoreRounds">5</span> Runden</h3>
-        <ol class="highscore-list" id="lobbyHighscoreList"></ol>
-        <p class="hint" id="lobbyHighscoreEmpty" hidden>Noch keine Rekorde für diese Rundenzahl.</p>
-      </div>
-      <div class="cta-row">
-        <button type="button" class="btn btn-primary" id="btnStart" hidden>Spiel starten</button>
-      </div>
-      <p class="hint" id="lobbyHint"></p>
-      <p class="hint kb-hint">Tipp: Tab durch die Lobby · Space schaltet Schalter</p>
     </section>
 
     <section id="view-play" class="view view-play" hidden>

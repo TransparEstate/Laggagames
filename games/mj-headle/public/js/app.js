@@ -293,6 +293,55 @@
     fillHighscoreList($('lobbyHighscoreList'), $('lobbyHighscoreEmpty'), board);
   }
 
+  async function refreshHomeHighscore() {
+    const panel = $('homeHighscorePanel');
+    if (!panel || panel.hidden) return;
+    const rounds = Number($('homeRoundsInput')?.value) || 5;
+    const board = await fetchRaceHighscores(rounds);
+    fillHighscoreList($('homeHighscoreList'), $('homeHighscoreEmpty'), board);
+  }
+
+  function setHomeRacePreview(on) {
+    const panel = $('homeHighscorePanel');
+    const raceCard = $('modeCardRace');
+    const classicCard = $('modeCardClassic');
+    if (raceCard) raceCard.classList.toggle('is-on', on === true);
+    if (classicCard) classicCard.classList.toggle('is-on', on === false);
+    if (!panel) return;
+    panel.hidden = on !== true;
+    if (on === true) void refreshHomeHighscore();
+  }
+
+  function syncLobbyModeCards() {
+    const race = raceModeOn();
+    const classic = $('lobbyModeClassic');
+    const raceBtn = $('lobbyModeRace');
+    const toggle = $('modeRaceToggle');
+    if (toggle) toggle.checked = race;
+    if (classic) {
+      classic.classList.toggle('is-on', !race);
+      classic.disabled = !isHost() || state?.phase !== 'lobby';
+    }
+    if (raceBtn) {
+      raceBtn.classList.toggle('is-on', race);
+      raceBtn.disabled = !isHost() || state?.phase !== 'lobby';
+    }
+  }
+
+  async function applyLobbyMode(mode) {
+    if (!isHost() || state?.phase !== 'lobby') return;
+    const race = mode === 'race';
+    const res = await emit('lobby:set-mode', { mode: race ? 'race' : 'classic' });
+    if (res.error) {
+      $('lobbyHint').textContent = res.error;
+      return;
+    }
+    if (res.state) {
+      state = res.state;
+      render();
+    }
+  }
+
   async function refreshFinishedHighscore() {
     const panel = $('finishedHighscorePanel');
     const banner = $('finishedHighscoreBanner');
@@ -1049,13 +1098,7 @@
     $('roundsField').hidden = !isHost();
     $('roundsInput').value = state.settings?.rounds || 5;
     const race = raceModeOn();
-    const modeField = $('modeField');
-    const modeToggle = $('modeRaceToggle');
-    if (modeField && modeToggle) {
-      modeField.hidden = false;
-      modeToggle.checked = race;
-      modeToggle.disabled = !isHost() || state.phase !== 'lobby';
-    }
+    syncLobbyModeCards();
     const syncField = $('syncRevealField');
     const syncToggle = $('syncRevealToggle');
     if (syncField && syncToggle) {
@@ -1073,7 +1116,7 @@
       } else {
         $('lobbyHint').textContent = syncRevealOn()
           ? 'Party-Host — starte direkt. Gemeinsames Aufdecken: an.'
-          : 'Party-Host — starte direkt. Ohne Zwischenstand: unabhängig spielen, Scoreboard erst am Ende.';
+          : 'Party-Host — starte direkt. Ohne Zwischenstand, Scoreboard erst am Ende.';
       }
     } else {
       $('lobbyHint').textContent = race
@@ -1194,7 +1237,7 @@
         return;
       }
       if (isHost()) focusEl($('btnStart'));
-      else focusEl($('modeRaceToggle'));
+      else focusEl($('lobbyModeClassic') || $('nameInput'));
       return;
     }
     if (viewName === 'play') {
@@ -1471,15 +1514,18 @@
     if (state.phase === 'playing') renderPlay();
   }
 
-  async function startSolo() {
+  async function startSolo({ mode = 'classic' } = {}) {
     const name = ($('nameInput').value || prefillName || 'Solo').trim() || 'Solo';
     $('nameInput').value = name;
     localStorage.setItem('mj-headle-name', name);
+    const rounds = Number($('homeRoundsInput')?.value) || Number($('roundsInput')?.value) || 5;
+    if ($('roundsInput')) $('roundsInput').value = String(rounds);
     connect();
     show('lobby');
     const res = await emit('room:create-solo', {
       name,
-      rounds: Number($('roundsInput').value) || 5,
+      rounds,
+      mode: mode === 'race' ? 'race' : 'classic',
     });
     if (res.error) {
       $('lobbyHint').textContent = res.error;
@@ -1513,10 +1559,46 @@
     render();
   }
 
-  $('btnSolo').addEventListener('click', () => {
-    if (!$('nameInput').value) $('nameInput').value = prefillName || 'Solo';
-    startSolo();
-  });
+  function bindModeCards() {
+    const homeClassic = $('modeCardClassic');
+    const homeRace = $('modeCardRace');
+    if (homeRace) {
+      homeRace.addEventListener('mouseenter', () => setHomeRacePreview(true));
+      homeRace.addEventListener('focus', () => setHomeRacePreview(true));
+      homeRace.addEventListener('click', () => {
+        setHomeRacePreview(true);
+        if (!$('nameInput').value) $('nameInput').value = prefillName || 'Solo';
+        startSolo({ mode: 'race' });
+      });
+    }
+    if (homeClassic) {
+      homeClassic.addEventListener('mouseenter', () => setHomeRacePreview(false));
+      homeClassic.addEventListener('focus', () => setHomeRacePreview(false));
+      homeClassic.addEventListener('click', () => {
+        setHomeRacePreview(false);
+        if (!$('nameInput').value) $('nameInput').value = prefillName || 'Solo';
+        startSolo({ mode: 'classic' });
+      });
+    }
+    const homeLayout = document.querySelector('.home-layout');
+    homeLayout?.addEventListener('mouseleave', () => {
+      if (!partyId) setHomeRacePreview(false);
+    });
+
+    $('lobbyModeClassic')?.addEventListener('click', () => applyLobbyMode('classic'));
+    $('lobbyModeRace')?.addEventListener('click', () => applyLobbyMode('race'));
+    $('homeRoundsInput')?.addEventListener('input', () => {
+      setHomeRacePreview(true);
+      void refreshHomeHighscore();
+    });
+    $('homeRoundsInput')?.addEventListener('change', () => {
+      const n = Number($('homeRoundsInput').value) || 5;
+      if ($('roundsInput')) $('roundsInput').value = String(n);
+      void refreshHomeHighscore();
+    });
+  }
+
+  bindModeCards();
 
   $('roundsInput').addEventListener('change', async () => {
     if (!isHost()) return;
@@ -1534,21 +1616,6 @@
     if (res.error) {
       $('lobbyHint').textContent = res.error;
       $('syncRevealToggle').checked = syncRevealOn();
-    }
-  });
-
-  $('modeRaceToggle')?.addEventListener('change', async () => {
-    if (!isHost()) return;
-    const race = !!$('modeRaceToggle').checked;
-    const res = await emit('lobby:set-mode', { mode: race ? 'race' : 'classic' });
-    if (res.error) {
-      $('lobbyHint').textContent = res.error;
-      $('modeRaceToggle').checked = raceModeOn();
-      return;
-    }
-    if (res.state) {
-      state = res.state;
-      render();
     }
   });
 
@@ -1693,6 +1760,7 @@
       }
       return;
     }
+    const rematchMode = raceModeOn() ? 'race' : 'classic';
     state = null;
     playerId = null;
     lastRoundKey = null;
@@ -1705,7 +1773,7 @@
     clearRaceCountdown();
     leaving = false;
     show('home');
-    startSolo();
+    startSolo({ mode: rematchMode });
   });
   $('btnLeave')?.addEventListener('click', () => openLeaveModal());
   $('btnFinishedLeave')?.addEventListener('click', () => openLeaveModal());
@@ -1769,7 +1837,8 @@
   $('nameInput').value = prefillName;
   if (partyId) {
     $('homeHint').textContent = `Party ${partyId} — verbinde…`;
-    $('btnSolo').hidden = true;
+    const homePick = document.querySelector('.home-layout');
+    if (homePick) homePick.hidden = true;
   }
 
   loadCatalog()
