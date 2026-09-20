@@ -215,6 +215,24 @@ section('race points decay + first bonus + window continues');
   const first = game.submitGuess(room, 'host', title);
   assert.ok(first.correct, first.error);
   assert.ok(first.firstBonus);
+  assert.ok(room.current.firstCorrectAt);
+  const hint1 = game.buildRaceTitleHint(
+    room.current.title,
+    room.current.firstCorrectAt,
+    room.current.firstCorrectAt,
+    room.current.songId
+  );
+  assert.ok(hint1 && hint1.includes('·'), 'partial hint at start');
+  const hintLate = game.buildRaceTitleHint(
+    room.current.title,
+    room.current.firstCorrectAt,
+    room.current.firstCorrectAt + 60_000,
+    room.current.songId
+  );
+  const letters = [...room.current.title].filter((c) => /[A-Za-zÄÖÜäöüß0-9]/.test(c)).length;
+  const revealed = [...hintLate].filter((c) => c !== '·' && /[A-Za-zÄÖÜäöüß0-9]/.test(c)).length;
+  assert.ok(revealed <= Math.ceil(letters * game.RACE_TITLE_HINT_CAP) + 1, 'hint capped');
+  assert.notStrictEqual(hintLate, room.current.title, 'never full title during drip');
   assert.ok(first.basePoints != null);
   assert.strictEqual(first.bonusPoints, game.RACE_FIRST_BONUS);
   assert.strictEqual(first.points, first.basePoints + first.bonusPoints);
@@ -382,7 +400,15 @@ section('static UI markers');
   assert.ok(js.includes('race:armed'));
   assert.ok(js.includes('handleRaceGo'));
   assert.ok(html.includes('id="guessAttempts"'));
+  assert.ok(html.includes('id="revealSeek"'));
+  assert.ok(html.includes('id="audioVolumePlay"'));
+  assert.ok(html.includes('id="audioVolumeReveal"'));
+  assert.ok(html.includes('id="raceTitleHint"'));
   assert.ok(js.includes('function renderGuessAttempts'));
+  assert.ok(js.includes('mj-headle-volume'));
+  assert.ok(js.includes("e.key === 'Tab'"));
+  assert.ok(js.includes('requestSubmit'));
+  assert.ok(js.includes('buildRaceTitleHint') || js.includes('titleHint') || js.includes('updateRaceTitleHint'));
   assert.ok(js.includes('function focusGuessInput'), 'targeted focus helper');
   assert.ok(js.includes('function renderRaceStandingsList'), 'standings helper clears list');
   assert.ok(js.includes('keepFocus: true'));

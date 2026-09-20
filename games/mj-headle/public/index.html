@@ -82,12 +82,17 @@
       <div class="race-hud" id="raceHud" hidden>
         <div class="race-timer" id="raceTimer">30,0s</div>
         <div class="race-points" id="racePointsPreview">bis 100 P</div>
+        <p class="race-title-hint" id="raceTitleHint" hidden aria-live="polite"></p>
         <ul class="race-standings" id="raceStandings"></ul>
       </div>
       <button type="button" class="play-orb" id="btnPlay" aria-label="Clip abspielen">
         <span class="play-orb-core">▶</span>
       </button>
       <p class="play-caption" id="playCaption">Ab Cue hören</p>
+      <label class="volume-field volume-field-play">
+        <span>Lautstärke</span>
+        <input type="range" id="audioVolumePlay" min="0" max="100" value="80" step="1" aria-label="Lautstärke" />
+      </label>
       <form id="guessForm" class="guess-form" autocomplete="off">
         <label class="sr-only" for="guessInput">Songtitel</label>
         <div class="search-wrap">
@@ -104,7 +109,7 @@
         </div>
       </form>
       <p class="feedback" id="feedback"></p>
-      <p class="hint kb-hint" id="playKbHint">Tab · Space = Replay · Pfeile + Enter = Suche</p>
+      <p class="hint kb-hint" id="playKbHint">Tab = Treffer · Enter = Raten · Space = Replay</p>
     </section>
 
     <section id="view-wait" class="view view-wait" hidden>
@@ -118,7 +123,15 @@
       <p class="reveal-flash title-letters" id="revealTitle" aria-live="polite">—</p>
       <p class="lede" id="revealSub"></p>
       <div class="reveal-audio">
-        <button type="button" class="btn" id="btnRevealPlay" aria-label="Song abspielen">▶ Song anhören</button>
+        <button type="button" class="btn btn-primary" id="btnRevealPlay" aria-label="Song abspielen">▶ Song anhören</button>
+        <div class="reveal-transport" id="revealTransport" hidden>
+          <input type="range" id="revealSeek" min="0" max="0" value="0" step="0.1" aria-label="Songposition" />
+          <span class="reveal-time" id="revealTime">0:00 / 0:00</span>
+        </div>
+        <label class="volume-field">
+          <span>Lautstärke</span>
+          <input type="range" id="audioVolumeReveal" min="0" max="100" value="80" step="1" aria-label="Lautstärke" />
+        </label>
         <p class="hint" id="revealWaitHint" hidden></p>
       </div>
       <ul class="score-breakdown" id="revealList"></ul>

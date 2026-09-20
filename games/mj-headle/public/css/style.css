@@ -485,7 +485,51 @@ main {
   box-shadow: 0 0 0 3px rgba(240, 201, 106, 0.35), 0 0 28px rgba(212, 168, 75, 0.35);
 }
 .reveal-audio {
-  margin: 0.75rem 0 1.25rem;
+  margin: 0.75rem auto 1.25rem;
+  width: min(100%, 28rem);
+  display: grid;
+  gap: 0.65rem;
+  justify-items: center;
+  text-align: center;
+}
+.reveal-transport {
+  width: 100%;
+  display: grid;
+  gap: 0.25rem;
+  justify-items: stretch;
+}
+.reveal-transport input[type="range"] {
+  width: 100%;
+  accent-color: var(--gold);
+}
+.reveal-time {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.volume-field {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: min(100%, 18rem);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.volume-field input[type="range"] {
+  flex: 1;
+  accent-color: var(--gold);
+}
+.volume-field-play {
+  margin: 0.15rem auto 0.35rem;
+}
+.race-title-hint {
+  margin: 0.35rem 0 0;
+  font-family: var(--display);
+  font-size: clamp(1.15rem, 4.5vw, 1.75rem);
+  letter-spacing: 0.12em;
+  color: var(--gold-bright);
+  text-shadow: 0 0 18px rgba(240, 201, 106, 0.25);
+  min-height: 1.2em;
 }
 .search-results li {
   padding: 0.55rem 0.85rem;
