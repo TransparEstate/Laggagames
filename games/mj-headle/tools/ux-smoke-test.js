@@ -427,6 +427,11 @@ section('static UI markers');
   assert.ok(html.includes('class="brand home-enter"') || html.includes('home-enter'));
   assert.ok(js.includes("e.key === 'Tab'"));
   assert.ok(js.includes('requestSubmit'));
+  assert.ok(
+    js.includes('function moveActive') && js.includes('input.value = title') || js.includes('input.value = currentTitle'),
+    'Tab/arrow selection fills guessInput'
+  );
+  assert.ok(js.includes('setSelectionRange'), 'cursor at end after Tab fill');
   assert.ok(js.includes('buildRaceTitleHint') || js.includes('titleHint') || js.includes('updateRaceTitleHint'));
   assert.ok(js.includes('function focusGuessInput'), 'targeted focus helper');
   assert.ok(js.includes('function renderRaceStandingsList'), 'standings helper clears list');
