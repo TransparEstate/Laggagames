@@ -19,7 +19,7 @@ const {
   refreshR2Manifests,
   repairPackDurations,
 } = require('./packLoader');
-const { installPackFromZip, deleteUserPack } = require('./packUpload');
+const { installPackFromArchive } = require('./packUpload');
 const r2 = require('./r2');
 
 const PORT = process.env.PORT || 3000;
@@ -92,19 +92,17 @@ const upload = multer({
   fileFilter(_req, file, cb) {
     const name = (file.originalname || '').toLowerCase();
     const mime = String(file.mimetype || '').toLowerCase();
-    const okExt = name.endsWith('.zip');
+    const okExt = name.endsWith('.zip') || name.endsWith('.rar');
     const okMime =
       !mime ||
       mime.includes('zip') ||
+      mime.includes('rar') ||
       mime === 'application/octet-stream' ||
-      mime === 'application/x-zip-compressed';
+      mime === 'application/x-zip-compressed' ||
+      mime === 'application/vnd.rar' ||
+      mime === 'application/x-rar-compressed';
     if (!okExt && !okMime) {
-      cb(new Error('Nur .zip Voicepacks werden unterstützt.'));
-      return;
-    }
-    if (!okExt) {
-      // Some mobile browsers send zip without .zip in the name — still accept by MIME
-      cb(null, true);
+      cb(new Error('Nur .zip oder .rar Voicepacks werden unterstützt.'));
       return;
     }
     cb(null, true);
@@ -220,7 +218,7 @@ app.post('/api/packs/upload', (req, res) => {
       return;
     }
     try {
-      const result = await installPackFromZip(req.file.path, req.file.originalname);
+      const result = await installPackFromArchive(req.file.path, req.file.originalname);
       res.json(result);
     } catch (e) {
       try {
@@ -234,17 +232,10 @@ app.post('/api/packs/upload', (req, res) => {
   });
 });
 
-app.delete('/api/packs/:packId', async (req, res) => {
-  try {
-    const result = await deleteUserPack(req.params.packId);
-    if (result.error) {
-      res.status(400).json(result);
-      return;
-    }
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message || 'Löschen fehlgeschlagen.' });
-  }
+app.delete('/api/packs/:packId', (_req, res) => {
+  res.status(403).json({
+    error: 'Pack-Löschen ist deaktiviert. Entferne Packs bei Bedarf manuell in Cloudflare R2.',
+  });
 });
 
 app.get('/api/join-info', (req, res) => {

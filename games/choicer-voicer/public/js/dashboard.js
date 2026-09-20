@@ -226,7 +226,7 @@
     if (!packGrid) return;
     packGrid.innerHTML = '';
     if (!packs.length) {
-      packGrid.innerHTML = '<p class="muted">Noch keine Packs — ZIP oben hochladen.</p>';
+      packGrid.innerHTML = '<p class="muted">Noch keine Packs — ZIP/RAR oben hochladen.</p>';
       return;
     }
 
@@ -253,11 +253,6 @@
         </div>
         <div class="pack-card-actions">
           ${action}
-          ${
-            !inParty && (pack.source === 'user' || pack.source === 'r2')
-              ? `<button type="button" class="btn btn-ghost btn-sm" data-del="${escapeHtml(pack.id)}" title="Löschen">✕</button>`
-              : ''
-          }
         </div>`;
       packGrid.appendChild(card);
     });
@@ -273,19 +268,6 @@
       btn.addEventListener('click', () => {
         if (partyPack) partyPack.value = btn.getAttribute('data-party-pack');
         startPartySession();
-      });
-    });
-    packGrid.querySelectorAll('[data-del]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-del');
-        if (!confirm(`Pack „${id}“ wirklich löschen?`)) return;
-        const res = await fetch(`/api/packs/${encodeURIComponent(id)}`, { method: 'DELETE' });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          alert(data.error || 'Löschen fehlgeschlagen.');
-          return;
-        }
-        await loadPacks();
       });
     });
   }
@@ -306,12 +288,16 @@
     }
   }
 
-  function uploadZip(file) {
+  function uploadArchive(file) {
     if (!file || inParty) return;
     const name = String(file.name || '');
-    const looksZip = /\.zip$/i.test(name) || /zip/i.test(file.type || '');
-    if (!looksZip) {
-      showUploadError('Bitte eine .zip Datei wählen.');
+    const type = String(file.type || '');
+    const looksArchive =
+      /\.(zip|rar)$/i.test(name) ||
+      /zip/i.test(type) ||
+      /rar/i.test(type);
+    if (!looksArchive) {
+      showUploadError('Bitte eine .zip oder .rar Datei wählen.');
       return;
     }
     if (file.size > maxUploadMb * 1024 * 1024) {
@@ -418,7 +404,7 @@
       }
     });
     packFile?.addEventListener('change', () => {
-      uploadZip(packFile.files?.[0]);
+      uploadArchive(packFile.files?.[0]);
       packFile.value = '';
     });
     ['dragenter', 'dragover'].forEach((ev) => {
@@ -435,7 +421,7 @@
     });
     uploadDrop.addEventListener('drop', (e) => {
       if (uploadDrop.classList.contains('uploading')) return;
-      uploadZip(e.dataTransfer?.files?.[0]);
+      uploadArchive(e.dataTransfer?.files?.[0]);
     });
   }
 
