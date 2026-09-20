@@ -71,9 +71,7 @@
 
   function syncVolumeSliders(v) {
     const pct = Math.round((v != null ? v : getVolume()) * 100);
-    const play = $('audioVolumePlay');
     const reveal = $('audioVolumeReveal');
-    if (play && Number(play.value) !== pct) play.value = String(pct);
     if (reveal && Number(reveal.value) !== pct) reveal.value = String(pct);
   }
 
@@ -308,8 +306,14 @@
     if (raceCard) raceCard.classList.toggle('is-on', on === true);
     if (classicCard) classicCard.classList.toggle('is-on', on === false);
     if (!panel) return;
-    panel.hidden = on !== true;
-    if (on === true) void refreshHomeHighscore();
+    if (on === true) {
+      panel.hidden = false;
+      panel.classList.add('is-visible');
+      void refreshHomeHighscore();
+    } else {
+      panel.classList.remove('is-visible');
+      panel.hidden = true;
+    }
   }
 
   function syncLobbyModeCards() {
@@ -1650,7 +1654,6 @@
     if (!Number.isFinite(pct)) return;
     setVolume(pct / 100);
   }
-  $('audioVolumePlay')?.addEventListener('input', onVolumeInput);
   $('audioVolumeReveal')?.addEventListener('input', onVolumeInput);
   syncVolumeSliders(getVolume());
 
