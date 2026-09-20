@@ -1,0 +1,2787 @@
+{
+  "version": 1,
+  "count": 236,
+  "countries": [
+    {
+      "iso": "af",
+      "iso2": "AF",
+      "de": "Afghanistan",
+      "en": "Afghanistan",
+      "keys": [
+        "afghanistan",
+        "af"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "eg",
+      "iso2": "EG",
+      "de": "Ägypten",
+      "en": "Egypt",
+      "keys": [
+        "egypt",
+        "agypten",
+        "eg"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "ax",
+      "iso2": "AX",
+      "de": "Åland",
+      "en": "Åland",
+      "keys": [
+        "aland",
+        "ax"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "al",
+      "iso2": "AL",
+      "de": "Albanien",
+      "en": "Albania",
+      "keys": [
+        "albania",
+        "albanien",
+        "al"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "dz",
+      "iso2": "DZ",
+      "de": "Algerien",
+      "en": "Algeria",
+      "keys": [
+        "algeria",
+        "algerien",
+        "dz"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "as",
+      "iso2": "AS",
+      "de": "Amerikanisch-Samoa",
+      "en": "American Samoa",
+      "keys": [
+        "american samoa",
+        "amerikanisch samoa",
+        "as"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "vi",
+      "iso2": "VI",
+      "de": "Amerikanische Jungferninseln",
+      "en": "United States Virgin Islands",
+      "keys": [
+        "united states virgin islands",
+        "amerikanische jungferninseln",
+        "vi"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ad",
+      "iso2": "AD",
+      "de": "Andorra",
+      "en": "Andorra",
+      "keys": [
+        "andorra",
+        "ad"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ao",
+      "iso2": "AO",
+      "de": "Angola",
+      "en": "Angola",
+      "keys": [
+        "angola",
+        "ao"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ai",
+      "iso2": "AI",
+      "de": "Anguilla",
+      "en": "Anguilla",
+      "keys": [
+        "anguilla",
+        "ai"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ag",
+      "iso2": "AG",
+      "de": "Antigua und Barbuda",
+      "en": "Antigua and Barbuda",
+      "keys": [
+        "antigua and barbuda",
+        "antigua und barbuda",
+        "ag"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "gq",
+      "iso2": "GQ",
+      "de": "Äquatorialguinea",
+      "en": "Equatorial Guinea",
+      "keys": [
+        "equatorial guinea",
+        "aquatorialguinea",
+        "gq"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ar",
+      "iso2": "AR",
+      "de": "Argentinien",
+      "en": "Argentina",
+      "keys": [
+        "argentina",
+        "argentinien",
+        "ar"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "am",
+      "iso2": "AM",
+      "de": "Armenien",
+      "en": "Armenia",
+      "keys": [
+        "armenia",
+        "armenien",
+        "am"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "aw",
+      "iso2": "AW",
+      "de": "Aruba",
+      "en": "Aruba",
+      "keys": [
+        "aruba",
+        "aw"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "az",
+      "iso2": "AZ",
+      "de": "Aserbaidschan",
+      "en": "Azerbaijan",
+      "keys": [
+        "azerbaijan",
+        "aserbaidschan",
+        "az"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "et",
+      "iso2": "ET",
+      "de": "Äthiopien",
+      "en": "Ethiopia",
+      "keys": [
+        "ethiopia",
+        "athiopien",
+        "et"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "au",
+      "iso2": "AU",
+      "de": "Australien",
+      "en": "Australia",
+      "keys": [
+        "australia",
+        "australien",
+        "au"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "bs",
+      "iso2": "BS",
+      "de": "Bahamas",
+      "en": "The Bahamas",
+      "keys": [
+        "the bahamas",
+        "bahamas",
+        "bs"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "bh",
+      "iso2": "BH",
+      "de": "Bahrain",
+      "en": "Bahrain",
+      "keys": [
+        "bahrain",
+        "bh"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "bd",
+      "iso2": "BD",
+      "de": "Bangladesch",
+      "en": "Bangladesh",
+      "keys": [
+        "bangladesh",
+        "bangladesch",
+        "bd"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "bb",
+      "iso2": "BB",
+      "de": "Barbados",
+      "en": "Barbados",
+      "keys": [
+        "barbados",
+        "bb"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "by",
+      "iso2": "BY",
+      "de": "Belarus",
+      "en": "Belarus",
+      "keys": [
+        "belarus",
+        "by"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "be",
+      "iso2": "BE",
+      "de": "Belgien",
+      "en": "Belgium",
+      "keys": [
+        "belgium",
+        "belgien",
+        "be"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "bz",
+      "iso2": "BZ",
+      "de": "Belize",
+      "en": "Belize",
+      "keys": [
+        "belize",
+        "bz"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "bj",
+      "iso2": "BJ",
+      "de": "Benin",
+      "en": "Benin",
+      "keys": [
+        "benin",
+        "bj"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "bm",
+      "iso2": "BM",
+      "de": "Bermuda",
+      "en": "Bermuda",
+      "keys": [
+        "bermuda",
+        "bm"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "bt",
+      "iso2": "BT",
+      "de": "Bhutan",
+      "en": "Bhutan",
+      "keys": [
+        "bhutan",
+        "bt"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "bo",
+      "iso2": "BO",
+      "de": "Bolivien",
+      "en": "Bolivia",
+      "keys": [
+        "bolivia",
+        "bolivien",
+        "bo"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ba",
+      "iso2": "BA",
+      "de": "Bosnien und Herzegowina",
+      "en": "Bosnia and Herzegovina",
+      "keys": [
+        "bosnia and herzegovina",
+        "bosnien und herzegowina",
+        "ba"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "bw",
+      "iso2": "BW",
+      "de": "Botswana",
+      "en": "Botswana",
+      "keys": [
+        "botswana",
+        "bw"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "br",
+      "iso2": "BR",
+      "de": "Brasilien",
+      "en": "Brazil",
+      "keys": [
+        "brazil",
+        "brasilien",
+        "br"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "vg",
+      "iso2": "VG",
+      "de": "Britische Jungferninseln",
+      "en": "British Virgin Islands",
+      "keys": [
+        "british virgin islands",
+        "britische jungferninseln",
+        "vg"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "io",
+      "iso2": "IO",
+      "de": "Britisches Territorium im Indischen Ozean",
+      "en": "British Indian Ocean Territory",
+      "keys": [
+        "british indian ocean territory",
+        "britisches territorium im indischen ozean",
+        "io"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "bn",
+      "iso2": "BN",
+      "de": "Brunei",
+      "en": "Brunei",
+      "keys": [
+        "brunei",
+        "bn"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "bg",
+      "iso2": "BG",
+      "de": "Bulgarien",
+      "en": "Bulgaria",
+      "keys": [
+        "bulgaria",
+        "bulgarien",
+        "bg"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "bf",
+      "iso2": "BF",
+      "de": "Burkina Faso",
+      "en": "Burkina Faso",
+      "keys": [
+        "burkina faso",
+        "bf"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "bi",
+      "iso2": "BI",
+      "de": "Burundi",
+      "en": "Burundi",
+      "keys": [
+        "burundi",
+        "bi"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ky",
+      "iso2": "KY",
+      "de": "Cayman Islands",
+      "en": "Cayman Islands",
+      "keys": [
+        "cayman islands",
+        "ky"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "cl",
+      "iso2": "CL",
+      "de": "Chile",
+      "en": "Chile",
+      "keys": [
+        "chile",
+        "cl"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "ck",
+      "iso2": "CK",
+      "de": "Cookinseln",
+      "en": "Cook Islands",
+      "keys": [
+        "cook islands",
+        "cookinseln",
+        "ck"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "cr",
+      "iso2": "CR",
+      "de": "Costa Rica",
+      "en": "Costa Rica",
+      "keys": [
+        "costa rica",
+        "cr"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "cw",
+      "iso2": "CW",
+      "de": "Curaçao",
+      "en": "Curaçao",
+      "keys": [
+        "curacao",
+        "cw"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "dk",
+      "iso2": "DK",
+      "de": "Dänemark",
+      "en": "Denmark",
+      "keys": [
+        "denmark",
+        "danemark",
+        "dk"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "cd",
+      "iso2": "CD",
+      "de": "Demokratische Republik Kongo",
+      "en": "Democratic Republic of the Congo",
+      "keys": [
+        "democratic republic of the congo",
+        "demokratische republik kongo",
+        "cd",
+        "dr congo",
+        "drc",
+        "kongo",
+        "congo kinshasa"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "de",
+      "iso2": "DE",
+      "de": "Deutschland",
+      "en": "Germany",
+      "keys": [
+        "germany",
+        "deutschland",
+        "de"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "dm",
+      "iso2": "DM",
+      "de": "Dominica",
+      "en": "Dominica",
+      "keys": [
+        "dominica",
+        "dm"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "do",
+      "iso2": "DO",
+      "de": "Dominikanische Republik",
+      "en": "Dominican Republic",
+      "keys": [
+        "dominican republic",
+        "dominikanische republik",
+        "do"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "dj",
+      "iso2": "DJ",
+      "de": "Dschibuti",
+      "en": "Djibouti",
+      "keys": [
+        "djibouti",
+        "dschibuti",
+        "dj"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ec",
+      "iso2": "EC",
+      "de": "Ecuador",
+      "en": "Ecuador",
+      "keys": [
+        "ecuador",
+        "ec"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "sv",
+      "iso2": "SV",
+      "de": "El Salvador",
+      "en": "El Salvador",
+      "keys": [
+        "el salvador",
+        "sv"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ci",
+      "iso2": "CI",
+      "de": "Elfenbeinküste",
+      "en": "Ivory Coast",
+      "keys": [
+        "ivory coast",
+        "elfenbeinkuste",
+        "ci",
+        "cote d ivoire"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "er",
+      "iso2": "ER",
+      "de": "Eritrea",
+      "en": "Eritrea",
+      "keys": [
+        "eritrea",
+        "er"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ee",
+      "iso2": "EE",
+      "de": "Estland",
+      "en": "Estonia",
+      "keys": [
+        "estonia",
+        "estland",
+        "ee"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "sz",
+      "iso2": "SZ",
+      "de": "Eswatini",
+      "en": "Eswatini",
+      "keys": [
+        "eswatini",
+        "sz",
+        "swaziland",
+        "swasiland"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "fk",
+      "iso2": "FK",
+      "de": "Falklandinseln",
+      "en": "Falkland Islands",
+      "keys": [
+        "falkland islands",
+        "falklandinseln",
+        "fk"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "fo",
+      "iso2": "FO",
+      "de": "Färöer",
+      "en": "Faroe Islands",
+      "keys": [
+        "faroe islands",
+        "faroer",
+        "fo"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "fj",
+      "iso2": "FJ",
+      "de": "Fidschi",
+      "en": "Fiji",
+      "keys": [
+        "fiji",
+        "fidschi",
+        "fj"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "fi",
+      "iso2": "FI",
+      "de": "Finnland",
+      "en": "Finland",
+      "keys": [
+        "finland",
+        "finnland",
+        "fi"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "fm",
+      "iso2": "FM",
+      "de": "Föderierte Staaten von Mikronesien",
+      "en": "Federated States of Micronesia",
+      "keys": [
+        "federated states of micronesia",
+        "foderierte staaten von mikronesien",
+        "fm"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "fr",
+      "iso2": "FR",
+      "de": "Frankreich",
+      "en": "France",
+      "keys": [
+        "france",
+        "frankreich",
+        "fr"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "pf",
+      "iso2": "PF",
+      "de": "Französisch-Polynesien",
+      "en": "French Polynesia",
+      "keys": [
+        "french polynesia",
+        "franzosisch polynesien",
+        "pf"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "tf",
+      "iso2": "TF",
+      "de": "Französische Süd- und Antarktisgebiete",
+      "en": "French Southern and Antarctic Lands",
+      "keys": [
+        "french southern and antarctic lands",
+        "franzosische sud und antarktisgebiete",
+        "tf"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ga",
+      "iso2": "GA",
+      "de": "Gabun",
+      "en": "Gabon",
+      "keys": [
+        "gabon",
+        "gabun",
+        "ga"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "gm",
+      "iso2": "GM",
+      "de": "Gambia",
+      "en": "The Gambia",
+      "keys": [
+        "the gambia",
+        "gambia",
+        "gm"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ge",
+      "iso2": "GE",
+      "de": "Georgien",
+      "en": "Georgia",
+      "keys": [
+        "georgia",
+        "georgien",
+        "ge"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "gh",
+      "iso2": "GH",
+      "de": "Ghana",
+      "en": "Ghana",
+      "keys": [
+        "ghana",
+        "gh"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "gd",
+      "iso2": "GD",
+      "de": "Grenada",
+      "en": "Grenada",
+      "keys": [
+        "grenada",
+        "gd"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "gr",
+      "iso2": "GR",
+      "de": "Griechenland",
+      "en": "Greece",
+      "keys": [
+        "greece",
+        "griechenland",
+        "gr"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "gl",
+      "iso2": "GL",
+      "de": "Grönland",
+      "en": "Greenland",
+      "keys": [
+        "greenland",
+        "gronland",
+        "gl"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "gu",
+      "iso2": "GU",
+      "de": "Guam",
+      "en": "Guam",
+      "keys": [
+        "guam",
+        "gu"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "gt",
+      "iso2": "GT",
+      "de": "Guatemala",
+      "en": "Guatemala",
+      "keys": [
+        "guatemala",
+        "gt"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "gg",
+      "iso2": "GG",
+      "de": "Guernsey",
+      "en": "Guernsey",
+      "keys": [
+        "guernsey",
+        "gg"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "gn",
+      "iso2": "GN",
+      "de": "Guinea",
+      "en": "Guinea",
+      "keys": [
+        "guinea",
+        "gn"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "gw",
+      "iso2": "GW",
+      "de": "Guinea-Bissau",
+      "en": "Guinea-Bissau",
+      "keys": [
+        "guinea bissau",
+        "gw"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "gy",
+      "iso2": "GY",
+      "de": "Guyana",
+      "en": "Guyana",
+      "keys": [
+        "guyana",
+        "gy"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ht",
+      "iso2": "HT",
+      "de": "Haiti",
+      "en": "Haiti",
+      "keys": [
+        "haiti",
+        "ht"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "hm",
+      "iso2": "HM",
+      "de": "Heard und McDonaldinseln",
+      "en": "Heard Island and McDonald Islands",
+      "keys": [
+        "heard island and mcdonald islands",
+        "heard und mcdonaldinseln",
+        "hm"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "hn",
+      "iso2": "HN",
+      "de": "Honduras",
+      "en": "Honduras",
+      "keys": [
+        "honduras",
+        "hn"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "hk",
+      "iso2": "HK",
+      "de": "Hongkong",
+      "en": "Hong Kong",
+      "keys": [
+        "hong kong",
+        "hongkong",
+        "hong kong s a r",
+        "hk"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "in",
+      "iso2": "IN",
+      "de": "Indien",
+      "en": "India",
+      "keys": [
+        "india",
+        "indien",
+        "in"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "id",
+      "iso2": "ID",
+      "de": "Indonesien",
+      "en": "Indonesia",
+      "keys": [
+        "indonesia",
+        "indonesien",
+        "id"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "iq",
+      "iso2": "IQ",
+      "de": "Irak",
+      "en": "Iraq",
+      "keys": [
+        "iraq",
+        "irak",
+        "iq"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "ir",
+      "iso2": "IR",
+      "de": "Iran",
+      "en": "Iran",
+      "keys": [
+        "iran",
+        "ir"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "ie",
+      "iso2": "IE",
+      "de": "Irland",
+      "en": "Ireland",
+      "keys": [
+        "ireland",
+        "irland",
+        "ie"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "is",
+      "iso2": "IS",
+      "de": "Island",
+      "en": "Iceland",
+      "keys": [
+        "iceland",
+        "island",
+        "is"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "im",
+      "iso2": "IM",
+      "de": "Isle of Man",
+      "en": "Isle of Man",
+      "keys": [
+        "isle of man",
+        "im"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "il",
+      "iso2": "IL",
+      "de": "Israel",
+      "en": "Israel",
+      "keys": [
+        "israel",
+        "il"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "it",
+      "iso2": "IT",
+      "de": "Italien",
+      "en": "Italy",
+      "keys": [
+        "italy",
+        "italien",
+        "it"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "jm",
+      "iso2": "JM",
+      "de": "Jamaika",
+      "en": "Jamaica",
+      "keys": [
+        "jamaica",
+        "jamaika",
+        "jm"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "jp",
+      "iso2": "JP",
+      "de": "Japan",
+      "en": "Japan",
+      "keys": [
+        "japan",
+        "jp"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "ye",
+      "iso2": "YE",
+      "de": "Jemen",
+      "en": "Yemen",
+      "keys": [
+        "yemen",
+        "jemen",
+        "ye"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "je",
+      "iso2": "JE",
+      "de": "Jersey",
+      "en": "Jersey",
+      "keys": [
+        "jersey",
+        "je"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "jo",
+      "iso2": "JO",
+      "de": "Jordanien",
+      "en": "Jordan",
+      "keys": [
+        "jordan",
+        "jordanien",
+        "jo"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "kh",
+      "iso2": "KH",
+      "de": "Kambodscha",
+      "en": "Cambodia",
+      "keys": [
+        "cambodia",
+        "kambodscha",
+        "kh"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "cm",
+      "iso2": "CM",
+      "de": "Kamerun",
+      "en": "Cameroon",
+      "keys": [
+        "cameroon",
+        "kamerun",
+        "cm"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ca",
+      "iso2": "CA",
+      "de": "Kanada",
+      "en": "Canada",
+      "keys": [
+        "canada",
+        "kanada",
+        "ca"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "cv",
+      "iso2": "CV",
+      "de": "Kap Verde",
+      "en": "Cape Verde",
+      "keys": [
+        "cape verde",
+        "kap verde",
+        "cabo verde",
+        "cv"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "kz",
+      "iso2": "KZ",
+      "de": "Kasachstan",
+      "en": "Kazakhstan",
+      "keys": [
+        "kazakhstan",
+        "kasachstan",
+        "kz"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "qa",
+      "iso2": "QA",
+      "de": "Katar",
+      "en": "Qatar",
+      "keys": [
+        "qatar",
+        "katar",
+        "qa"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "ke",
+      "iso2": "KE",
+      "de": "Kenia",
+      "en": "Kenya",
+      "keys": [
+        "kenya",
+        "kenia",
+        "ke"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "kg",
+      "iso2": "KG",
+      "de": "Kirgisistan",
+      "en": "Kyrgyzstan",
+      "keys": [
+        "kyrgyzstan",
+        "kirgisistan",
+        "kg"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ki",
+      "iso2": "KI",
+      "de": "Kiribati",
+      "en": "Kiribati",
+      "keys": [
+        "kiribati",
+        "ki"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "co",
+      "iso2": "CO",
+      "de": "Kolumbien",
+      "en": "Colombia",
+      "keys": [
+        "colombia",
+        "kolumbien",
+        "co"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "km",
+      "iso2": "KM",
+      "de": "Komoren",
+      "en": "Comoros",
+      "keys": [
+        "comoros",
+        "komoren",
+        "km"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "xk",
+      "iso2": "XK",
+      "de": "Kosovo",
+      "en": "Kosovo",
+      "keys": [
+        "kosovo",
+        "xk"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "hr",
+      "iso2": "HR",
+      "de": "Kroatien",
+      "en": "Croatia",
+      "keys": [
+        "croatia",
+        "kroatien",
+        "hr"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "cu",
+      "iso2": "CU",
+      "de": "Kuba",
+      "en": "Cuba",
+      "keys": [
+        "cuba",
+        "kuba",
+        "cu"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "kw",
+      "iso2": "KW",
+      "de": "Kuwait",
+      "en": "Kuwait",
+      "keys": [
+        "kuwait",
+        "kw"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "la",
+      "iso2": "LA",
+      "de": "Laos",
+      "en": "Laos",
+      "keys": [
+        "laos",
+        "la"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ls",
+      "iso2": "LS",
+      "de": "Lesotho",
+      "en": "Lesotho",
+      "keys": [
+        "lesotho",
+        "ls"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "lv",
+      "iso2": "LV",
+      "de": "Lettland",
+      "en": "Latvia",
+      "keys": [
+        "latvia",
+        "lettland",
+        "lv"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "lb",
+      "iso2": "LB",
+      "de": "Libanon",
+      "en": "Lebanon",
+      "keys": [
+        "lebanon",
+        "libanon",
+        "lb"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "lr",
+      "iso2": "LR",
+      "de": "Liberia",
+      "en": "Liberia",
+      "keys": [
+        "liberia",
+        "lr"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ly",
+      "iso2": "LY",
+      "de": "Libyen",
+      "en": "Libya",
+      "keys": [
+        "libya",
+        "libyen",
+        "ly"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "li",
+      "iso2": "LI",
+      "de": "Liechtenstein",
+      "en": "Liechtenstein",
+      "keys": [
+        "liechtenstein",
+        "li"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "lt",
+      "iso2": "LT",
+      "de": "Litauen",
+      "en": "Lithuania",
+      "keys": [
+        "lithuania",
+        "litauen",
+        "lt"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "lu",
+      "iso2": "LU",
+      "de": "Luxemburg",
+      "en": "Luxembourg",
+      "keys": [
+        "luxembourg",
+        "luxemburg",
+        "lu"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "mo",
+      "iso2": "MO",
+      "de": "Macau",
+      "en": "Macau",
+      "keys": [
+        "macau",
+        "macao s a r",
+        "mo"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "mg",
+      "iso2": "MG",
+      "de": "Madagaskar",
+      "en": "Madagascar",
+      "keys": [
+        "madagascar",
+        "madagaskar",
+        "mg"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "mw",
+      "iso2": "MW",
+      "de": "Malawi",
+      "en": "Malawi",
+      "keys": [
+        "malawi",
+        "mw"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "my",
+      "iso2": "MY",
+      "de": "Malaysia",
+      "en": "Malaysia",
+      "keys": [
+        "malaysia",
+        "my"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "mv",
+      "iso2": "MV",
+      "de": "Malediven",
+      "en": "Maldives",
+      "keys": [
+        "maldives",
+        "malediven",
+        "mv"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ml",
+      "iso2": "ML",
+      "de": "Mali",
+      "en": "Mali",
+      "keys": [
+        "mali",
+        "ml"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "mt",
+      "iso2": "MT",
+      "de": "Malta",
+      "en": "Malta",
+      "keys": [
+        "malta",
+        "mt"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ma",
+      "iso2": "MA",
+      "de": "Marokko",
+      "en": "Morocco",
+      "keys": [
+        "morocco",
+        "marokko",
+        "ma"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "mh",
+      "iso2": "MH",
+      "de": "Marshallinseln",
+      "en": "Marshall Islands",
+      "keys": [
+        "marshall islands",
+        "marshallinseln",
+        "mh"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "mr",
+      "iso2": "MR",
+      "de": "Mauretanien",
+      "en": "Mauritania",
+      "keys": [
+        "mauritania",
+        "mauretanien",
+        "mr"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "mu",
+      "iso2": "MU",
+      "de": "Mauritius",
+      "en": "Mauritius",
+      "keys": [
+        "mauritius",
+        "mu"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "mx",
+      "iso2": "MX",
+      "de": "Mexiko",
+      "en": "Mexico",
+      "keys": [
+        "mexico",
+        "mexiko",
+        "mx"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "mc",
+      "iso2": "MC",
+      "de": "Monaco",
+      "en": "Monaco",
+      "keys": [
+        "monaco",
+        "mc"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "mn",
+      "iso2": "MN",
+      "de": "Mongolei",
+      "en": "Mongolia",
+      "keys": [
+        "mongolia",
+        "mongolei",
+        "mn"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "me",
+      "iso2": "ME",
+      "de": "Montenegro",
+      "en": "Montenegro",
+      "keys": [
+        "montenegro",
+        "me"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ms",
+      "iso2": "MS",
+      "de": "Montserrat",
+      "en": "Montserrat",
+      "keys": [
+        "montserrat",
+        "ms"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "mz",
+      "iso2": "MZ",
+      "de": "Mosambik",
+      "en": "Mozambique",
+      "keys": [
+        "mozambique",
+        "mosambik",
+        "mz"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "mm",
+      "iso2": "MM",
+      "de": "Myanmar",
+      "en": "Myanmar",
+      "keys": [
+        "myanmar",
+        "mm",
+        "burma",
+        "birma"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "na",
+      "iso2": "NA",
+      "de": "Namibia",
+      "en": "Namibia",
+      "keys": [
+        "namibia",
+        "na"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "nr",
+      "iso2": "NR",
+      "de": "Nauru",
+      "en": "Nauru",
+      "keys": [
+        "nauru",
+        "nr"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "np",
+      "iso2": "NP",
+      "de": "Nepal",
+      "en": "Nepal",
+      "keys": [
+        "nepal",
+        "np"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "nc",
+      "iso2": "NC",
+      "de": "Neukaledonien",
+      "en": "New Caledonia",
+      "keys": [
+        "new caledonia",
+        "neukaledonien",
+        "nc"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "nz",
+      "iso2": "NZ",
+      "de": "Neuseeland",
+      "en": "New Zealand",
+      "keys": [
+        "new zealand",
+        "neuseeland",
+        "nz"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "ni",
+      "iso2": "NI",
+      "de": "Nicaragua",
+      "en": "Nicaragua",
+      "keys": [
+        "nicaragua",
+        "ni"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "nl",
+      "iso2": "NL",
+      "de": "Niederlande",
+      "en": "Netherlands",
+      "keys": [
+        "netherlands",
+        "niederlande",
+        "nl",
+        "holland"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "ne",
+      "iso2": "NE",
+      "de": "Niger",
+      "en": "Niger",
+      "keys": [
+        "niger",
+        "ne"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ng",
+      "iso2": "NG",
+      "de": "Nigeria",
+      "en": "Nigeria",
+      "keys": [
+        "nigeria",
+        "ng"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "nu",
+      "iso2": "NU",
+      "de": "Niue",
+      "en": "Niue",
+      "keys": [
+        "niue",
+        "nu"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "kp",
+      "iso2": "KP",
+      "de": "Nordkorea",
+      "en": "North Korea",
+      "keys": [
+        "north korea",
+        "nordkorea",
+        "kp",
+        "dprk"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "mp",
+      "iso2": "MP",
+      "de": "Nördliche Marianen",
+      "en": "Northern Mariana Islands",
+      "keys": [
+        "northern mariana islands",
+        "nordliche marianen",
+        "mp"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "mk",
+      "iso2": "MK",
+      "de": "Nordmazedonien",
+      "en": "North Macedonia",
+      "keys": [
+        "north macedonia",
+        "nordmazedonien",
+        "mk",
+        "macedonia",
+        "mazedonien"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "nf",
+      "iso2": "NF",
+      "de": "Norfolkinsel",
+      "en": "Norfolk Island",
+      "keys": [
+        "norfolk island",
+        "norfolkinsel",
+        "nf"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "no",
+      "iso2": "NO",
+      "de": "Norwegen",
+      "en": "Norway",
+      "keys": [
+        "norway",
+        "norwegen",
+        "no"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "om",
+      "iso2": "OM",
+      "de": "Oman",
+      "en": "Oman",
+      "keys": [
+        "oman",
+        "om"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "at",
+      "iso2": "AT",
+      "de": "Österreich",
+      "en": "Austria",
+      "keys": [
+        "austria",
+        "osterreich",
+        "at"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "tl",
+      "iso2": "TL",
+      "de": "Osttimor",
+      "en": "East Timor",
+      "keys": [
+        "east timor",
+        "osttimor",
+        "tl"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "pk",
+      "iso2": "PK",
+      "de": "Pakistan",
+      "en": "Pakistan",
+      "keys": [
+        "pakistan",
+        "pk"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ps",
+      "iso2": "PS",
+      "de": "Palästina",
+      "en": "Palestine",
+      "keys": [
+        "palestine",
+        "palastina",
+        "ps"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "pw",
+      "iso2": "PW",
+      "de": "Palau",
+      "en": "Palau",
+      "keys": [
+        "palau",
+        "pw"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "pa",
+      "iso2": "PA",
+      "de": "Panama",
+      "en": "Panama",
+      "keys": [
+        "panama",
+        "pa"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "pg",
+      "iso2": "PG",
+      "de": "Papua-Neuguinea",
+      "en": "Papua New Guinea",
+      "keys": [
+        "papua new guinea",
+        "papua neuguinea",
+        "pg"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "py",
+      "iso2": "PY",
+      "de": "Paraguay",
+      "en": "Paraguay",
+      "keys": [
+        "paraguay",
+        "py"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "pe",
+      "iso2": "PE",
+      "de": "Peru",
+      "en": "Peru",
+      "keys": [
+        "peru",
+        "pe"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "ph",
+      "iso2": "PH",
+      "de": "Philippinen",
+      "en": "Philippines",
+      "keys": [
+        "philippines",
+        "philippinen",
+        "ph"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "pn",
+      "iso2": "PN",
+      "de": "Pitcairninseln",
+      "en": "Pitcairn Islands",
+      "keys": [
+        "pitcairn islands",
+        "pitcairninseln",
+        "pn"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "pl",
+      "iso2": "PL",
+      "de": "Polen",
+      "en": "Poland",
+      "keys": [
+        "poland",
+        "polen",
+        "pl"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "pt",
+      "iso2": "PT",
+      "de": "Portugal",
+      "en": "Portugal",
+      "keys": [
+        "portugal",
+        "pt"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "pr",
+      "iso2": "PR",
+      "de": "Puerto Rico",
+      "en": "Puerto Rico",
+      "keys": [
+        "puerto rico",
+        "pr"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "tw",
+      "iso2": "TW",
+      "de": "Republik China",
+      "en": "Taiwan",
+      "keys": [
+        "taiwan",
+        "republik china",
+        "tw"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "cg",
+      "iso2": "CG",
+      "de": "Republik Kongo",
+      "en": "Republic of the Congo",
+      "keys": [
+        "republic of the congo",
+        "republik kongo",
+        "cg",
+        "congo",
+        "congo brazzaville"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "md",
+      "iso2": "MD",
+      "de": "Republik Moldau",
+      "en": "Moldova",
+      "keys": [
+        "moldova",
+        "republik moldau",
+        "md"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "cy",
+      "iso2": "CY",
+      "de": "Republik Zypern",
+      "en": "Cyprus",
+      "keys": [
+        "cyprus",
+        "republik zypern",
+        "cy"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "rw",
+      "iso2": "RW",
+      "de": "Ruanda",
+      "en": "Rwanda",
+      "keys": [
+        "rwanda",
+        "ruanda",
+        "rw"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ro",
+      "iso2": "RO",
+      "de": "Rumänien",
+      "en": "Romania",
+      "keys": [
+        "romania",
+        "rumanien",
+        "ro"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ru",
+      "iso2": "RU",
+      "de": "Russland",
+      "en": "Russia",
+      "keys": [
+        "russia",
+        "russland",
+        "ru",
+        "russian federation",
+        "russische foderation"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "bl",
+      "iso2": "BL",
+      "de": "Saint-Barthélemy",
+      "en": "Saint Barthélemy",
+      "keys": [
+        "saint barthelemy",
+        "bl"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "mf",
+      "iso2": "MF",
+      "de": "Saint-Martin",
+      "en": "Saint Martin",
+      "keys": [
+        "saint martin",
+        "mf"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "pm",
+      "iso2": "PM",
+      "de": "Saint-Pierre und Miquelon",
+      "en": "Saint Pierre and Miquelon",
+      "keys": [
+        "saint pierre and miquelon",
+        "saint pierre und miquelon",
+        "pm"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "sb",
+      "iso2": "SB",
+      "de": "Salomonen",
+      "en": "Solomon Islands",
+      "keys": [
+        "solomon islands",
+        "salomonen",
+        "sb"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "zm",
+      "iso2": "ZM",
+      "de": "Sambia",
+      "en": "Zambia",
+      "keys": [
+        "zambia",
+        "sambia",
+        "zm"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ws",
+      "iso2": "WS",
+      "de": "Samoa",
+      "en": "Samoa",
+      "keys": [
+        "samoa",
+        "ws"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "sm",
+      "iso2": "SM",
+      "de": "San Marino",
+      "en": "San Marino",
+      "keys": [
+        "san marino",
+        "sm"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "st",
+      "iso2": "ST",
+      "de": "São Tomé und Príncipe",
+      "en": "São Tomé and Príncipe",
+      "keys": [
+        "sao tome and principe",
+        "sao tome und principe",
+        "st"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "sa",
+      "iso2": "SA",
+      "de": "Saudi-Arabien",
+      "en": "Saudi Arabia",
+      "keys": [
+        "saudi arabia",
+        "saudi arabien",
+        "sa"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "se",
+      "iso2": "SE",
+      "de": "Schweden",
+      "en": "Sweden",
+      "keys": [
+        "sweden",
+        "schweden",
+        "se"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "ch",
+      "iso2": "CH",
+      "de": "Schweiz",
+      "en": "Switzerland",
+      "keys": [
+        "switzerland",
+        "schweiz",
+        "ch"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "sn",
+      "iso2": "SN",
+      "de": "Senegal",
+      "en": "Senegal",
+      "keys": [
+        "senegal",
+        "sn"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "rs",
+      "iso2": "RS",
+      "de": "Serbien",
+      "en": "Serbia",
+      "keys": [
+        "serbia",
+        "serbien",
+        "republic of serbia",
+        "rs"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "sc",
+      "iso2": "SC",
+      "de": "Seychellen",
+      "en": "Seychelles",
+      "keys": [
+        "seychelles",
+        "seychellen",
+        "sc"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "sl",
+      "iso2": "SL",
+      "de": "Sierra Leone",
+      "en": "Sierra Leone",
+      "keys": [
+        "sierra leone",
+        "sl"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "zw",
+      "iso2": "ZW",
+      "de": "Simbabwe",
+      "en": "Zimbabwe",
+      "keys": [
+        "zimbabwe",
+        "simbabwe",
+        "zw"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "sg",
+      "iso2": "SG",
+      "de": "Singapur",
+      "en": "Singapore",
+      "keys": [
+        "singapore",
+        "singapur",
+        "sg"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "sx",
+      "iso2": "SX",
+      "de": "Sint Maarten",
+      "en": "Sint Maarten",
+      "keys": [
+        "sint maarten",
+        "sx"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "sk",
+      "iso2": "SK",
+      "de": "Slowakei",
+      "en": "Slovakia",
+      "keys": [
+        "slovakia",
+        "slowakei",
+        "sk"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "si",
+      "iso2": "SI",
+      "de": "Slowenien",
+      "en": "Slovenia",
+      "keys": [
+        "slovenia",
+        "slowenien",
+        "si"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "so",
+      "iso2": "SO",
+      "de": "Somalia",
+      "en": "Somalia",
+      "keys": [
+        "somalia",
+        "so"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "es",
+      "iso2": "ES",
+      "de": "Spanien",
+      "en": "Spain",
+      "keys": [
+        "spain",
+        "spanien",
+        "es"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "lk",
+      "iso2": "LK",
+      "de": "Sri Lanka",
+      "en": "Sri Lanka",
+      "keys": [
+        "sri lanka",
+        "lk"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "sh",
+      "iso2": "SH",
+      "de": "St. Helena",
+      "en": "Saint Helena",
+      "keys": [
+        "saint helena",
+        "st helena",
+        "sh"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "kn",
+      "iso2": "KN",
+      "de": "St. Kitts und Nevis",
+      "en": "Saint Kitts and Nevis",
+      "keys": [
+        "saint kitts and nevis",
+        "st kitts und nevis",
+        "kn"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "lc",
+      "iso2": "LC",
+      "de": "St. Lucia",
+      "en": "Saint Lucia",
+      "keys": [
+        "saint lucia",
+        "st lucia",
+        "lc"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "vc",
+      "iso2": "VC",
+      "de": "St. Vincent und die Grenadinen",
+      "en": "Saint Vincent and the Grenadines",
+      "keys": [
+        "saint vincent and the grenadines",
+        "st vincent und die grenadinen",
+        "vc"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "za",
+      "iso2": "ZA",
+      "de": "Südafrika",
+      "en": "South Africa",
+      "keys": [
+        "south africa",
+        "sudafrika",
+        "za"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "sd",
+      "iso2": "SD",
+      "de": "Sudan",
+      "en": "Sudan",
+      "keys": [
+        "sudan",
+        "sd"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "gs",
+      "iso2": "GS",
+      "de": "Südgeorgien und die Südlichen Sandwichinseln",
+      "en": "South Georgia and the South Sandwich Islands",
+      "keys": [
+        "south georgia and the south sandwich islands",
+        "sudgeorgien und die sudlichen sandwichinseln",
+        "south georgia and the islands",
+        "gs"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "kr",
+      "iso2": "KR",
+      "de": "Südkorea",
+      "en": "South Korea",
+      "keys": [
+        "south korea",
+        "sudkorea",
+        "kr",
+        "korea",
+        "republic of korea"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "ss",
+      "iso2": "SS",
+      "de": "Südsudan",
+      "en": "South Sudan",
+      "keys": [
+        "south sudan",
+        "sudsudan",
+        "ss"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "sr",
+      "iso2": "SR",
+      "de": "Suriname",
+      "en": "Suriname",
+      "keys": [
+        "suriname",
+        "sr"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "sy",
+      "iso2": "SY",
+      "de": "Syrien",
+      "en": "Syria",
+      "keys": [
+        "syria",
+        "syrien",
+        "sy"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "tj",
+      "iso2": "TJ",
+      "de": "Tadschikistan",
+      "en": "Tajikistan",
+      "keys": [
+        "tajikistan",
+        "tadschikistan",
+        "tj"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "tz",
+      "iso2": "TZ",
+      "de": "Tansania",
+      "en": "Tanzania",
+      "keys": [
+        "tanzania",
+        "tansania",
+        "united republic of tanzania",
+        "tz"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "th",
+      "iso2": "TH",
+      "de": "Thailand",
+      "en": "Thailand",
+      "keys": [
+        "thailand",
+        "th"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "tg",
+      "iso2": "TG",
+      "de": "Togo",
+      "en": "Togo",
+      "keys": [
+        "togo",
+        "tg"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "to",
+      "iso2": "TO",
+      "de": "Tonga",
+      "en": "Tonga",
+      "keys": [
+        "tonga",
+        "to"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "tt",
+      "iso2": "TT",
+      "de": "Trinidad und Tobago",
+      "en": "Trinidad and Tobago",
+      "keys": [
+        "trinidad and tobago",
+        "trinidad und tobago",
+        "tt"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "td",
+      "iso2": "TD",
+      "de": "Tschad",
+      "en": "Chad",
+      "keys": [
+        "chad",
+        "tschad",
+        "td"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "cz",
+      "iso2": "CZ",
+      "de": "Tschechien",
+      "en": "Czech Republic",
+      "keys": [
+        "czech republic",
+        "tschechien",
+        "czechia",
+        "cz",
+        "tschechische republik"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "tn",
+      "iso2": "TN",
+      "de": "Tunesien",
+      "en": "Tunisia",
+      "keys": [
+        "tunisia",
+        "tunesien",
+        "tn"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "tr",
+      "iso2": "TR",
+      "de": "Türkei",
+      "en": "Turkey",
+      "keys": [
+        "turkey",
+        "turkei",
+        "tr",
+        "turkiye"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "tm",
+      "iso2": "TM",
+      "de": "Turkmenistan",
+      "en": "Turkmenistan",
+      "keys": [
+        "turkmenistan",
+        "tm"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "tc",
+      "iso2": "TC",
+      "de": "Turks- und Caicosinseln",
+      "en": "Turks and Caicos Islands",
+      "keys": [
+        "turks and caicos islands",
+        "turks und caicosinseln",
+        "tc"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "tv",
+      "iso2": "TV",
+      "de": "Tuvalu",
+      "en": "Tuvalu",
+      "keys": [
+        "tuvalu",
+        "tv"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ug",
+      "iso2": "UG",
+      "de": "Uganda",
+      "en": "Uganda",
+      "keys": [
+        "uganda",
+        "ug"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ua",
+      "iso2": "UA",
+      "de": "Ukraine",
+      "en": "Ukraine",
+      "keys": [
+        "ukraine",
+        "ua"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "hu",
+      "iso2": "HU",
+      "de": "Ungarn",
+      "en": "Hungary",
+      "keys": [
+        "hungary",
+        "ungarn",
+        "hu"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "uy",
+      "iso2": "UY",
+      "de": "Uruguay",
+      "en": "Uruguay",
+      "keys": [
+        "uruguay",
+        "uy"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "uz",
+      "iso2": "UZ",
+      "de": "Usbekistan",
+      "en": "Uzbekistan",
+      "keys": [
+        "uzbekistan",
+        "usbekistan",
+        "uz"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "vu",
+      "iso2": "VU",
+      "de": "Vanuatu",
+      "en": "Vanuatu",
+      "keys": [
+        "vanuatu",
+        "vu"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "va",
+      "iso2": "VA",
+      "de": "Vatikanstadt",
+      "en": "Vatican City",
+      "keys": [
+        "vatican city",
+        "vatikanstadt",
+        "vatican",
+        "va",
+        "holy see",
+        "vatikan"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "ve",
+      "iso2": "VE",
+      "de": "Venezuela",
+      "en": "Venezuela",
+      "keys": [
+        "venezuela",
+        "ve"
+      ],
+      "difficulty": "medium"
+    },
+    {
+      "iso": "ae",
+      "iso2": "AE",
+      "de": "Vereinigte Arabische Emirate",
+      "en": "United Arab Emirates",
+      "keys": [
+        "united arab emirates",
+        "vereinigte arabische emirate",
+        "ae",
+        "uae"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "us",
+      "iso2": "US",
+      "de": "Vereinigte Staaten",
+      "en": "United States of America",
+      "keys": [
+        "united states of america",
+        "vereinigte staaten",
+        "us",
+        "usa",
+        "united states",
+        "vereinigte staaten von amerika",
+        "amerika"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "gb",
+      "iso2": "GB",
+      "de": "Vereinigtes Königreich",
+      "en": "United Kingdom",
+      "keys": [
+        "united kingdom",
+        "vereinigtes konigreich",
+        "gb",
+        "uk",
+        "great britain",
+        "britain",
+        "grossbritannien",
+        "england"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "vn",
+      "iso2": "VN",
+      "de": "Vietnam",
+      "en": "Vietnam",
+      "keys": [
+        "vietnam",
+        "vn"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "cn",
+      "iso2": "CN",
+      "de": "Volksrepublik China",
+      "en": "People's Republic of China",
+      "keys": [
+        "people s republic of china",
+        "volksrepublik china",
+        "china",
+        "cn",
+        "prc",
+        "china vr"
+      ],
+      "difficulty": "easy"
+    },
+    {
+      "iso": "wf",
+      "iso2": "WF",
+      "de": "Wallis und Futuna",
+      "en": "Wallis and Futuna",
+      "keys": [
+        "wallis and futuna",
+        "wallis und futuna",
+        "wf"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "eh",
+      "iso2": "EH",
+      "de": "Westsahara",
+      "en": "Western Sahara",
+      "keys": [
+        "western sahara",
+        "westsahara",
+        "eh"
+      ],
+      "difficulty": "hard"
+    },
+    {
+      "iso": "cf",
+      "iso2": "CF",
+      "de": "Zentralafrikanische Republik",
+      "en": "Central African Republic",
+      "keys": [
+        "central african republic",
+        "zentralafrikanische republik",
+        "cf"
+      ],
+      "difficulty": "hard"
+    }
+  ]
+}

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flag Rush</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="back" href="/" id="hubLink">← Lagga Club</a>
+    <div class="brand">Flag Rush</div>
+    <div class="scorechip" id="scoreChip" hidden>Score <strong id="scoreValue">0</strong></div>
+  </header>
+
+  <main>
+    <!-- HOME / SOLO SETUP -->
+    <section class="view" id="view-home">
+      <p class="eyebrow">Flaggen-Quiz</p>
+      <h1>Flagge. Tippen. Punkten.</h1>
+      <p class="lead">Erkenne die Flagge so schnell wie möglich — Solo üben oder Party-Race über die Hub-Lobby.</p>
+
+      <div class="setup" id="soloSetup">
+        <label class="field">
+          <span>Name</span>
+          <input id="soloName" type="text" maxlength="24" placeholder="Dein Name" autocomplete="nickname" />
+        </label>
+        <label class="field">
+          <span>Runden</span>
+          <select id="soloRounds">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="15">15</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Schwierigkeit</span>
+          <select id="soloDifficulty">
+            <option value="easy">Leicht</option>
+            <option value="medium" selected>Mittel</option>
+            <option value="hard">Schwer</option>
+          </select>
+        </label>
+        <button type="button" class="btn primary" id="btnSoloStart">Solo starten</button>
+      </div>
+      <p class="hint" id="homeHint"></p>
+      <p class="meta" id="homeMeta"></p>
+    </section>
+
+    <!-- LOBBY -->
+    <section class="view" id="view-lobby" hidden>
+      <p class="eyebrow" id="lobbyEyebrow">Lobby</p>
+      <h2 id="lobbyTitle">Wartet auf Start…</h2>
+      <div class="lobby-grid">
+        <div class="panel">
+          <h3>Spieler</h3>
+          <ul class="player-list" id="lobbyPlayers"></ul>
+        </div>
+        <div class="panel" id="lobbyControls">
+          <h3>Einstellungen</h3>
+          <label class="field">
+            <span>Runden</span>
+            <select id="lobbyRounds">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="15">15</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Schwierigkeit</span>
+            <select id="lobbyDifficulty">
+              <option value="easy">Leicht</option>
+              <option value="medium" selected>Mittel</option>
+              <option value="hard">Schwer</option>
+            </select>
+          </label>
+          <div class="btn-row">
+            <button type="button" class="btn" id="btnReady">Ready</button>
+            <button type="button" class="btn primary" id="btnStart" hidden>Start</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint" id="lobbyHint"></p>
+      <button type="button" class="btn ghost" id="btnLeaveLobby">Zurück zur Hub-Party</button>
+    </section>
+
+    <!-- PLAY -->
+    <section class="view" id="view-play" hidden>
+      <div class="race-hud">
+        <div class="race-timer" id="raceTimer">20,0s</div>
+        <div class="race-points" id="racePoints">bis 100 P</div>
+        <div class="race-round" id="raceRound">1 / 10</div>
+      </div>
+
+      <div class="flag-stage">
+        <img id="flagImg" class="flag" alt="Flagge" width="320" height="213" />
+      </div>
+
+      <form class="guess-form" id="guessForm" autocomplete="off">
+        <input
+          id="guessInput"
+          type="text"
+          placeholder="Welches Land?"
+          maxlength="80"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+        />
+        <button type="submit" class="btn primary" id="btnGuess">Tippen</button>
+      </form>
+      <ul class="suggest" id="suggestList" hidden></ul>
+      <p class="guess-feedback" id="guessFeedback" aria-live="polite"></p>
+
+      <ul class="standings" id="raceStandings"></ul>
+    </section>
+
+    <!-- REVEAL -->
+    <section class="view" id="view-reveal" hidden>
+      <p class="eyebrow">Auflösung</p>
+      <div class="flag-stage compact">
+        <img id="revealFlag" class="flag" alt="" width="240" height="160" />
+      </div>
+      <h2 id="revealName">—</h2>
+      <p class="sub" id="revealEn"></p>
+      <ul class="standings" id="revealStandings"></ul>
+      <p class="hint">Nächste Runde gleich…</p>
+    </section>
+
+    <!-- FINISHED -->
+    <section class="view" id="view-finished" hidden>
+      <p class="eyebrow">Fertig</p>
+      <h2 id="winnerTitle">Gewonnen!</h2>
+      <p class="winner-score" id="winnerScore"></p>
+      <ol class="ranking" id="finalRanking"></ol>
+      <ul class="recap" id="recapList"></ul>
+      <div class="btn-row">
+        <button type="button" class="btn primary" id="btnRematch" hidden>Nochmal</button>
+        <button type="button" class="btn" id="btnHome">Zur Startseite</button>
+        <button type="button" class="btn ghost" id="btnLeaveFinished" hidden>Zurück zur Hub-Party</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
